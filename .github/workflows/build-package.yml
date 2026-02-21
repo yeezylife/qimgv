@@ -22,6 +22,7 @@ jobs:
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
             mingw-w64-x86_64-ntldd
+            mingw-w64-x86_64-extra-cmake-modules
             mingw-w64-x86_64-qt6-base
             mingw-w64-x86_64-qt6-svg
             mingw-w64-x86_64-qt6-imageformats
@@ -46,10 +47,13 @@ jobs:
 
       - name: Build JXL Plugin
         run: |
+          # 克隆并进入插件目录
           git clone https://github.com/novomesk/qt-jpegxl-image-plugin.git
+          # ECM 需要在这里显式指定 Qt6 且使用 Ninja 构建
           cmake -B build-jxl -S qt-jpegxl-image-plugin -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DQT_VERSION_MAJOR=6
+            -DQT_VERSION_MAJOR=6 \
+            -DCMAKE_PREFIX_PATH=/mingw64
           cmake --build build-jxl
 
       - name: Fix Windows Unicode Path Issue
@@ -57,7 +61,6 @@ jobs:
           # 修复 directorymanager.cpp 中的字符编码问题
           sed -i 's/entry\.path()\.generic_string()\.c_str()/entry.path().wstring().c_str()/g' \
             qimgv/components/directorymanager/directorymanager.cpp
-          echo "Applied Unicode path fix."
 
       - name: Build qimgv
         run: |
@@ -75,26 +78,25 @@ jobs:
           mkdir -p "${TARGET_DIR}"
           cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
           
-          # 1. 部署标准 Qt 库
+          # 1. 部署 Qt 基础环境
           windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe"
           
-          # 2. 部署 JXL 插件 (从刚才编译的目录拷贝)
+          # 2. 部署 JXL 插件 (关键：手动拷贝编译出的 dll)
           mkdir -p "${TARGET_DIR}/imageformats"
           cp build-jxl/qjxl.dll "${TARGET_DIR}/imageformats/"
           
-          # 3. 部署系统/Qt 图像格式插件
+          # 3. 补充官方 imageformats (如 svg, ico 等)
           cp -f /mingw64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
           
-          # 4. 生成 qt.conf
+          # 4. 生成配置文件
           echo -e "[Paths]\nPrefix = .\nPlugins = ." > "${TARGET_DIR}/qt.conf"
           
-          # 5. 拷贝 qimgv 自身的翻译文件
+          # 5. 拷贝翻译
           mkdir -p "${TARGET_DIR}/translations"
           cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
           
-          # 6. 使用 ntldd 递归收集所有缺失的 DLL (核心修复)
-          echo "Collecting deep dependencies..."
-          # 循环 3 次以确保捕获依赖的依赖
+          # 6. 递归补全 DLL 依赖 (针对 mpv, opencv, libjxl 等第三方库)
+          echo "Deep scanning for DLL dependencies..."
           for i in {1..3}; do
             find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | xargs ntldd -R | grep "=> /mingw64" | awk '{print $3}' | sort -u | xargs -I {} cp -n {} "${TARGET_DIR}/"
           done
@@ -122,4 +124,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
-          body: "Auto-build with Qt6 and JXL support. Fixed dependency resolution and path issues."
+          body: "Fixed ECM dependency and added JPEG-XL plugin support."

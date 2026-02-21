@@ -48,7 +48,8 @@ jobs:
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
-      - name: Remove broken Unicode patch
+      # ❗ 已删除所有 sed 修改，避免破坏 Windows API
+      - name: No Unicode patch
         run: |
           echo "No Unicode patch applied."
 

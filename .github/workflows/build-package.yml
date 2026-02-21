@@ -109,7 +109,7 @@ jobs:
           while true; do
             NEW=0
             for f in $(find "$TARGET" -name "*.exe" -o -name "*.dll"); do
-              ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}' | while read dep; do
+              ntldd -R "$f" 2>/dev/null || true | grep "=> /ucrt64" | awk '{print $3}' | while read dep; do
                 base=$(basename "$dep")
                 if [ ! -f "$TARGET/$base" ]; then
                   cp "$dep" "$TARGET/"
@@ -123,7 +123,6 @@ jobs:
 
           echo "Slim package ready"
           echo "Total files: $(find "$TARGET" -type f | wc -l)"
-
 
       - name: Compress
         run: |

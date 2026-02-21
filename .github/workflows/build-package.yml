@@ -99,6 +99,7 @@ jobs:
           QT_PATTERNS=(
             "Qt6Core*.dll" "Qt6Gui*.dll" "Qt6Widgets*.dll" "Qt6Svg*.dll"
             "Qt6Network*.dll" "Qt6Concurrent*.dll" "Qt6DBus*.dll"
+            "Qt6PrintSupport*.dll"  # ← 新增
             "libb2*.dll" "libdouble-conversion*.dll"
             "libicudata*.dll" "libicuin*.dll" "libicuuc*.dll"
             "libfreetype*.dll" "libharfbuzz*.dll" "libgraphite2*.dll"
@@ -143,7 +144,7 @@ jobs:
           done
           
           # 7. 【增强】深度依赖扫描 - 多轮迭代确保捕获所有传递依赖
-          echo "Scanning for deep dependencies (3 passes)..."
+          echo "Scanning for deep dependencies..."
           for i in {1..5}; do
             echo "Pass #$i"
             find "${TARGET_DIR}" \( -name "*.exe" -o -name "*.dll" \) -print0 | \
@@ -164,7 +165,7 @@ jobs:
           
           # 10. 验证关键 DLL 是否存在
           echo "Verifying critical DLLs..."
-          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll libstdc++-6.dll libgcc_s_seh-1.dll; do
+          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6PrintSupport.dll libstdc++-6.dll; do
             if [ -f "${TARGET_DIR}/${dll}" ]; then
               echo "✓ ${dll} found"
             else

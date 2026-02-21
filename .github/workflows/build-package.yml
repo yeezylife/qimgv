@@ -1,4 +1,4 @@
-name: qimgv-qt6-ultimate-fix
+name: qimgv-qt6-slim
 on: [workflow_dispatch]
 
 jobs:
@@ -48,10 +48,10 @@ jobs:
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
-      - name: Fix Windows Unicode Path Issue
+      # ❌ 删除错误的 sed 修改（这是导致 Exiv2 报错的原因）
+      - name: Remove broken Unicode patch
         run: |
-          sed -i 's/entry\.path()\.generic_string()\.c_str()/entry.path().wstring().c_str()/g' \
-            qimgv/components/directorymanager/directorymanager.cpp
+          echo "No Unicode patch applied (previous sed removed)."
 
       - name: Build qimgv
         run: |
@@ -63,110 +63,60 @@ jobs:
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
 
-      - name: Prepare Package
+      - name: Prepare Slim Package
         run: |
-          TARGET_DIR="./${{ steps.vars.outputs.build_name }}"
-          mkdir -p "${TARGET_DIR}/imageformats"
-          mkdir -p "${TARGET_DIR}/translations"
-          mkdir -p "${TARGET_DIR}/platforms"
-          mkdir -p "${TARGET_DIR}/styles"
+          TARGET="./${{ steps.vars.outputs.build_name }}"
+          mkdir -p "$TARGET"
+          mkdir -p "$TARGET/plugins/imageformats"
+          mkdir -p "$TARGET/plugins/platforms"
+          mkdir -p "$TARGET/plugins/styles"
+          mkdir -p "$TARGET/translations"
 
-          cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
+          echo "Copy main executable"
+          cp build/qimgv/qimgv.exe "$TARGET/"
 
-          echo "Copying kimageformats plugins..."
-          cp -f /ucrt64/share/qt6/plugins/imageformats/qjxl.dll "${TARGET_DIR}/imageformats/" || true
+          echo "Copy required Qt plugins"
+          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
+          cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" || true
 
-          echo "Deploying Qt dependencies..."
-          windeployqt --verbose --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
+          # Image formats (only essential)
+          cp /ucrt64/share/qt6/plugins/imageformats/qjpeg.dll "$TARGET/plugins/imageformats/"
+          cp /ucrt64/share/qt6/plugins/imageformats/qgif.dll "$TARGET/plugins/imageformats/"
+          cp /ucrt64/share/qt6/plugins/imageformats/qico.dll "$TARGET/plugins/imageformats/"
+          cp /ucrt64/share/qt6/plugins/imageformats/qsvg.dll "$TARGET/plugins/imageformats/"
+          cp /ucrt64/share/qt6/plugins/imageformats/qjxl.dll "$TARGET/plugins/imageformats/" || true
+          cp /ucrt64/share/qt6/plugins/imageformats/qheif.dll "$TARGET/plugins/imageformats/" || true
+          cp /ucrt64/share/qt6/plugins/imageformats/qavif.dll "$TARGET/plugins/imageformats/" || true
 
-          echo "Copying Qt image format plugins..."
-          cp -f /ucrt64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
+          echo "Copy translations"
+          cp /ucrt64/share/qt6/translations/qt_*.qm "$TARGET/translations/" || true
 
-          cp -f /ucrt64/share/qt6/plugins/platforms/qwindows.dll "${TARGET_DIR}/platforms/" || true
-          cp -f /ucrt64/share/qt6/plugins/styles/*.dll "${TARGET_DIR}/styles/" || true
+          echo "Create qt.conf"
+          cat > "$TARGET/qt.conf" <<EOF
+[Paths]
+Prefix = .
+Plugins = plugins
+Translations = translations
+EOF
 
-          cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
-          cp -f /ucrt64/share/qt6/translations/qt_*.qm "${TARGET_DIR}/translations/" || true
-
-          echo "Collecting ALL required DLLs..."
-
-          QT_PATTERNS=(
-            "Qt6Core*.dll" "Qt6Gui*.dll" "Qt6Widgets*.dll" "Qt6Svg*.dll"
-            "Qt6Network*.dll" "Qt6Concurrent*.dll" "Qt6DBus*.dll"
-            "Qt6PrintSupport*.dll"
-            "libb2*.dll" "libdouble-conversion*.dll"
-            "libicudata*.dll" "libicuin*.dll" "libicuuc*.dll"
-            "libfreetype*.dll" "libharfbuzz*.dll" "libgraphite2*.dll"
-            "libpng*.dll" "libjpeg*.dll" "libtiff*.dll"
-          )
-
-          KIMAGEFORMATS_PATTERNS=(
-            "libjxl*.dll" "libjxl_threads*.dll"
-            "liblcms2*.dll" "libpng*.dll"
-          )
-
-          OPENCV_PATTERNS=(
-            "libopencv_core*.dll" "libopencv_imgproc*.dll" "libopencv_imgcodecs*.dll"
-            "libopencv_videoio*.dll" "libopencv_highgui*.dll"
-            "libtbb*.dll" "libopenblas*.dll" "liblapack*.dll"
-          )
-
-          IMAGE_PATTERNS=(
-            "libraw*.dll" "libheif*.dll" "libavif*.dll"
-            "libwebp*.dll" "libwebpdemux*.dll"
-            "libhwy*.dll" "libbrotli*.dll" "libaom*.dll"
-          )
-
-          MEDIA_PATTERNS=(
-            "libmpv*.dll" "libavcodec*.dll" "libavformat*.dll" "libavutil*.dll"
-            "libswscale*.dll" "libswresample*.dll"
-            "libexiv2*.dll"
-          )
-
-          RUNTIME_PATTERNS=(
-            "libstdc++*.dll" "libgcc_s*.dll" "libwinpthread*.dll"
-            "zlib*.dll" "libzstd*.dll"
-          )
-
-          ALL_PATTERNS=(
-            "${QT_PATTERNS[@]}" "${KIMAGEFORMATS_PATTERNS[@]}" "${OPENCV_PATTERNS[@]}"
-            "${IMAGE_PATTERNS[@]}" "${MEDIA_PATTERNS[@]}" "${RUNTIME_PATTERNS[@]}"
-          )
-
-          for pattern in "${ALL_PATTERNS[@]}"; do
-            find /ucrt64/bin -maxdepth 1 -name "$pattern" -exec cp -t "${TARGET_DIR}/" {} + 2>/dev/null || true
+          echo "Start reverse dependency scan"
+          while true; do
+            NEW=0
+            for f in $(find "$TARGET" -name "*.exe" -o -name "*.dll"); do
+              ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}' | while read dep; do
+                base=$(basename "$dep")
+                if [ ! -f "$TARGET/$base" ]; then
+                  cp "$dep" "$TARGET/"
+                  echo "Added: $base"
+                  NEW=1
+                fi
+              done
+            done
+            [ $NEW -eq 0 ] && break
           done
 
-          echo "Scanning for deep dependencies..."
-          for i in {1..5}; do
-            echo "Pass #$i"
-            find "${TARGET_DIR}" \( -name "*.exe" -o -name "*.dll" \) -print0 | \
-              xargs -0 ntldd -R 2>/dev/null | \
-              grep "=> /ucrt64" | \
-              awk '{print $3}' | \
-              sort -u | \
-              xargs -r -I {} cp -n {} "${TARGET_DIR}/" 2>/dev/null || true
-          done
-
-          echo "Copying remaining lib*.dll as fallback..."
-          find /ucrt64/bin -maxdepth 1 -name "lib*.dll" -exec cp -n -t "${TARGET_DIR}/" {} + 2>/dev/null || true
-
-          echo -e "[Paths]\nPrefix = .\nPlugins = plugins\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
-
-          echo "Verifying JXL support..."
-          if [ -f "${TARGET_DIR}/imageformats/qjxl.dll" ]; then
-            echo "✓ qjxl.dll (kimageformats) found"
-          else
-            echo "✗ qjxl.dll MISSING!"
-          fi
-          if [ -f "${TARGET_DIR}/libjxl.dll" ]; then
-            echo "✓ libjxl.dll found"
-          else
-            echo "✗ libjxl.dll MISSING!"
-          fi
-
-          echo "Package preparation completed."
-          echo "Total files in package: $(find "${TARGET_DIR}" -type f | wc -l)"
+          echo "Slim package ready"
+          echo "Total files: $(find "$TARGET" -type f | wc -l)"
 
       - name: Compress
         run: |
@@ -190,6 +140,6 @@ jobs:
         with:
           files: ${{ needs.build.outputs.build_file_name }}
           prerelease: true
-          tag_name: latest-dev-qt6
+          tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Fixed: Added kimageformats for proper JXL support (Qt6)."
+          body: "Slim build: reverse dependency scan + minimal Qt plugins."

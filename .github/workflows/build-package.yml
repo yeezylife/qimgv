@@ -82,32 +82,46 @@ jobs:
           mkdir -p "${TARGET_DIR}"
           cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
           
-          # 1. 部署 Qt6 运行库
-          windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe"
+          # 1. 部署 Qt6 运行库 (忽略翻译缺失警告)
+          windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
           
           # 2. 部署手动编译的 JXL 插件
+          # 使用 find 寻找 qjxl.dll，因为它可能在 build-jxl/src 或其他深层目录
+          echo "Locating qjxl.dll..."
+          QJXL_PATH=$(find build-jxl -name "qjxl.dll" | head -n 1)
+          if [ -z "$QJXL_PATH" ]; then
+            echo "Error: qjxl.dll not found!"
+            exit 1
+          fi
           mkdir -p "${TARGET_DIR}/imageformats"
-          cp -f build-jxl/qjxl.dll "${TARGET_DIR}/imageformats/"
+          cp -f "$QJXL_PATH" "${TARGET_DIR}/imageformats/"
+          echo "Copied JXL plugin from $QJXL_PATH"
           
-          # 3. 部署系统自带的所有图像插件
+          # 3. 补充系统自带的其他图像插件 (avif, heif 等)
           cp -f /mingw64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
           
-          # 4. 拷贝翻译文件
+          # 4. 拷贝 qimgv 自身的翻译文件
           mkdir -p "${TARGET_DIR}/translations"
           cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
           
-          # 5. 关键：解决 DLL 缺失问题
-          # 针对你提供的 msys2-dll-deps.txt，我们直接从 bin 目录拷贝那些可能无法被自动识别的库
-          echo "Syncing mandatory DLLs..."
-          DLL_LIST=(libexiv2.dll libmpv.dll libopencv_core*.dll libopencv_imgproc*.dll libjxl*.dll libraw*.dll libheif*.dll libavif*.dll libwebp*.dll)
-          for pattern in "${DLL_LIST[@]}"; do
-            cp -n /mingw64/bin/$pattern "${TARGET_DIR}/" || true
+          # 5. 暴力收集所有需要的第三方 DLL
+          # 这里的逻辑是：扫描 exe 和所有插件，找到所有依赖的 mingw64 DLL 并拷贝
+          echo "Scanning and collecting deep dependencies..."
+          
+          # 显式拷贝一些关键库，防止 ntldd 扫描不全
+          cp -n /mingw64/bin/libexiv2*.dll "${TARGET_DIR}/" || true
+          cp -n /mingw64/bin/libmpv*.dll "${TARGET_DIR}/" || true
+          cp -n /mingw64/bin/libopencv_*.dll "${TARGET_DIR}/" || true
+          cp -n /mingw64/bin/libjxl*.dll "${TARGET_DIR}/" || true
+          cp -n /mingw64/bin/libhwy.dll "${TARGET_DIR}/" || true
+          cp -n /mingw64/bin/libbrotli*.dll "${TARGET_DIR}/" || true
+          
+          # 递归补全
+          for i in {1..3}; do
+            find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | xargs ntldd -R | grep "=> /mingw64" | awk '{print $3}' | sort -u | xargs -I {} cp -n {} "${TARGET_DIR}/"
           done
 
-          # 6. 使用 ntldd 进行最后的补全
-          find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | xargs ntldd -R | grep "=> /mingw64" | awk '{print $3}' | sort -u | xargs -I {} cp -n {} "${TARGET_DIR}/"
-          
-          # 7. 生成 qt.conf
+          # 6. 生成 qt.conf 确保插件路径正确
           echo -e "[Paths]\nPrefix = .\nPlugins = ." > "${TARGET_DIR}/qt.conf"
 
       - name: Compress

@@ -76,19 +76,29 @@ jobs:
           echo "Copy Qt platform plugin"
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
 
-          echo "Copy Qt style plugin (Qt6 uses Fusion style)"
-          cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" || true
+          echo "Detect and copy Qt style plugin"
+          for style in qfusionstyle.dll qwindowsvistastyle.dll; do
+            if [ -f "/ucrt64/share/qt6/plugins/styles/$style" ]; then
+              cp "/ucrt64/share/qt6/plugins/styles/$style" "$TARGET/plugins/styles/"
+              echo "Copied style plugin: $style"
+            fi
+          done
 
-          echo "Copy Qt imageformats"
-          cp /ucrt64/share/qt6/plugins/imageformats/qjpeg.dll "$TARGET/plugins/imageformats/"
-          cp /ucrt64/share/qt6/plugins/imageformats/qgif.dll "$TARGET/plugins/imageformats/"
-          cp /ucrt64/share/qt6/plugins/imageformats/qico.dll "$TARGET/plugins/imageformats/"
-          cp /ucrt64/share/qt6/plugins/imageformats/qsvg.dll "$TARGET/plugins/imageformats/"
+          echo "Copy Qt imageformats (auto-detect)"
+          for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
+            if [ -f "/ucrt64/share/qt6/plugins/imageformats/$fmt" ]; then
+              cp "/ucrt64/share/qt6/plugins/imageformats/$fmt" "$TARGET/plugins/imageformats/"
+              echo "Copied Qt imageformat: $fmt"
+            fi
+          done
 
-          echo "Copy KDE kimageformats plugins (JXL/HEIF/AVIF)"
-          cp /ucrt64/share/kf6/plugins/imageformats/kimg_jxl.dll "$TARGET/plugins/imageformats/" || true
-          cp /ucrt64/share/kf6/plugins/imageformats/kimg_heif.dll "$TARGET/plugins/imageformats/" || true
-          cp /ucrt64/share/kf6/plugins/imageformats/kimg_avif.dll "$TARGET/plugins/imageformats/" || true
+          echo "Copy KDE kimageformats plugins (auto-detect)"
+          for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
+            if [ -f "/ucrt64/share/kf6/plugins/imageformats/$kfmt" ]; then
+              cp "/ucrt64/share/kf6/plugins/imageformats/$kfmt" "$TARGET/plugins/imageformats/"
+              echo "Copied KDE imageformat: $kfmt"
+            fi
+          done
 
           echo "Write qt.conf"
           echo "[Paths]" > "$TARGET/qt.conf"
@@ -113,6 +123,7 @@ jobs:
 
           echo "Slim package ready"
           echo "Total files: $(find "$TARGET" -type f | wc -l)"
+
 
       - name: Compress
         run: |

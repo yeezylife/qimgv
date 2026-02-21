@@ -16,25 +16,15 @@ jobs:
           msystem: UCRT64
           update: true
           install: >-
-            git
-            p7zip
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-ntldd
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-svg
-            mingw-w64-ucrt-x86_64-qt6-imageformats
-            mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-kimageformats
-            mingw-w64-ucrt-x86_64-libjxl
-            mingw-w64-ucrt-x86_64-libraw
-            mingw-w64-ucrt-x86_64-exiv2
-            mingw-w64-ucrt-x86_64-opencv
-            mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-lcms2
-            mingw-w64-ucrt-x86_64-libavif
-            mingw-w64-ucrt-x86_64-libheif
+            git p7zip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-kimageformats mingw-w64-ucrt-x86_64-libjxl
+            mingw-w64-ucrt-x86_64-libraw mingw-w64-ucrt-x86_64-exiv2
+            mingw-w64-ucrt-x86_64-opencv mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-lcms2 mingw-w64-ucrt-x86_64-libavif
+            mingw-w64-ucrt-x86_64-libheif python3
 
       - uses: actions/checkout@v4
         with:
@@ -57,83 +47,75 @@ jobs:
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
 
-      - name: Prepare Slim Package
+      - name: Prepare Slim Package (Python Powered)
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
-          mkdir -p "$TARGET/plugins/styles"
 
-          echo "--- Copying core executable ---"
+          echo "--- Copying Core Files ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-
-          echo "--- Copying Qt plugins ---"
-          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/" 2>/dev/null || true
-          cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
-          cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
-
-          cp /ucrt64/share/qt6/plugins/imageformats/q{jpeg,gif,ico,svg,webp,wbmp}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
-          cp /ucrt64/share/kf6/plugins/imageformats/kimg_{jxl,heif,avif,exr,hdr}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
+          
+          # 初始拷贝核心 Qt 插件
+          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
+          cp /ucrt64/share/qt6/plugins/imageformats/q{jpeg,gif,ico,svg,webp}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
+          cp /ucrt64/share/kf6/plugins/imageformats/kimg_{jxl,heif,avif,hdr}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
 
           echo "--- Writing qt.conf ---"
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
 
-          echo "--- Starting Recursive Dependency Scan ---"
-          iteration=0
-          while true; do
-            iteration=$((iteration+1))
-            echo "Scan iteration $iteration..."
-            NEW_DEP_FOUND=false
+          echo "--- Running Robust Dependency Scanner ---"
+          # 使用 Python 处理 ntldd 输出，避开 Shell 路径匹配失败和退出码问题
+          python3 - <<EOF
+          import os, subprocess, shutil
+          from pathlib import Path
 
-            # 生成扫描列表（避免空格路径问题）
-            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > scan_list.txt
+          target_dir = os.path.abspath("$TARGET")
+          ucrt_bin = "/ucrt64/bin"
+          
+          def get_deps(file_path):
+              try:
+                  result = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8')
+                  deps = []
+                  for line in result.splitlines():
+                      if "=>" in line and "ucrt64" in line.lower():
+                          parts = line.split("=>")
+                          if len(parts) > 1:
+                              path = parts[1].split("(")[0].strip()
+                              if os.path.exists(path):
+                                  deps.append(path)
+                  return deps
+              except:
+                  return []
 
-            while IFS= read -r f; do
-              # 获取 ntldd 输出
-              raw_deps=$(ntldd -R "$f" 2>/dev/null || true)
+          processed = set()
+          while True:
+              new_added = False
+              # 扫描目录下所有的 exe 和 dll
+              files_to_check = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
+              for f in files_to_check:
+                  f_str = str(f)
+                  if f_str in processed: continue
+                  
+                  for dep in get_deps(f_str):
+                      dep_name = os.path.basename(dep)
+                      dest = os.path.join(target_dir, dep_name)
+                      if not os.path.exists(dest):
+                          print(f"  [+] Copying {dep_name} (needed by {f.name})")
+                          shutil.copy2(dep, dest)
+                          new_added = True
+                  processed.add(f_str)
+              
+              if not new_added: break
+          EOF
 
-              # 提取所有 DLL 路径（最通用、最稳的匹配）
-              echo "$raw_deps" | grep -oP '([A-Z]:)?/[^ ]+\.dll' | while read -r dep_path; do
-                if [ -f "$dep_path" ]; then
-                  dep_name=$(basename "$dep_path")
-                  if [ ! -f "$TARGET/$dep_name" ]; then
-                    cp "$dep_path" "$TARGET/"
-                    echo "  [+] Added: $dep_name (required by $(basename "$f"))"
-                    echo "found" > found.tmp
-                  fi
-                fi
-              done
-
-            done < scan_list.txt
-
-            # 检查是否发现新依赖
-            if [ -f found.tmp ]; then
-              NEW_DEP_FOUND=true
-              rm found.tmp
-            fi
-
-            # 没有新依赖 → 结束
-            if [ "$NEW_DEP_FOUND" = false ]; then
-              echo "No more dependencies found. Scan complete."
-              break
-            fi
-
-            # 防止死循环
-            if [ $iteration -gt 30 ]; then
-              echo "Reached max iteration limit."
-              break
-            fi
-          done
-
-          rm -f scan_list.txt
-
-          echo "--- Slim package ready ---"
-          echo "Total files: $(find "$TARGET" -type f | wc -l)"
+          echo "--- Stats ---"
           du -sh "$TARGET"
+          echo "Files count: $(find "$TARGET" -type f | wc -l)"
 
       - name: Compress
         run: |
-          7z a "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
+          7z a -mx=9 "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -155,4 +137,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Fix: Enhanced dependency scanner with manual core-lib pre-copy."
+          body: "Robust Slim Build: Python-based recursive dependency scan. Includes OpenCV, MPV, and KDE plugins."

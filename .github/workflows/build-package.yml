@@ -70,12 +70,12 @@ jobs:
           # 1. 拷贝主程序
           cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
           
-          # 2. 下载并安装 JXL 插件 (按照你提供的最新地址)
+          # 2. 下载并安装 JXL 插件
           echo "Downloading JXL plugin..."
           curl -L -o "${TARGET_DIR}/imageformats/qjpegxl6.dll" \
             https://github.com/novomesk/qt-jpegxl-image-plugin/releases/latest/download/qjpegxl6.dll
           
-          # 3. 部署 Qt6 基础环境 (windeployqt 会自动处理大部分 Qt 核心 DLL)
+          # 3. 部署 Qt6 基础环境
           windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
           
           # 4. 强制补充官方图像格式 DLL
@@ -84,27 +84,31 @@ jobs:
           # 5. 拷贝 qimgv 自身的翻译文件
           cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
           
-          # 6. 生成 qt.conf 核心配置文件
-          echo -e "[Paths]\nPrefix = .\nPlugins = .\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
+          # 6. 核心修复：自动化依赖收集
+          echo "Collecting DLLs using flexible matching..."
           
-          # 7. 补全第三方依赖 (结合你提供的 msys2-dll-deps.txt 关键项)
-          echo "Starting deep dependency collection..."
-          
-          # 第一步：显式拷贝一些 windeployqt 经常漏掉的库
-          EXTRA_LIBS=(
-            "libexiv2.dll" "libmpv-2.dll" "libopencv_core*.dll" "libopencv_imgproc*.dll" 
-            "libjxl*.dll" "libraw*.dll" "libheif.dll" "libavif*.dll" "libwebp*.dll" 
-            "libhwy.dll" "libbrotli*.dll" "libstdc++-6.dll" "libgcc_s_seh-1.dll" "libwinpthread-1.dll"
+          # 这里的逻辑是：不管版本号是多少，只要前缀匹配就拷贝
+          # 解决了 libexiv2-27.dll vs libexiv2.dll 的问题
+          CP_PATTERNS=(
+            "libexiv2*.dll" "libmpv*.dll" "libopencv_core*.dll" "libopencv_imgproc*.dll" 
+            "libjxl*.dll" "libraw*.dll" "libheif*.dll" "libavif*.dll" "libwebp*.dll" 
+            "libhwy*.dll" "libbrotli*.dll" "libstdc++*.dll" "libgcc_s*.dll" "libwinpthread*.dll"
+            "liblcms2*.dll" "libpng*.dll" "libjpeg*.dll" "libtiff*.dll" "libaom*.dll" "zlib*.dll"
           )
-          for lib in "${EXTRA_LIBS[@]}"; do
-            cp -n /mingw64/bin/$lib "${TARGET_DIR}/" || true
+          
+          for pattern in "${CP_PATTERNS[@]}"; do
+            # 使用 find 寻找文件，避免 cp 直接报错
+            find /mingw64/bin -maxdepth 1 -name "$pattern" -exec cp -t "${TARGET_DIR}/" {} + 2>/dev/null || true
           done
 
-          # 第二步：使用 ntldd 递归补全所有缺失的 DLL
-          # 扫描所有 exe 和 dll，确保插件的依赖也被捕获
+          # 7. 使用 ntldd 进行深度递归扫描 (补全依赖的依赖)
+          echo "Scanning for deep dependencies..."
           for i in {1..3}; do
             find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | xargs ntldd -R | grep "=> /mingw64" | awk '{print $3}' | sort -u | xargs -I {} cp -n {} "${TARGET_DIR}/"
           done
+          
+          # 8. 生成 qt.conf
+          echo -e "[Paths]\nPrefix = .\nPlugins = .\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
 
       - name: Compress
         run: |
@@ -129,4 +133,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
-          body: "Complete fix with pre-compiled qjpegxl6.dll and full dependency scanning."
+          body: "Auto-fix: Using flexible DLL matching for MinGW versioned libraries."

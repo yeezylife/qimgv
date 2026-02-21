@@ -1,6 +1,5 @@
 name: qimgv-qt6-slim
 on: [workflow_dispatch]
-
 jobs:
   build:
     runs-on: windows-latest
@@ -35,18 +34,15 @@ jobs:
             mingw-w64-ucrt-x86_64-lcms2
             mingw-w64-ucrt-x86_64-libavif
             mingw-w64-ucrt-x86_64-libheif
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Set Variables
         id: vars
         run: |
           BNAME="qimgv-x64-qt6_$(git describe --tags --always)"
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
-
       - name: Build qimgv
         run: |
           cmake -B build -S . -G Ninja \
@@ -56,91 +52,69 @@ jobs:
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
-
       - name: Prepare Slim Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-          # 创建目录结构
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
           mkdir -p "$TARGET/plugins/styles"
-
-          echo "--- Copying main executable ---"
+          echo "--- Copying core executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-
-          echo "--- Copying Essential Qt Plugins ---"
-          # 1. 拷贝平台插件 (Windows 运行必选)
+          echo "--- Manual Pre-copy Qt6 core libs (to bootstrap dependency scan) ---"
+          cp /ucrt64/bin/Qt6{Core,Gui,Widgets,Svg,Network}.dll "$TARGET/" 2>/dev/null || true
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
-          
-          # 2. 拷贝外观样式 (防止界面变得难看)
-          cp /ucrt64/share/qt6/plugins/styles/q{fusion,windowsvista}style.dll "$TARGET/plugins/styles/" 2>/dev/null || true
-
-          # 3. 拷贝基础图像格式
-          for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
-            if [ -f "/ucrt64/share/qt6/plugins/imageformats/$fmt" ]; then
-              cp "/ucrt64/share/qt6/plugins/imageformats/$fmt" "$TARGET/plugins/imageformats/"
-            fi
-          done
-
-          # 4. 拷贝 KDE 扩展图像格式 (HEIC, JXL 等)
-          for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
-            if [ -f "/ucrt64/share/kf6/plugins/imageformats/$kfmt" ]; then
-              cp "/ucrt64/share/kf6/plugins/imageformats/$kfmt" "$TARGET/plugins/imageformats/"
-            fi
-          done
-
           echo "--- Writing qt.conf ---"
-          # 告诉程序去当前目录的 plugins 文件夹加载插件
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
-
           echo "--- Starting Recursive Dependency Scan ---"
           iteration=0
           while true; do
             iteration=$((iteration+1))
             NEW_DEP_FOUND=false
             echo "Scan iteration $iteration..."
-            
-            # 找到文件夹内现有的所有 exe 和 dll
-            # 存入临时文件防止文件名空格导致的 for 循环拆分问题
+            # 使用临时文件避免 for 循环中空格/特殊字符问题
             find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > files_to_scan.txt
-            
             while IFS= read -r f; do
-              # 使用 || true 防止 grep 找不到结果时导致 GitHub Actions 中断步骤
-              # awk 提取 => 之后的第三列（路径）
-              deps=$(ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}' || true)
-              
-              if [ -n "$deps" ]; then
-                for dep_path in $deps; do
-                  dep_name=$(basename "$dep_path")
-                  if [ ! -f "$TARGET/$dep_name" ]; then
-                    cp "$dep_path" "$TARGET/"
-                    echo "  [+] Added $dep_name (needed by $(basename "$f"))"
-                    NEW_DEP_FOUND=true
-                  fi
-                done
-              fi
+              [ -z "$f" ] && continue
+              # 经典可靠的 ntldd 依赖提取管道（来自 MSYS2 社区实践）
+              ntldd -R "$f" 2>/dev/null | grep '=>' | grep '/ucrt64/' | awk '{print $3}' | while read -r dep_path; do
+                if [ -n "$dep_path" ] && [ ! -f "$TARGET/$(basename "$dep_path")" ]; then
+                  cp -v "$dep_path" "$TARGET/"
+                  echo " [+] Added: $(basename "$dep_path") (from $(basename "$f"))"
+                  echo "found" > found.tmp
+                fi
+              done
             done < files_to_scan.txt
-            
-            # 如果这一轮没找到新依赖，或者达到最大限制（防止死循环），则退出
-            if [ "$NEW_DEP_FOUND" = false ] || [ $iteration -gt 20 ]; then
+            rm -f files_to_scan.txt
+            if [ -f found.tmp ]; then
+              NEW_DEP_FOUND=true
+              rm found.tmp
+            fi
+            if [ "$NEW_DEP_FOUND" = false ] || [ $iteration -gt 25 ]; then
               break
             fi
           done
-          rm -f files_to_scan.txt
-
+          echo "--- Copying Qt imageformat plugins ---"
+          for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
+            src="/ucrt64/share/qt6/plugins/imageformats/$fmt"
+            [ -f "$src" ] && cp "$src" "$TARGET/plugins/imageformats/"
+          done
+          echo "--- Copying KDE kimageformats plugins ---"
+          for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
+            src="/ucrt64/share/kf6/plugins/imageformats/$kfmt"
+            [ -f "$src" ] && cp "$src" "$TARGET/plugins/imageformats/"
+          done
           echo "--- Slim package ready ---"
+          echo "Files List:"
+          ls -l "$TARGET"
           echo "Total files: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
-
       - name: Compress
         run: |
           7z a "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
-
       - uses: actions/upload-artifact@v4
         with:
           name: qimgv-binary
           path: ${{ steps.vars.outputs.build_file_name }}
-
   upload-release:
     runs-on: ubuntu-latest
     needs: build
@@ -156,4 +130,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Slim build based on recursive dependency scan (Qt6 + KF6 plugins included)."
+          body: "Slim build: recursive ntldd dependency scan + minimal Qt/KF6 plugins."

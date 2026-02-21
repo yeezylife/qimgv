@@ -1,9 +1,7 @@
-name: msys2 dev-latest
+name: msys2 dev-latest (Qt6 + kimageformats + libjxl)
+
 on: [workflow_dispatch]
-#on:
-#  push:
-#    branches:
-#      - dev
+
 jobs:
   build:
     runs-on: windows-latest
@@ -15,51 +13,142 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: git p7zip
+          install: >-
+            git
+            p7zip
+            mingw-w64-x86_64-ntldd   # 你的原版有，保持用于 DLL 收集
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-extra-cmake-modules
+            mingw-w64-x86_64-ninja   # 上游有，用 Ninja 更快
+            mingw-w64-x86_64-qt6-base   # 升级为 Qt6
+            mingw-w64-x86_64-qt6-svg    # 升级为 Qt6
+            mingw-w64-x86_64-qt6-tools  # 你的原版有，保持
+            mingw-w64-x86_64-exiv2
+            mingw-w64-x86_64-lerc
+            mingw-w64-x86_64-aom
+            mingw-w64-x86_64-libavif
+            mingw-w64-x86_64-libheif
+            mingw-w64-x86_64-libwebp
+            mingw-w64-x86_64-libmng
+            mingw-w64-x86_64-libraw
+            mingw-w64-x86_64-gflags
+            mingw-w64-x86_64-libjxl
+            mingw-w64-x86_64-opencv     # 你的原版有，添加
+            mingw-w64-x86_64-mpv        # 你的原版有，添加
 
       - uses: actions/checkout@v4
-        with: 
-          #ref: dev
+        with:
           fetch-depth: 0
 
       - id: build
         name: CI-Build
         run: |
-          export BUILD_NAME="qimgv-x64_$(git describe --tags)"
+          # 1. 生成版本名称
+          export BUILD_NAME="qimgv-x64_$(git describe --tags --always)"
           echo "build_name=${BUILD_NAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BUILD_NAME}.7z" >> $GITHUB_OUTPUT
-          ./scripts/build-qimgv.sh
-          pwd
-          ls -al
-          echo "running: 7z a qimgv-x64.7z ./${BUILD_NAME}"
-          7z a qimgv-x64.7z ./${BUILD_NAME}
+
+          # 2. 创建构建目录
+          mkdir -p build
+          cd build
+
+          # 3. 配置 CMake（强制使用 Qt6，开启所有功能，用 Ninja 更快）
+          cmake .. -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_QT5=OFF \
+            -DEXIV2=ON \
+            -DVIDEO_SUPPORT=ON \
+            -DOPENCV_SUPPORT=ON \
+            -DKDE_SUPPORT=OFF \
+            -DCMAKE_INSTALL_PREFIX="${PWD}/install"
+
+          # 4. 编译（使用所有 CPU 核心）
+          cmake --build . -j$(nproc)
+
+          # 5. 安装到临时目录
+          cmake --install .
+
+          # 6. 准备发布目录
+          TARGET_DIR="../${BUILD_NAME}"
+          mkdir -p "${TARGET_DIR}"
+
+          # 复制二进制文件和翻译文件
+          cp -r install/bin/* "${TARGET_DIR}/" 2>/dev/null || true
+          cp -r install/share "${TARGET_DIR}/" 2>/dev/null || true
+
+          # 7. 使用 Qt6 的 windeployqt 部署基本 Qt 依赖
+          windeployqt --no-translations --compiler-runtime "${TARGET_DIR}/qimgv.exe"
+
+          # 8. 额外步骤：clone 并构建 qt-jpegxl-image-plugin（为 JXL 支持）
+          cd ..
+          git clone https://github.com/novomesk/qt-jpegxl-image-plugin.git
+          cd qt-jpegxl-image-plugin
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQT_VERSION_MAJOR=6   # 指定 Qt6
+          cmake --build . -j$(nproc)
+          # 复制生成的 DLL 到 imageformats/（插件名为 qjpegxl.dll，根据仓库 CMake）
+          mkdir -p "../../${BUILD_NAME}/imageformats"
+          cp qjpegxl.dll "../../${BUILD_NAME}/imageformats/" || true
+
+          # 9. 手动部署 kimageformats 插件（如果你还想用 KDE 的，Qt6 版；可选，但你的原版有）
+          cd ../..
+          mkdir -p "${BUILD_NAME}/imageformats"
+          cp /mingw64/lib/qt6/plugins/imageformats/kimg_*.dll "${BUILD_NAME}/imageformats/" || true
+
+          # 10. 使用 ntldd 递归查找所有缺失的 MinGW 系统库（包括插件依赖）
+          echo "Searching for system DLLs..."
+          declare -A seen
+          collect_dlls() {
+            local file="$1"
+            [ ! -f "$file" ] && return
+            local dlls=$(ntldd -R "$file" 2>/dev/null | grep -i "mingw64" | cut -d'>' -f2 | cut -d'(' -f1)
+            for dll in $dlls; do
+              dll=$(echo "$dll" | sed 's/^[ \t]*//;s/[ \t]*$//')
+              if [ -f "$dll" ] && [ -z "${seen[$dll]}" ]; then
+                seen["$dll"]=1
+                cp -vn "$dll" "${BUILD_NAME}/"
+                collect_dlls "$dll"
+              fi
+            done
+          }
+          # 从主 exe 开始收集
+          collect_dlls "${BUILD_NAME}/qimgv.exe"
+          # 从所有 DLL 和插件中收集（包括新加的 qjpegxl.dll）
+          for f in "${BUILD_NAME}"/*.dll "${BUILD_NAME}/imageformats"/*.dll; do
+            [ -f "$f" ] && collect_dlls "$f"
+          done
+
+          # 11. 打包为 7z（包含上游 dll-deps.txt 提到的 DLL，已通过 ntldd 自动处理）
+          7z a "${BUILD_NAME}.7z" "${BUILD_NAME}/"
 
       - uses: actions/upload-artifact@v4
         with:
           name: qimgv-build
-          path: qimgv-x64.7z
+          path: ${{ steps.build.outputs.build_file_name }}
 
     outputs:
-       build_name: ${{ steps.build.outputs.build_name }}
-       build_file_name: ${{ steps.build.outputs.build_file_name }}
+      build_name: ${{ steps.build.outputs.build_name }}
+      build_file_name: ${{ steps.build.outputs.build_file_name }}
 
   upload-release:
     runs-on: ubuntu-latest
     needs: build
     steps:
-       #- run: echo "${{ needs.build.outputs.build_name }}"
-       - uses: actions/download-artifact@v4
-         with: 
-           name: qimgv-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: qimgv-build
 
-       - name: Rename archive
-         run: mv qimgv-x64.7z "${{ needs.build.outputs.build_file_name }}"
-
-       - uses: softprops/action-gh-release@v2
-         #if: startsWith(github.ref, 'refs/tags/')
-         with:
-           files: ${{ needs.build.outputs.build_file_name }}
-           prerelease: true
-           tag_name: latest-dev
-           name: ${{ needs.build.outputs.build_name }}
-           body: "Automated build"
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ needs.build.outputs.build_file_name }}
+          prerelease: true
+          tag_name: latest-dev
+          name: ${{ needs.build.outputs.build_name }}
+          body: "Automated Qt6 build with qt-jpegxl-image-plugin (JXL support), kimageformats, libjxl, and all dependencies from upstream deps lists."

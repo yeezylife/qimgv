@@ -69,32 +69,31 @@ jobs:
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
           mkdir -p "$TARGET/plugins/styles"
-          mkdir -p "$TARGET/translations"
 
           echo "Copy main executable"
           cp build/qimgv/qimgv.exe "$TARGET/"
 
-          echo "Copy required Qt plugins"
+          echo "Copy Qt platform plugin"
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
-          cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" || true
 
-          echo "Copy essential imageformats"
+          echo "Copy Qt style plugin (Qt6 uses Fusion style)"
+          cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" || true
+
+          echo "Copy Qt imageformats"
           cp /ucrt64/share/qt6/plugins/imageformats/qjpeg.dll "$TARGET/plugins/imageformats/"
           cp /ucrt64/share/qt6/plugins/imageformats/qgif.dll "$TARGET/plugins/imageformats/"
           cp /ucrt64/share/qt6/plugins/imageformats/qico.dll "$TARGET/plugins/imageformats/"
           cp /ucrt64/share/qt6/plugins/imageformats/qsvg.dll "$TARGET/plugins/imageformats/"
-          cp /ucrt64/share/qt6/plugins/imageformats/qjxl.dll "$TARGET/plugins/imageformats/" || true
-          cp /ucrt64/share/qt6/plugins/imageformats/qheif.dll "$TARGET/plugins/imageformats/" || true
-          cp /ucrt64/share/qt6/plugins/imageformats/qavif.dll "$TARGET/plugins/imageformats/" || true
 
-          echo "Copy translations"
-          cp /ucrt64/share/qt6/translations/qt_*.qm "$TARGET/translations/" || true
+          echo "Copy KDE kimageformats plugins (JXL/HEIF/AVIF)"
+          cp /ucrt64/share/kf6/plugins/imageformats/kimg_jxl.dll "$TARGET/plugins/imageformats/" || true
+          cp /ucrt64/share/kf6/plugins/imageformats/kimg_heif.dll "$TARGET/plugins/imageformats/" || true
+          cp /ucrt64/share/kf6/plugins/imageformats/kimg_avif.dll "$TARGET/plugins/imageformats/" || true
 
           echo "Write qt.conf"
           echo "[Paths]" > "$TARGET/qt.conf"
           echo "Prefix = ." >> "$TARGET/qt.conf"
           echo "Plugins = plugins" >> "$TARGET/qt.conf"
-          echo "Translations = translations" >> "$TARGET/qt.conf"
 
           echo "Start reverse dependency scan"
           while true; do

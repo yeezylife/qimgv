@@ -1,4 +1,3 @@
-
 name: qimgv-qt6-slim
 on: [workflow_dispatch]
 
@@ -58,45 +57,56 @@ jobs:
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
 
-- name: Prepare Slim Package
+      - name: Prepare Slim Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
+          # 创建目录结构
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
           mkdir -p "$TARGET/plugins/styles"
 
-          echo "--- Copying core executable ---"
+          echo "--- Copying main executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
 
-          echo "--- Copying Qt plugins ---"
+          echo "--- Copying Essential Qt Plugins ---"
+          # 1. 拷贝平台插件 (Windows 运行必选)
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
-          cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
-          cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
+          
+          # 2. 拷贝外观样式 (防止界面变得难看)
+          cp /ucrt64/share/qt6/plugins/styles/q{fusion,windowsvista}style.dll "$TARGET/plugins/styles/" 2>/dev/null || true
 
+          # 3. 拷贝基础图像格式
           for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
-            [ -f "/ucrt64/share/qt6/plugins/imageformats/$fmt" ] && cp "/ucrt64/share/qt6/plugins/imageformats/$fmt" "$TARGET/plugins/imageformats/"
+            if [ -f "/ucrt64/share/qt6/plugins/imageformats/$fmt" ]; then
+              cp "/ucrt64/share/qt6/plugins/imageformats/$fmt" "$TARGET/plugins/imageformats/"
+            fi
           done
 
+          # 4. 拷贝 KDE 扩展图像格式 (HEIC, JXL 等)
           for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
-            [ -f "/ucrt64/share/kf6/plugins/imageformats/$kfmt" ] && cp "/ucrt64/share/kf6/plugins/imageformats/$kfmt" "$TARGET/plugins/imageformats/"
+            if [ -f "/ucrt64/share/kf6/plugins/imageformats/$kfmt" ]; then
+              cp "/ucrt64/share/kf6/plugins/imageformats/$kfmt" "$TARGET/plugins/imageformats/"
+            fi
           done
 
           echo "--- Writing qt.conf ---"
+          # 告诉程序去当前目录的 plugins 文件夹加载插件
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
 
           echo "--- Starting Recursive Dependency Scan ---"
           iteration=0
           while true; do
             iteration=$((iteration+1))
-            NEW_DEP_FOUND=0
-            echo "Scan iteration: $iteration"
+            NEW_DEP_FOUND=false
+            echo "Scan iteration $iteration..."
             
-            # 使用临时文件存储文件列表，避免 for 循环处理空格时的崩溃
-            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > scan_list.txt
+            # 找到文件夹内现有的所有 exe 和 dll
+            # 存入临时文件防止文件名空格导致的 for 循环拆分问题
+            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > files_to_scan.txt
             
             while IFS= read -r f; do
-              # 关键修复：增加 || true，防止 grep 找不到结果时导致脚本退出
-              # 同时确保 deps 不为空时才处理
+              # 使用 || true 防止 grep 找不到结果时导致 GitHub Actions 中断步骤
+              # awk 提取 => 之后的第三列（路径）
               deps=$(ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}' || true)
               
               if [ -n "$deps" ]; then
@@ -104,25 +114,20 @@ jobs:
                   dep_name=$(basename "$dep_path")
                   if [ ! -f "$TARGET/$dep_name" ]; then
                     cp "$dep_path" "$TARGET/"
-                    echo "  [+] Added $dep_name (required by $(basename "$f"))"
-                    NEW_DEP_FOUND=1
+                    echo "  [+] Added $dep_name (needed by $(basename "$f"))"
+                    NEW_DEP_FOUND=true
                   fi
                 done
               fi
-            done < scan_list.txt
-
-            if [ "$NEW_DEP_FOUND" -eq 0 ]; then
-              echo "No more dependencies found. Scan complete."
+            done < files_to_scan.txt
+            
+            # 如果这一轮没找到新依赖，或者达到最大限制（防止死循环），则退出
+            if [ "$NEW_DEP_FOUND" = false ] || [ $iteration -gt 20 ]; then
               break
             fi
-            
-            if [ $iteration -gt 30 ]; then 
-              echo "Reached max iteration limit."
-              break 
-            fi
           done
+          rm -f files_to_scan.txt
 
-          rm -f scan_list.txt
           echo "--- Slim package ready ---"
           echo "Total files: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
@@ -139,6 +144,7 @@ jobs:
   upload-release:
     runs-on: ubuntu-latest
     needs: build
+    if: success()
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -150,4 +156,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Slim build: recursive dependency scan + minimal Qt/KF6 plugins."
+          body: "Slim build based on recursive dependency scan (Qt6 + KF6 plugins included)."

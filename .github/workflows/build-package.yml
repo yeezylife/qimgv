@@ -16,15 +16,26 @@ jobs:
           msystem: UCRT64
           update: true
           install: >-
-            git p7zip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-ntldd
-            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg
-            mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-kimageformats mingw-w64-ucrt-x86_64-libjxl
-            mingw-w64-ucrt-x86_64-libraw mingw-w64-ucrt-x86_64-exiv2
-            mingw-w64-ucrt-x86_64-opencv mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-lcms2 mingw-w64-ucrt-x86_64-libavif
-            mingw-w64-ucrt-x86_64-libheif python3
+            git
+            p7zip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-kimageformats
+            mingw-w64-ucrt-x86_64-libjxl
+            mingw-w64-ucrt-x86_64-libraw
+            mingw-w64-ucrt-x86_64-exiv2
+            mingw-w64-ucrt-x86_64-opencv
+            mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-lcms2
+            mingw-w64-ucrt-x86_64-libavif
+            mingw-w64-ucrt-x86_64-libheif
+            python3
 
       - uses: actions/checkout@v4
         with:
@@ -47,71 +58,92 @@ jobs:
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
 
-      - name: Prepare Slim Package (Python Powered)
+      - name: Prepare Slim Package (The Master Version)
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-          mkdir -p "$TARGET/plugins/imageformats"
-          mkdir -p "$TARGET/plugins/platforms"
+          # 创建标准的 Qt 插件布局
+          mkdir -p "$TARGET/imageformats"
+          mkdir -p "$TARGET/platforms"
+          mkdir -p "$TARGET/styles"
 
-          echo "--- Copying Core Files ---"
+          echo "--- Copying Core Executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-          
-          # 初始拷贝核心 Qt 插件
-          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
-          cp /ucrt64/share/qt6/plugins/imageformats/q{jpeg,gif,ico,svg,webp}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
-          cp /ucrt64/share/kf6/plugins/imageformats/kimg_{jxl,heif,avif,hdr}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
 
-          echo "--- Writing qt.conf ---"
-          echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
+          echo "--- Collecting Plugins from MSYS2 ---"
+          # 遍历 UCRT64 中所有可能的插件存放点
+          PLUGIN_SOURCES=(
+            "/ucrt64/lib/qt6/plugins"
+            "/ucrt64/share/qt6/plugins"
+            "/ucrt64/lib/kf6/plugins"
+            "/ucrt64/share/kf6/plugins"
+          )
 
-          echo "--- Running Robust Dependency Scanner ---"
-          # 使用 Python 处理 ntldd 输出，避开 Shell 路径匹配失败和退出码问题
+          for src in "${PLUGIN_SOURCES[@]}"; do
+            if [ -d "$src" ]; then
+              echo "Checking $src..."
+              # 平台支持
+              [ -d "$src/platforms" ] && cp -n "$src/platforms/qwindows.dll" "$TARGET/platforms/" 2>/dev/null || true
+              # 图像格式 (Qt + KDE)
+              [ -d "$src/imageformats" ] && cp -n "$src/imageformats"/*.dll "$TARGET/imageformats/" 2>/dev/null || true
+              # 界面样式
+              [ -d "$src/styles" ] && cp -n "$src/styles"/*.dll "$TARGET/styles/" 2>/dev/null || true
+            fi
+          done
+
+          echo "--- Creating qt.conf ---"
+          # 强制指定 Prefix 为当前目录，Qt 将会自动加载旁边的 imageformats 文件夹
+          echo -e "[Paths]\nPrefix = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
+
+          echo "--- Starting Greedy Dependency Resolver ---"
+          # 使用 Python 进行深度递归扫描，确保插件的依赖也被拷贝
           python3 - <<EOF
           import os, subprocess, shutil
           from pathlib import Path
 
           target_dir = os.path.abspath("$TARGET")
-          ucrt_bin = "/ucrt64/bin"
           
-          def get_deps(file_path):
+          def get_ntldd_deps(file_path):
               try:
-                  result = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8')
+                  # 获取所有被标记为 ucrt64 的依赖项
+                  out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
                   deps = []
-                  for line in result.splitlines():
+                  for line in out.splitlines():
                       if "=>" in line and "ucrt64" in line.lower():
-                          parts = line.split("=>")
-                          if len(parts) > 1:
-                              path = parts[1].split("(")[0].strip()
-                              if os.path.exists(path):
-                                  deps.append(path)
+                          path = line.split("=>")[1].split("(")[0].strip()
+                          if os.path.exists(path):
+                              deps.append(path)
                   return deps
               except:
                   return []
 
-          processed = set()
+          scanned_files = set()
           while True:
-              new_added = False
-              # 扫描目录下所有的 exe 和 dll
-              files_to_check = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
-              for f in files_to_check:
-                  f_str = str(f)
-                  if f_str in processed: continue
-                  
-                  for dep in get_deps(f_str):
-                      dep_name = os.path.basename(dep)
-                      dest = os.path.join(target_dir, dep_name)
-                      if not os.path.exists(dest):
-                          print(f"  [+] Copying {dep_name} (needed by {f.name})")
-                          shutil.copy2(dep, dest)
-                          new_added = True
-                  processed.add(f_str)
+              found_new = False
+              # 扫描根目录及所有子目录下的 exe 和 dll
+              current_files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
               
-              if not new_added: break
+              for f in current_files:
+                  f_path = str(f)
+                  if f_path in scanned_files: continue
+                  
+                  deps = get_ntldd_deps(f_path)
+                  for d in deps:
+                      d_name = os.path.basename(d)
+                      dest = os.path.join(target_dir, d_name) # 依赖库统一放根目录
+                      if not os.path.exists(dest):
+                          print(f"  [+] Found: {d_name} (needed by {f.name})")
+                          shutil.copy2(d, dest)
+                          found_new = True
+                  scanned_files.add(f_path)
+              
+              if not found_new: break
           EOF
 
-          echo "--- Stats ---"
+          echo "--- Package Verification ---"
+          echo "Checking JXL plugin presence:"
+          find "$TARGET" -name "*jxl*"
+          echo "Total file count: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
-          echo "Files count: $(find "$TARGET" -type f | wc -l)"
 
       - name: Compress
         run: |
@@ -137,4 +169,8 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Robust Slim Build: Python-based recursive dependency scan. Includes OpenCV, MPV, and KDE plugins."
+          body: |
+            ### Slim Portable Build
+            - **Qt6 & KF6 Plugins**: Full support for JXL, AVIF, HEIC, etc.
+            - **Engines**: OpenCV & MPV support included.
+            - **Dependency Scanning**: Recursive Python resolver used.

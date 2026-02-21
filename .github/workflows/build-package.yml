@@ -87,8 +87,6 @@ jobs:
           # 6. 核心修复：自动化依赖收集
           echo "Collecting DLLs using flexible matching..."
           
-          # 这里的逻辑是：不管版本号是多少，只要前缀匹配就拷贝
-          # 解决了 libexiv2-27.dll vs libexiv2.dll 的问题
           CP_PATTERNS=(
             "libexiv2*.dll" "libmpv*.dll" "libopencv_core*.dll" "libopencv_imgproc*.dll" 
             "libjxl*.dll" "libraw*.dll" "libheif*.dll" "libavif*.dll" "libwebp*.dll" 
@@ -97,28 +95,38 @@ jobs:
           )
           
           for pattern in "${CP_PATTERNS[@]}"; do
-            # 使用 find 寻找文件，避免 cp 直接报错
             find /mingw64/bin -maxdepth 1 -name "$pattern" -exec cp -t "${TARGET_DIR}/" {} + 2>/dev/null || true
           done
 
-          # 7. 使用 ntldd 进行深度递归扫描 (补全依赖的依赖) - 改进版
-          echo "Scanning for deep dependencies (robust mode)..."
+          # 7. 深度依赖扫描 - 详细诊断版
+          echo "Scanning for deep dependencies (diagnostic mode)..."
           for i in {1..3}; do
-            echo "Dependency scan pass #$i"
+            echo "=== Dependency scan pass #$i ==="
+            # 对每个文件进行分析
             find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | while read -r file; do
-              # 使用 ntldd 分析，忽略错误输出
-              ntldd -R "$file" 2>/dev/null | grep "=> /mingw64" | awk '{print $3}' | while read -r dep; do
+              echo "Checking: $file"
+              # 运行 ntldd，捕获输出和错误
+              ntldd_output=$(ntldd -R "$file" 2>&1)
+              ntldd_ret=$?
+              if [ $ntldd_ret -ne 0 ]; then
+                echo "Warning: ntldd returned $ntldd_ret for $file, output: $ntldd_output"
+                continue
+              fi
+              # 提取 mingw64 路径的依赖，忽略 grep 无匹配的错误
+              echo "$ntldd_output" | grep "=> /mingw64" | awk '{print $3}' | while read -r dep; do
                 if [ -f "$dep" ]; then
-                  cp -n "$dep" "${TARGET_DIR}/" && echo "Copied: $(basename "$dep")"
+                  cp -n "$dep" "${TARGET_DIR}/" 2>/dev/null && echo "Copied: $(basename "$dep")" || echo "File already exists: $(basename "$dep")"
                 else
-                  echo "Warning: Dependency not found - $dep"
+                  echo "Warning: Missing dependency file: $dep (referenced by $file)"
                 fi
-              done
-            done
+              done || true   # 忽略 grep/awk 管道失败
+            done || true     # 忽略 find 循环的整体失败
           done
           
           # 8. 生成 qt.conf
           echo -e "[Paths]\nPrefix = .\nPlugins = .\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
+          
+          echo "Package preparation completed."
 
       - name: Compress
         run: |
@@ -143,4 +151,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
-          body: "Auto-fix: Using flexible DLL matching for MinGW versioned libraries."
+          body: "Auto-fix: Diagnostic mode for DLL scanning."

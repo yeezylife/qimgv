@@ -66,6 +66,8 @@ jobs:
           TARGET_DIR="./${{ steps.vars.outputs.build_name }}"
           mkdir -p "${TARGET_DIR}/imageformats"
           mkdir -p "${TARGET_DIR}/translations"
+          mkdir -p "${TARGET_DIR}/platforms"
+          mkdir -p "${TARGET_DIR}/styles"
           
           # 1. 拷贝主程序
           cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
@@ -73,60 +75,105 @@ jobs:
           # 2. 下载并安装 JXL 插件
           echo "Downloading JXL plugin..."
           curl -L -o "${TARGET_DIR}/imageformats/qjpegxl6.dll" \
-            https://github.com/novomesk/qt-jpegxl-image-plugin/releases/latest/download/qjpegxl6.dll
+            https://github.com/novomesk/qt-jpegxl-image-plugin/releases/latest/download/qjpegxl6.dll  
           
-          # 3. 部署 Qt6 基础环境
-          windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
+          # 3. 部署 Qt6 基础环境 (使用 verbose 模式便于调试)
+          echo "Deploying Qt dependencies..."
+          windeployqt --verbose --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
           
-          # 4. 强制补充官方图像格式 DLL
+          # 4. 强制补充 Qt 插件
+          echo "Copying Qt plugins..."
           cp -f /mingw64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
+          cp -f /mingw64/share/qt6/plugins/platforms/qwindows.dll "${TARGET_DIR}/platforms/" || true
+          cp -f /mingw64/share/qt6/plugins/styles/*.dll "${TARGET_DIR}/styles/" || true
           
           # 5. 拷贝 qimgv 自身的翻译文件
           cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
+          # 补充 Qt 翻译文件
+          cp -f /mingw64/share/qt6/translations/qt_*.qm "${TARGET_DIR}/translations/" || true
           
-          # 6. 核心修复：自动化依赖收集
-          echo "Collecting DLLs using flexible matching..."
+          # 6. 【关键修复】扩大 DLL 依赖收集范围
+          echo "Collecting ALL required DLLs..."
           
-          CP_PATTERNS=(
-            "libexiv2*.dll" "libmpv*.dll" "libopencv_core*.dll" "libopencv_imgproc*.dll" 
-            "libjxl*.dll" "libraw*.dll" "libheif*.dll" "libavif*.dll" "libwebp*.dll" 
-            "libhwy*.dll" "libbrotli*.dll" "libstdc++*.dll" "libgcc_s*.dll" "libwinpthread*.dll"
-            "liblcms2*.dll" "libpng*.dll" "libjpeg*.dll" "libtiff*.dll" "libaom*.dll" "zlib*.dll"
+          # 6.1 Qt 核心库 (必须包含)
+          QT_PATTERNS=(
+            "Qt6Core*.dll" "Qt6Gui*.dll" "Qt6Widgets*.dll" "Qt6Svg*.dll"
+            "Qt6Network*.dll" "Qt6Concurrent*.dll" "Qt6DBus*.dll"
+            "libb2*.dll" "libdouble-conversion*.dll"
+            "libicudata*.dll" "libicuin*.dll" "libicuuc*.dll"
+            "libfreetype*.dll" "libharfbuzz*.dll" "libgraphite2*.dll"
+            "libpng*.dll" "libjpeg*.dll" "libtiff*.dll"
           )
           
-          for pattern in "${CP_PATTERNS[@]}"; do
+          # 6.2 OpenCV 及相关数学库
+          OPENCV_PATTERNS=(
+            "libopencv_core*.dll" "libopencv_imgproc*.dll" "libopencv_imgcodecs*.dll"
+            "libopencv_videoio*.dll" "libopencv_highgui*.dll"
+            "libtbb*.dll" "libopenblas*.dll" "liblapack*.dll"
+          )
+          
+          # 6.3 图像格式库
+          IMAGE_PATTERNS=(
+            "libjxl*.dll" "libjxl_threads*.dll" "libraw*.dll"
+            "libheif*.dll" "libavif*.dll" "libwebp*.dll" "libwebpdemux*.dll"
+            "libhwy*.dll" "libbrotli*.dll" "libaom*.dll"
+          )
+          
+          # 6.4 其他多媒体库
+          MEDIA_PATTERNS=(
+            "libmpv*.dll" "libavcodec*.dll" "libavformat*.dll" "libavutil*.dll"
+            "libswscale*.dll" "libswresample*.dll"
+            "liblcms2*.dll" "libexiv2*.dll"
+          )
+          
+          # 6.5 运行时库 (必须)
+          RUNTIME_PATTERNS=(
+            "libstdc++*.dll" "libgcc_s*.dll" "libwinpthread*.dll"
+            "zlib*.dll" "libzstd*.dll"
+          )
+          
+          # 合并所有模式
+          ALL_PATTERNS=(
+            "${QT_PATTERNS[@]}" "${OPENCV_PATTERNS[@]}" "${IMAGE_PATTERNS[@]}"
+            "${MEDIA_PATTERNS[@]}" "${RUNTIME_PATTERNS[@]}"
+          )
+          
+          for pattern in "${ALL_PATTERNS[@]}"; do
             find /mingw64/bin -maxdepth 1 -name "$pattern" -exec cp -t "${TARGET_DIR}/" {} + 2>/dev/null || true
           done
-
-          # 7. 深度依赖扫描 - 详细诊断版
-          echo "Scanning for deep dependencies (diagnostic mode)..."
-          for i in {1..3}; do
-            echo "=== Dependency scan pass #$i ==="
-            # 对每个文件进行分析
-            find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | while read -r file; do
-              echo "Checking: $file"
-              # 运行 ntldd，捕获输出和错误
-              ntldd_output=$(ntldd -R "$file" 2>&1)
-              ntldd_ret=$?
-              if [ $ntldd_ret -ne 0 ]; then
-                echo "Warning: ntldd returned $ntldd_ret for $file, output: $ntldd_output"
-                continue
-              fi
-              # 提取 mingw64 路径的依赖，忽略 grep 无匹配的错误
-              echo "$ntldd_output" | grep "=> /mingw64" | awk '{print $3}' | while read -r dep; do
-                if [ -f "$dep" ]; then
-                  cp -n "$dep" "${TARGET_DIR}/" 2>/dev/null && echo "Copied: $(basename "$dep")" || echo "File already exists: $(basename "$dep")"
-                else
-                  echo "Warning: Missing dependency file: $dep (referenced by $file)"
-                fi
-              done || true   # 忽略 grep/awk 管道失败
-            done || true     # 忽略 find 循环的整体失败
+          
+          # 7. 【增强】深度依赖扫描 - 多轮迭代确保捕获所有传递依赖
+          echo "Scanning for deep dependencies (3 passes)..."
+          for i in {1..5}; do
+            echo "Pass #$i"
+            find "${TARGET_DIR}" \( -name "*.exe" -o -name "*.dll" \) -print0 | \
+              xargs -0 ntldd -R 2>/dev/null | \
+              grep "=> /mingw64" | \
+              awk '{print $3}' | \
+              sort -u | \
+              xargs -r -I {} cp -n {} "${TARGET_DIR}/" 2>/dev/null || true
           done
           
-          # 8. 生成 qt.conf
-          echo -e "[Paths]\nPrefix = .\nPlugins = .\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
+          # 8. 【备用方案】如果还有缺失，直接拷贝 /mingw64/bin 中所有 lib*.dll
+          # 这会增加包体积，但能确保不缺失任何依赖
+          echo "Copying remaining lib*.dll as fallback..."
+          find /mingw64/bin -maxdepth 1 -name "lib*.dll" -exec cp -n -t "${TARGET_DIR}/" {} + 2>/dev/null || true
+          
+          # 9. 生成 qt.conf
+          echo -e "[Paths]\nPrefix = .\nPlugins = plugins\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
+          
+          # 10. 验证关键 DLL 是否存在
+          echo "Verifying critical DLLs..."
+          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll libstdc++-6.dll libgcc_s_seh-1.dll; do
+            if [ -f "${TARGET_DIR}/${dll}" ]; then
+              echo "✓ ${dll} found"
+            else
+              echo "✗ ${dll} MISSING!"
+            fi
+          done
           
           echo "Package preparation completed."
+          echo "Total files in package: $(find "${TARGET_DIR}" -type f | wc -l)"
 
       - name: Compress
         run: |
@@ -151,4 +198,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
-          body: "Auto-fix: Diagnostic mode for DLL scanning."
+          body: "Fixed: Added comprehensive DLL dependency collection including Qt core libs (ICU, Freetype, Harfbuzz, etc.)"

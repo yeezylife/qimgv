@@ -1,5 +1,6 @@
 name: qimgv-qt6-slim
 on: [workflow_dispatch]
+
 jobs:
   build:
     runs-on: windows-latest
@@ -34,15 +35,18 @@ jobs:
             mingw-w64-ucrt-x86_64-lcms2
             mingw-w64-ucrt-x86_64-libavif
             mingw-w64-ucrt-x86_64-libheif
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set Variables
         id: vars
         run: |
           BNAME="qimgv-x64-qt6_$(git describe --tags --always)"
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
+
       - name: Build qimgv
         run: |
           cmake -B build -S . -G Ninja \
@@ -52,69 +56,90 @@ jobs:
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
+
       - name: Prepare Slim Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
           mkdir -p "$TARGET/plugins/styles"
+
           echo "--- Copying core executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-          echo "--- Manual Pre-copy Qt6 core libs (to bootstrap dependency scan) ---"
-          cp /ucrt64/bin/Qt6{Core,Gui,Widgets,Svg,Network}.dll "$TARGET/" 2>/dev/null || true
-          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
+
+          echo "--- Copying Qt plugins ---"
+          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/" 2>/dev/null || true
+          cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
+          cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
+
+          cp /ucrt64/share/qt6/plugins/imageformats/q{jpeg,gif,ico,svg,webp,wbmp}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
+          cp /ucrt64/share/kf6/plugins/imageformats/kimg_{jxl,heif,avif,exr,hdr}.dll "$TARGET/plugins/imageformats/" 2>/dev/null || true
+
           echo "--- Writing qt.conf ---"
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
+
           echo "--- Starting Recursive Dependency Scan ---"
           iteration=0
           while true; do
             iteration=$((iteration+1))
-            NEW_DEP_FOUND=false
             echo "Scan iteration $iteration..."
-            # 使用临时文件避免 for 循环中空格/特殊字符问题
-            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > files_to_scan.txt
+            NEW_DEP_FOUND=false
+
+            # 生成扫描列表（避免空格路径问题）
+            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > scan_list.txt
+
             while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              # 经典可靠的 ntldd 依赖提取管道（来自 MSYS2 社区实践）
-              ntldd -R "$f" 2>/dev/null | grep '=>' | grep '/ucrt64/' | awk '{print $3}' | while read -r dep_path; do
-                if [ -n "$dep_path" ] && [ ! -f "$TARGET/$(basename "$dep_path")" ]; then
-                  cp -v "$dep_path" "$TARGET/"
-                  echo " [+] Added: $(basename "$dep_path") (from $(basename "$f"))"
-                  echo "found" > found.tmp
+              # 获取 ntldd 输出
+              raw_deps=$(ntldd -R "$f" 2>/dev/null || true)
+
+              # 提取所有 DLL 路径（最通用、最稳的匹配）
+              echo "$raw_deps" | grep -oP '([A-Z]:)?/[^ ]+\.dll' | while read -r dep_path; do
+                if [ -f "$dep_path" ]; then
+                  dep_name=$(basename "$dep_path")
+                  if [ ! -f "$TARGET/$dep_name" ]; then
+                    cp "$dep_path" "$TARGET/"
+                    echo "  [+] Added: $dep_name (required by $(basename "$f"))"
+                    echo "found" > found.tmp
+                  fi
                 fi
               done
-            done < files_to_scan.txt
-            rm -f files_to_scan.txt
+
+            done < scan_list.txt
+
+            # 检查是否发现新依赖
             if [ -f found.tmp ]; then
               NEW_DEP_FOUND=true
               rm found.tmp
             fi
-            if [ "$NEW_DEP_FOUND" = false ] || [ $iteration -gt 25 ]; then
+
+            # 没有新依赖 → 结束
+            if [ "$NEW_DEP_FOUND" = false ]; then
+              echo "No more dependencies found. Scan complete."
+              break
+            fi
+
+            # 防止死循环
+            if [ $iteration -gt 30 ]; then
+              echo "Reached max iteration limit."
               break
             fi
           done
-          echo "--- Copying Qt imageformat plugins ---"
-          for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
-            src="/ucrt64/share/qt6/plugins/imageformats/$fmt"
-            [ -f "$src" ] && cp "$src" "$TARGET/plugins/imageformats/"
-          done
-          echo "--- Copying KDE kimageformats plugins ---"
-          for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
-            src="/ucrt64/share/kf6/plugins/imageformats/$kfmt"
-            [ -f "$src" ] && cp "$src" "$TARGET/plugins/imageformats/"
-          done
+
+          rm -f scan_list.txt
+
           echo "--- Slim package ready ---"
-          echo "Files List:"
-          ls -l "$TARGET"
           echo "Total files: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
+
       - name: Compress
         run: |
           7z a "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
+
       - uses: actions/upload-artifact@v4
         with:
           name: qimgv-binary
           path: ${{ steps.vars.outputs.build_file_name }}
+
   upload-release:
     runs-on: ubuntu-latest
     needs: build
@@ -130,4 +155,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
-          body: "Slim build: recursive ntldd dependency scan + minimal Qt/KF6 plugins."
+          body: "Fix: Enhanced dependency scanner with manual core-lib pre-copy."

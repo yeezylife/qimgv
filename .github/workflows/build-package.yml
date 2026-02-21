@@ -1,3 +1,4 @@
+
 name: qimgv-qt6-slim
 on: [workflow_dispatch]
 
@@ -57,7 +58,7 @@ jobs:
             -DCMAKE_PREFIX_PATH=/ucrt64
           cmake --build build --config Release
 
-      - name: Prepare Slim Package
+- name: Prepare Slim Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
           mkdir -p "$TARGET/plugins/imageformats"
@@ -68,64 +69,62 @@ jobs:
           cp build/qimgv/qimgv.exe "$TARGET/"
 
           echo "--- Copying Qt plugins ---"
-          # 平台插件 (Windows 运行必需)
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
-          
-          # 样式插件 (防止界面回退到 Windows 95 风格)
           cp /ucrt64/share/qt6/plugins/styles/qfusionstyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
           cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" 2>/dev/null || true
 
-          # 图像格式插件
           for fmt in qjpeg.dll qgif.dll qico.dll qsvg.dll qwebp.dll qwbmp.dll; do
             [ -f "/ucrt64/share/qt6/plugins/imageformats/$fmt" ] && cp "/ucrt64/share/qt6/plugins/imageformats/$fmt" "$TARGET/plugins/imageformats/"
           done
 
-          # KDE 扩展图像格式 (HEIC, AVIF, JXL)
           for kfmt in kimg_jxl.dll kimg_heif.dll kimg_avif.dll kimg_exr.dll kimg_hdr.dll; do
             [ -f "/ucrt64/share/kf6/plugins/imageformats/$kfmt" ] && cp "/ucrt64/share/kf6/plugins/imageformats/$kfmt" "$TARGET/plugins/imageformats/"
           done
 
           echo "--- Writing qt.conf ---"
-          # 强制程序去 plugins 目录找 DLL
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins" > "$TARGET/qt.conf"
 
           echo "--- Starting Recursive Dependency Scan ---"
-          # 核心修复：使用一个非管道形式的 while 循环，确保 NEW_DEP 变量能逃出循环
           iteration=0
           while true; do
             iteration=$((iteration+1))
             NEW_DEP_FOUND=0
             echo "Scan iteration: $iteration"
             
-            # 获取当前目录内所有的二进制文件
-            FILES=$(find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \))
+            # 使用临时文件存储文件列表，避免 for 循环处理空格时的崩溃
+            find "$TARGET" -type f \( -name "*.exe" -o -name "*.dll" \) > scan_list.txt
             
-            for f in $FILES; do
-              # 使用 ntldd 找出所有指向 /ucrt64 系统的依赖
-              # 注意：awk '{print $3}' 提取的是 DLL 的完整系统路径
-              deps=$(ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}')
+            while IFS= read -r f; do
+              # 关键修复：增加 || true，防止 grep 找不到结果时导致脚本退出
+              # 同时确保 deps 不为空时才处理
+              deps=$(ntldd -R "$f" 2>/dev/null | grep "=> /ucrt64" | awk '{print $3}' || true)
               
-              for dep_path in $deps; do
-                dep_name=$(basename "$dep_path")
-                if [ ! -f "$TARGET/$dep_name" ]; then
-                  cp "$dep_path" "$TARGET/"
-                  echo "  [+] Added $dep_name (required by $(basename $f))"
-                  NEW_DEP_FOUND=1
-                fi
-              done
-            done
+              if [ -n "$deps" ]; then
+                for dep_path in $deps; do
+                  dep_name=$(basename "$dep_path")
+                  if [ ! -f "$TARGET/$dep_name" ]; then
+                    cp "$dep_path" "$TARGET/"
+                    echo "  [+] Added $dep_name (required by $(basename "$f"))"
+                    NEW_DEP_FOUND=1
+                  fi
+                done
+              fi
+            done < scan_list.txt
 
-            # 如果这一轮扫描没有增加任何新文件，说明依赖已补全，退出循环
             if [ "$NEW_DEP_FOUND" -eq 0 ]; then
+              echo "No more dependencies found. Scan complete."
               break
             fi
             
-            # 安全阈值，防止无限循环
-            if [ $iteration -gt 20 ]; then break; fi
+            if [ $iteration -gt 30 ]; then 
+              echo "Reached max iteration limit."
+              break 
+            fi
           done
 
+          rm -f scan_list.txt
           echo "--- Slim package ready ---"
-          echo "Total files count: $(find "$TARGET" -type f | wc -l)"
+          echo "Total files: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
 
       - name: Compress

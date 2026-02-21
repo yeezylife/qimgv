@@ -26,6 +26,7 @@ jobs:
             mingw-w64-x86_64-qt6-svg
             mingw-w64-x86_64-qt6-imageformats
             mingw-w64-x86_64-qt6-tools
+            mingw-w64-x86_64-kimageformats  # ← 新增：KDE 图像格式插件包
             mingw-w64-x86_64-libjxl
             mingw-w64-x86_64-libraw
             mingw-w64-x86_64-exiv2
@@ -72,78 +73,79 @@ jobs:
           # 1. 拷贝主程序
           cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
           
-          # 2. 下载并安装 JXL 插件
-          echo "Downloading JXL plugin..."
-          curl -L -o "${TARGET_DIR}/imageformats/qjpegxl6.dll" \
-            https://github.com/novomesk/qt-jpegxl-image-plugin/releases/latest/download/qjpegxl6.dll  
+          # 2. 【重要】使用 kimageformats 的 JXL 插件，而非第三方
+          # kimageformats 提供的 qjxl.dll 更稳定，与 Qt6 集成更好
+          echo "Copying kimageformats plugins..."
+          cp -f /mingw64/share/qt6/plugins/imageformats/qjxl.dll "${TARGET_DIR}/imageformats/" || true
           
-          # 3. 部署 Qt6 基础环境 (使用 verbose 模式便于调试)
+          # 3. 部署 Qt6 基础环境
           echo "Deploying Qt dependencies..."
           windeployqt --verbose --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe" || true
           
-          # 4. 强制补充 Qt 插件
-          echo "Copying Qt plugins..."
+          # 4. 强制补充其他 Qt 图像格式插件
+          echo "Copying Qt image format plugins..."
           cp -f /mingw64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
+          
+          # 5. 拷贝插件依赖
           cp -f /mingw64/share/qt6/plugins/platforms/qwindows.dll "${TARGET_DIR}/platforms/" || true
           cp -f /mingw64/share/qt6/plugins/styles/*.dll "${TARGET_DIR}/styles/" || true
           
-          # 5. 拷贝 qimgv 自身的翻译文件
+          # 6. 拷贝翻译文件
           cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
-          # 补充 Qt 翻译文件
           cp -f /mingw64/share/qt6/translations/qt_*.qm "${TARGET_DIR}/translations/" || true
           
-          # 6. 【关键修复】扩大 DLL 依赖收集范围
+          # 7. DLL 依赖收集
           echo "Collecting ALL required DLLs..."
           
-          # 6.1 Qt 核心库 (必须包含)
           QT_PATTERNS=(
             "Qt6Core*.dll" "Qt6Gui*.dll" "Qt6Widgets*.dll" "Qt6Svg*.dll"
             "Qt6Network*.dll" "Qt6Concurrent*.dll" "Qt6DBus*.dll"
-            "Qt6PrintSupport*.dll"  # ← 新增
+            "Qt6PrintSupport*.dll"
             "libb2*.dll" "libdouble-conversion*.dll"
             "libicudata*.dll" "libicuin*.dll" "libicuuc*.dll"
             "libfreetype*.dll" "libharfbuzz*.dll" "libgraphite2*.dll"
             "libpng*.dll" "libjpeg*.dll" "libtiff*.dll"
           )
           
-          # 6.2 OpenCV 及相关数学库
+          # kimageformats 相关依赖
+          KIMAGEFORMATS_PATTERNS=(
+            "libjxl*.dll" "libjxl_threads*.dll"
+            "liblcms2*.dll" "libpng*.dll"
+          )
+          
           OPENCV_PATTERNS=(
             "libopencv_core*.dll" "libopencv_imgproc*.dll" "libopencv_imgcodecs*.dll"
             "libopencv_videoio*.dll" "libopencv_highgui*.dll"
             "libtbb*.dll" "libopenblas*.dll" "liblapack*.dll"
           )
           
-          # 6.3 图像格式库
           IMAGE_PATTERNS=(
-            "libjxl*.dll" "libjxl_threads*.dll" "libraw*.dll"
-            "libheif*.dll" "libavif*.dll" "libwebp*.dll" "libwebpdemux*.dll"
+            "libraw*.dll" "libheif*.dll" "libavif*.dll" 
+            "libwebp*.dll" "libwebpdemux*.dll"
             "libhwy*.dll" "libbrotli*.dll" "libaom*.dll"
           )
           
-          # 6.4 其他多媒体库
           MEDIA_PATTERNS=(
             "libmpv*.dll" "libavcodec*.dll" "libavformat*.dll" "libavutil*.dll"
             "libswscale*.dll" "libswresample*.dll"
-            "liblcms2*.dll" "libexiv2*.dll"
+            "libexiv2*.dll"
           )
           
-          # 6.5 运行时库 (必须)
           RUNTIME_PATTERNS=(
             "libstdc++*.dll" "libgcc_s*.dll" "libwinpthread*.dll"
             "zlib*.dll" "libzstd*.dll"
           )
           
-          # 合并所有模式
           ALL_PATTERNS=(
-            "${QT_PATTERNS[@]}" "${OPENCV_PATTERNS[@]}" "${IMAGE_PATTERNS[@]}"
-            "${MEDIA_PATTERNS[@]}" "${RUNTIME_PATTERNS[@]}"
+            "${QT_PATTERNS[@]}" "${KIMAGEFORMATS_PATTERNS[@]}" "${OPENCV_PATTERNS[@]}" 
+            "${IMAGE_PATTERNS[@]}" "${MEDIA_PATTERNS[@]}" "${RUNTIME_PATTERNS[@]}"
           )
           
           for pattern in "${ALL_PATTERNS[@]}"; do
             find /mingw64/bin -maxdepth 1 -name "$pattern" -exec cp -t "${TARGET_DIR}/" {} + 2>/dev/null || true
           done
           
-          # 7. 【增强】深度依赖扫描 - 多轮迭代确保捕获所有传递依赖
+          # 8. 深度依赖扫描
           echo "Scanning for deep dependencies..."
           for i in {1..5}; do
             echo "Pass #$i"
@@ -155,23 +157,25 @@ jobs:
               xargs -r -I {} cp -n {} "${TARGET_DIR}/" 2>/dev/null || true
           done
           
-          # 8. 【备用方案】如果还有缺失，直接拷贝 /mingw64/bin 中所有 lib*.dll
-          # 这会增加包体积，但能确保不缺失任何依赖
+          # 9. 备用方案
           echo "Copying remaining lib*.dll as fallback..."
           find /mingw64/bin -maxdepth 1 -name "lib*.dll" -exec cp -n -t "${TARGET_DIR}/" {} + 2>/dev/null || true
           
-          # 9. 生成 qt.conf
+          # 10. 生成 qt.conf
           echo -e "[Paths]\nPrefix = .\nPlugins = plugins\nTranslations = translations" > "${TARGET_DIR}/qt.conf"
           
-          # 10. 验证关键 DLL 是否存在
-          echo "Verifying critical DLLs..."
-          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6PrintSupport.dll libstdc++-6.dll; do
-            if [ -f "${TARGET_DIR}/${dll}" ]; then
-              echo "✓ ${dll} found"
-            else
-              echo "✗ ${dll} MISSING!"
-            fi
-          done
+          # 11. 验证 JXL 支持
+          echo "Verifying JXL support..."
+          if [ -f "${TARGET_DIR}/imageformats/qjxl.dll" ]; then
+            echo "✓ qjxl.dll (kimageformats) found"
+          else
+            echo "✗ qjxl.dll MISSING!"
+          fi
+          if [ -f "${TARGET_DIR}/libjxl.dll" ]; then
+            echo "✓ libjxl.dll found"
+          else
+            echo "✗ libjxl.dll MISSING!"
+          fi
           
           echo "Package preparation completed."
           echo "Total files in package: $(find "${TARGET_DIR}" -type f | wc -l)"
@@ -199,4 +203,4 @@ jobs:
           prerelease: true
           tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
-          body: "Fixed: Added comprehensive DLL dependency collection including Qt core libs (ICU, Freetype, Harfbuzz, etc.)"
+          body: "Fixed: Added kimageformats for proper JXL support (Qt6)."

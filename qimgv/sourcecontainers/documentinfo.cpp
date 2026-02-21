@@ -193,7 +193,7 @@ void DocumentInfo::loadExifTags() {
     try {
         std::unique_ptr<Exiv2::Image> image;
 
-        std::string utf8path = QString::fromStdWString(toStdString(fileInfo.filePath())).toUtf8().constData();
+        std::string utf8path = QString::fromStdWString(toStdString(fileInfo.filePath())).toStdString();
 image = Exiv2::ImageFactory::open(utf8path);
 
 

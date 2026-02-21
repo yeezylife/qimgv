@@ -1,5 +1,4 @@
-name: msys2 dev-latest (Qt6 + libjxl + jpegxl plugin)
-
+name: qimgv-qt6-ultimate-fix
 on: [workflow_dispatch]
 
 jobs:
@@ -8,136 +7,119 @@ jobs:
     defaults:
       run:
         shell: msys2 {0}
+    outputs:
+      build_name: ${{ steps.vars.outputs.build_name }}
+      build_file_name: ${{ steps.vars.outputs.build_file_name }}
     steps:
       - uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
           install: >-
-            git
-            p7zip
-            mingw-w64-x86_64-ntldd
-            mingw-w64-x86_64-toolchain
+            git 
+            p7zip 
+            mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-extra-cmake-modules
             mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-ntldd
             mingw-w64-x86_64-qt6-base
             mingw-w64-x86_64-qt6-svg
+            mingw-w64-x86_64-qt6-imageformats
             mingw-w64-x86_64-qt6-tools
-            mingw-w64-x86_64-exiv2
-            mingw-w64-x86_64-lerc
-            mingw-w64-x86_64-aom
-            mingw-w64-x86_64-libavif
-            mingw-w64-x86_64-libheif
-            mingw-w64-x86_64-libwebp
-            mingw-w64-x86_64-libmng
-            mingw-w64-x86_64-libraw
-            mingw-w64-x86_64-gflags
             mingw-w64-x86_64-libjxl
+            mingw-w64-x86_64-libraw
+            mingw-w64-x86_64-exiv2
             mingw-w64-x86_64-opencv
             mingw-w64-x86_64-mpv
+            mingw-w64-x86_64-lcms2
 
       - uses: actions/checkout@v4
-        with:
+        with: 
           fetch-depth: 0
 
-      - id: build
-        name: CI-Build
+      - name: Set Variables
+        id: vars
         run: |
-          export BUILD_NAME="qimgv-x64_$(git describe --tags --always)"
-          echo "build_name=${BUILD_NAME}" >> $GITHUB_OUTPUT
-          echo "build_file_name=${BUILD_NAME}.7z" >> $GITHUB_OUTPUT
+          BNAME="qimgv-x64-qt6_$(git describe --tags --always)"
+          echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
+          echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
-          mkdir -p build
-          cd build
-
-          cmake .. -G "Ninja" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DUSE_QT5=OFF \
-            -DEXIV2=ON \
-            -DVIDEO_SUPPORT=ON \
-            -DOPENCV_SUPPORT=ON \
-            -DKDE_SUPPORT=OFF \
-            -DCMAKE_INSTALL_PREFIX="${PWD}/install"
-
-          cmake --build . -j$(nproc)
-
-          cmake --install .
-
-          TARGET_DIR="../${BUILD_NAME}"
-          mkdir -p "${TARGET_DIR}"
-
-          cp -r install/bin/* "${TARGET_DIR}/" 2>/dev/null || true
-          cp -r install/share "${TARGET_DIR}/" 2>/dev/null || true
-
-          windeployqt --no-translations --compiler-runtime "${TARGET_DIR}/qimgv.exe"
-
-          # 构建 qt-jpegxl-image-plugin (JXL 支持插件)
-          cd ..
+      - name: Build JXL Plugin
+        run: |
           git clone https://github.com/novomesk/qt-jpegxl-image-plugin.git
-          cd qt-jpegxl-image-plugin
-          mkdir build && cd build
-          cmake .. -G "Ninja" \
+          cmake -B build-jxl -S qt-jpegxl-image-plugin -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DQT_VERSION_MAJOR=6
-          cmake --build . -j$(nproc)
+          cmake --build build-jxl
 
-          # 复制插件 DLL（仓库中项目名为 qjpegxl）
-          mkdir -p "../../${BUILD_NAME}/imageformats"
-          cp qjpegxl.dll "../../${BUILD_NAME}/imageformats/" || cp *.dll "../../${BUILD_NAME}/imageformats/" || true
+      - name: Fix Windows Unicode Path Issue
+        run: |
+          # 修复 directorymanager.cpp 中的字符编码问题
+          sed -i 's/entry\.path()\.generic_string()\.c_str()/entry.path().wstring().c_str()/g' \
+            qimgv/components/directorymanager/directorymanager.cpp
+          echo "Applied Unicode path fix."
 
-          # 可选：如果想额外加 KDE kimageformats 插件（Qt6 版包存在）
-          cd ../..
-          mkdir -p "${BUILD_NAME}/imageformats"
-          cp /mingw64/lib/qt6/plugins/imageformats/kimg_*.dll "${BUILD_NAME}/imageformats/" || true
+      - name: Build qimgv
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_QT5=OFF \
+            -DVIDEO_SUPPORT=ON \
+            -DOPENCV_SUPPORT=ON \
+            -DCMAKE_PREFIX_PATH=/mingw64
+          cmake --build build --config Release
 
-          # ntldd 递归收集所有依赖 DLL
-          echo "Collecting dependencies with ntldd..."
-          declare -A seen
-          collect_dlls() {
-            local file="$1"
-            [ ! -f "$file" ] && return
-            local dlls=$(ntldd -R "$file" 2>/dev/null | grep -i "mingw64" | cut -d'>' -f2 | cut -d'(' -f1 | sed 's/^[ \t]*//;s/[ \t]*$//')
-            for dll in $dlls; do
-              if [ -f "$dll" ] && [ -z "${seen[$dll]}" ]; then
-                seen["$dll"]=1
-                cp -vn "$dll" "${BUILD_NAME}/"
-                collect_dlls "$dll"
-              fi
-            done
-          }
-
-          collect_dlls "${BUILD_NAME}/qimgv.exe"
-          for f in "${BUILD_NAME}"/*.dll "${BUILD_NAME}/imageformats"/*.dll; do
-            [ -f "$f" ] && collect_dlls "$f"
+      - name: Prepare Package
+        run: |
+          TARGET_DIR="./${{ steps.vars.outputs.build_name }}"
+          mkdir -p "${TARGET_DIR}"
+          cp build/qimgv/qimgv.exe "${TARGET_DIR}/"
+          
+          # 1. 部署标准 Qt 库
+          windeployqt6 --no-translations --compiler-runtime --no-opengl-sw "${TARGET_DIR}/qimgv.exe"
+          
+          # 2. 部署 JXL 插件 (从刚才编译的目录拷贝)
+          mkdir -p "${TARGET_DIR}/imageformats"
+          cp build-jxl/qjxl.dll "${TARGET_DIR}/imageformats/"
+          
+          # 3. 部署系统/Qt 图像格式插件
+          cp -f /mingw64/share/qt6/plugins/imageformats/*.dll "${TARGET_DIR}/imageformats/" || true
+          
+          # 4. 生成 qt.conf
+          echo -e "[Paths]\nPrefix = .\nPlugins = ." > "${TARGET_DIR}/qt.conf"
+          
+          # 5. 拷贝 qimgv 自身的翻译文件
+          mkdir -p "${TARGET_DIR}/translations"
+          cp -f build/qimgv/translations/*.qm "${TARGET_DIR}/translations/" || true
+          
+          # 6. 使用 ntldd 递归收集所有缺失的 DLL (核心修复)
+          echo "Collecting deep dependencies..."
+          # 循环 3 次以确保捕获依赖的依赖
+          for i in {1..3}; do
+            find "${TARGET_DIR}" -name "*.exe" -o -name "*.dll" | xargs ntldd -R | grep "=> /mingw64" | awk '{print $3}' | sort -u | xargs -I {} cp -n {} "${TARGET_DIR}/"
           done
 
-          # 打包
-          7z a "${BUILD_NAME}.7z" "${BUILD_NAME}/"
+      - name: Compress
+        run: |
+          7z a "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: qimgv-build
-          path: ${{ steps.build.outputs.build_file_name }}
-
-    outputs:
-      build_name: ${{ steps.build.outputs.build_name }}
-      build_file_name: ${{ steps.build.outputs.build_file_name }}
+          name: qimgv-binary
+          path: ${{ steps.vars.outputs.build_file_name }}
 
   upload-release:
     runs-on: ubuntu-latest
     needs: build
-    if: always()
     steps:
       - uses: actions/download-artifact@v4
-        with:
-          name: qimgv-build
-
+        with: 
+          name: qimgv-binary
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ needs.build.outputs.build_file_name }}
-          tag_name: latest-dev
-          name: ${{ needs.build.outputs.build_name }}
           prerelease: true
-          body: "Automated Qt6 build with qt-jpegxl-image-plugin (JXL), libjxl deps, AVIF/HEIF/WebP support via upstream libs."
+          tag_name: latest-dev-qt6
+          name: ${{ needs.build.outputs.build_name }}
+          body: "Auto-build with Qt6 and JXL support. Fixed dependency resolution and path issues."

@@ -48,10 +48,9 @@ jobs:
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
-      # ❌ 删除错误的 sed 修改（这是导致 Exiv2 报错的原因）
       - name: Remove broken Unicode patch
         run: |
-          echo "No Unicode patch applied (previous sed removed)."
+          echo "No Unicode patch applied."
 
       - name: Build qimgv
         run: |
@@ -66,7 +65,6 @@ jobs:
       - name: Prepare Slim Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-          mkdir -p "$TARGET"
           mkdir -p "$TARGET/plugins/imageformats"
           mkdir -p "$TARGET/plugins/platforms"
           mkdir -p "$TARGET/plugins/styles"
@@ -79,7 +77,7 @@ jobs:
           cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll "$TARGET/plugins/platforms/"
           cp /ucrt64/share/qt6/plugins/styles/qwindowsvistastyle.dll "$TARGET/plugins/styles/" || true
 
-          # Image formats (only essential)
+          echo "Copy essential imageformats"
           cp /ucrt64/share/qt6/plugins/imageformats/qjpeg.dll "$TARGET/plugins/imageformats/"
           cp /ucrt64/share/qt6/plugins/imageformats/qgif.dll "$TARGET/plugins/imageformats/"
           cp /ucrt64/share/qt6/plugins/imageformats/qico.dll "$TARGET/plugins/imageformats/"
@@ -91,13 +89,11 @@ jobs:
           echo "Copy translations"
           cp /ucrt64/share/qt6/translations/qt_*.qm "$TARGET/translations/" || true
 
-          echo "Create qt.conf"
-          cat > "$TARGET/qt.conf" <<EOF
-[Paths]
-Prefix = .
-Plugins = plugins
-Translations = translations
-EOF
+          echo "Write qt.conf"
+          echo "[Paths]" > "$TARGET/qt.conf"
+          echo "Prefix = ." >> "$TARGET/qt.conf"
+          echo "Plugins = plugins" >> "$TARGET/qt.conf"
+          echo "Translations = translations" >> "$TARGET/qt.conf"
 
           echo "Start reverse dependency scan"
           while true; do

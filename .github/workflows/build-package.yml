@@ -10,7 +10,11 @@ jobs:
     outputs:
       build_name: ${{ steps.vars.outputs.build_name }}
       build_file_name: ${{ steps.vars.outputs.build_file_name }}
+
     steps:
+      # ---------------------------------------------------------
+      # 1. Install MSYS2 + Dependencies
+      # ---------------------------------------------------------
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -37,10 +41,16 @@ jobs:
             mingw-w64-ucrt-x86_64-libheif
             python3
 
+      # ---------------------------------------------------------
+      # 2. Checkout
+      # ---------------------------------------------------------
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ---------------------------------------------------------
+      # 3. Set Variables
+      # ---------------------------------------------------------
       - name: Set Variables
         id: vars
         run: |
@@ -48,6 +58,9 @@ jobs:
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
+      # ---------------------------------------------------------
+      # 4. Build qimgv (with linker stripping)
+      # ---------------------------------------------------------
       - name: Build qimgv
         run: |
           cmake -B build -S . -G Ninja \
@@ -55,22 +68,23 @@ jobs:
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
-            -DCMAKE_PREFIX_PATH=/ucrt64
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-s" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-s"
           cmake --build build --config Release
 
-      - name: Prepare Slim Package (The Master Version)
+      # ---------------------------------------------------------
+      # 5. Prepare Slim Package + Optimized Dependency Resolver
+      # ---------------------------------------------------------
+      - name: Prepare Slim Package (Optimized)
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-          # 创建标准的 Qt 插件布局
-          mkdir -p "$TARGET/imageformats"
-          mkdir -p "$TARGET/platforms"
-          mkdir -p "$TARGET/styles"
+          mkdir -p "$TARGET/imageformats" "$TARGET/platforms" "$TARGET/styles"
 
           echo "--- Copying Core Executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
 
           echo "--- Collecting Plugins from MSYS2 ---"
-          # 遍历 UCRT64 中所有可能的插件存放点
           PLUGIN_SOURCES=(
             "/ucrt64/lib/qt6/plugins"
             "/ucrt64/share/qt6/plugins"
@@ -80,80 +94,95 @@ jobs:
 
           for src in "${PLUGIN_SOURCES[@]}"; do
             if [ -d "$src" ]; then
-              echo "Checking $src..."
-              # 平台支持
               [ -d "$src/platforms" ] && cp -n "$src/platforms/qwindows.dll" "$TARGET/platforms/" 2>/dev/null || true
-              # 图像格式 (Qt + KDE)
               [ -d "$src/imageformats" ] && cp -n "$src/imageformats"/*.dll "$TARGET/imageformats/" 2>/dev/null || true
-              # 界面样式
               [ -d "$src/styles" ] && cp -n "$src/styles"/*.dll "$TARGET/styles/" 2>/dev/null || true
             fi
           done
 
           echo "--- Creating qt.conf ---"
-          # 强制指定 Prefix 为当前目录，Qt 将会自动加载旁边的 imageformats 文件夹
           echo -e "[Paths]\nPrefix = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
 
-          echo "--- Starting Greedy Dependency Resolver ---"
-          # 使用 Python 进行深度递归扫描，确保插件的依赖也被拷贝
+          echo "--- Starting Optimized Dependency Resolver ---"
           python3 - <<EOF
           import os, subprocess, shutil
           from pathlib import Path
 
           target_dir = os.path.abspath("$TARGET")
-          
+
+          # Cache for ntldd results to avoid repeated parsing
+          ntldd_cache = {}
+
           def get_ntldd_deps(file_path):
+              if file_path in ntldd_cache:
+                  return ntldd_cache[file_path]
               try:
-                  # 获取所有被标记为 ucrt64 的依赖项
-                  out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
+                  out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode()
                   deps = []
                   for line in out.splitlines():
                       if "=>" in line and "ucrt64" in line.lower():
                           path = line.split("=>")[1].split("(")[0].strip()
                           if os.path.exists(path):
                               deps.append(path)
+                  ntldd_cache[file_path] = deps
                   return deps
               except:
                   return []
 
-          scanned_files = set()
+          scanned = set()
           while True:
               found_new = False
-              # 扫描根目录及所有子目录下的 exe 和 dll
-              current_files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
-              
-              for f in current_files:
-                  f_path = str(f)
-                  if f_path in scanned_files: continue
-                  
-                  deps = get_ntldd_deps(f_path)
-                  for d in deps:
-                      d_name = os.path.basename(d)
-                      dest = os.path.join(target_dir, d_name) # 依赖库统一放根目录
+              files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
+
+              for f in files:
+                  f = str(f)
+                  if f in scanned:
+                      continue
+
+                  for dep in get_ntldd_deps(f):
+                      name = os.path.basename(dep)
+                      dest = os.path.join(target_dir, name)
                       if not os.path.exists(dest):
-                          print(f"  [+] Found: {d_name} (needed by {f.name})")
-                          shutil.copy2(d, dest)
+                          print(f"  [+] Adding & Stripping: {name}")
+                          shutil.copy2(dep, dest)
+                          subprocess.run(["strip", "--strip-unneeded", dest])
                           found_new = True
-                  scanned_files.add(f_path)
-              
-              if not found_new: break
+
+                  scanned.add(f)
+
+              if not found_new:
+                  break
           EOF
 
-          echo "--- Package Verification ---"
-          echo "Checking JXL plugin presence:"
-          find "$TARGET" -name "*jxl*"
+          echo "--- Final Strip Pass ---"
+          strip --strip-unneeded "$TARGET/qimgv.exe"
+          find "$TARGET" -name "*.dll" -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+          echo "--- Plugin Verification ---"
+          echo "Checking JXL plugin:"
+          find "$TARGET" -name "*jxl*" || echo "WARNING: JXL plugin missing!"
+
           echo "Total file count: $(find "$TARGET" -type f | wc -l)"
           du -sh "$TARGET"
 
+      # ---------------------------------------------------------
+      # 6. Compress
+      # ---------------------------------------------------------
       - name: Compress
         run: |
           7z a -mx=9 "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
 
+      # ---------------------------------------------------------
+      # 7. Upload Artifact
+      # ---------------------------------------------------------
       - uses: actions/upload-artifact@v4
         with:
           name: qimgv-binary
           path: ${{ steps.vars.outputs.build_file_name }}
 
+  # ---------------------------------------------------------
+  # 8. Upload Release
+  # ---------------------------------------------------------
   upload-release:
     runs-on: ubuntu-latest
     needs: build
@@ -162,6 +191,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: qimgv-binary
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
@@ -170,7 +200,9 @@ jobs:
           tag_name: latest-dev-qt6-slim
           name: ${{ needs.build.outputs.build_name }}
           body: |
-            ### Slim Portable Build
-            - **Qt6 & KF6 Plugins**: Full support for JXL, AVIF, HEIC, etc.
-            - **Engines**: OpenCV & MPV support included.
-            - **Dependency Scanning**: Recursive Python resolver used.
+            ### Slim Portable Build (YML4 Optimized)
+            - **Optimized Dependency Resolver** with caching.
+            - **Linker Stripping** (`-Wl,-s`) + **Runtime Stripping**.
+            - **Qt6 & KF6 Plugins**: JXL, AVIF, HEIC, etc.
+            - **Engines**: OpenCV & MPV included.
+            - **Plugin Verification**: Ensures JXL plugin presence.

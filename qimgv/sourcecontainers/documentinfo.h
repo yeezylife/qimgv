@@ -7,6 +7,8 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QMap>
+#include <QMimeType>
 #include <cmath>
 #include <cstring>
 #include "utils/stuff.h"
@@ -53,6 +55,7 @@ private:
     int mOrientation;
     QString mFormat;
     bool exifLoaded;
+    bool orientationLoaded;  // ← 添加这一行
 
     // guesses file type from its contents
     // and sets extension

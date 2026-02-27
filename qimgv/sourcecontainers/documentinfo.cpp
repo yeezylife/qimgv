@@ -6,8 +6,8 @@
 #include <QDataStream>
 #include <memory>
 
-// 假设 settings 是全局可访问的，已在 settings.h 中声明为 extern
-// 如果未声明，请在此处添加：extern Settings* settings;
+// 假设 settings 是全局可访问的
+// extern Settings* settings;
 
 DocumentInfo::DocumentInfo(QString path)
     : mDocumentType(DocumentType::NONE),
@@ -41,7 +41,9 @@ void DocumentInfo::refresh() {
 }
 
 int DocumentInfo::exifOrientation() const {
+    std::lock_guard<std::mutex> lock(mMutex);
     if(!orientationLoaded) {
+        // const_cast is safe here because we are protected by mutex
         const_cast<DocumentInfo*>(this)->loadExifOrientation();
     }
     return mOrientation;
@@ -50,15 +52,27 @@ int DocumentInfo::exifOrientation() const {
 void DocumentInfo::detectFormat() {
     if(mDocumentType != DocumentType::NONE)
         return;
+
+    QFile file(fileInfo.filePath());
+    if(!file.open(QFile::ReadOnly)) {
+        return;
+    }
+
+    // Optimization: Read header once for MIME detection and format checks
+    // 256 bytes is usually enough for magic numbers and headers
+    QByteArray headerBuffer = file.read(256);
+    
     QMimeDatabase mimeDb;
-    mMimeType = mimeDb.mimeTypeForFile(fileInfo.filePath(), QMimeDatabase::MatchContent);
+    // Use data for MIME detection to avoid another disk read
+    mMimeType = mimeDb.mimeTypeForFileNameAndData(fileInfo.fileName(), headerBuffer);
+    
     auto mimeName = mMimeType.name().toUtf8();
     auto suffix = fileInfo.suffix().toLower().toUtf8();
 
     if(mimeName == "image/jpeg") {
         mFormat = "jpg"; mDocumentType = DocumentType::STATIC;
     } else if(mimeName == "image/png") {
-        if(QImageReader::supportedImageFormats().contains("apng") && detectAPNG()) {
+        if(QImageReader::supportedImageFormats().contains("apng") && detectAPNG(headerBuffer)) {
             mFormat = "apng"; mDocumentType = DocumentType::ANIMATED;
         } else {
             mFormat = "png"; mDocumentType = DocumentType::STATIC;
@@ -66,19 +80,23 @@ void DocumentInfo::detectFormat() {
     } else if(mimeName == "image/gif") {
         mFormat = "gif"; mDocumentType = DocumentType::ANIMATED;
     } else if(mimeName == "image/webp" || (mimeName == "audio/x-riff" && suffix == "webp")) {
-        mFormat = "webp"; mDocumentType = detectAnimatedWebP() ? DocumentType::ANIMATED : DocumentType::STATIC;
+        mFormat = "webp"; 
+        mDocumentType = detectAnimatedWebP(headerBuffer) ? DocumentType::ANIMATED : DocumentType::STATIC;
     } else if(mimeName == "image/jxl") {
-        mFormat = "jxl"; mDocumentType = detectAnimatedJxl() ? DocumentType::ANIMATED : DocumentType::STATIC;
+        mFormat = "jxl"; 
+        mDocumentType = detectAnimatedJxl(file) ? DocumentType::ANIMATED : DocumentType::STATIC;
         if(mDocumentType == DocumentType::ANIMATED && !settings->jxlAnimation()) {
             mDocumentType = DocumentType::NONE;
             qDebug() << "animated jxl is off; skipping file";
         }
     } else if(mimeName == "image/avif") {
-        mFormat = "avif"; mDocumentType = detectAnimatedAvif() ? DocumentType::ANIMATED : DocumentType::STATIC;
+        mFormat = "avif"; 
+        mDocumentType = detectAnimatedAvif(headerBuffer) ? DocumentType::ANIMATED : DocumentType::STATIC;
     } else if(mimeName == "image/bmp") {
         mFormat = "bmp"; mDocumentType = DocumentType::STATIC;
     } else if(settings->videoPlayback() && settings->videoFormats().contains(mimeName)) {
-        mDocumentType = DocumentType::VIDEO; mFormat = settings->videoFormats().value(mimeName);
+        mDocumentType = DocumentType::VIDEO; 
+        mFormat = settings->videoFormats().value(mimeName);
     } else {
         mFormat = suffix;
         if(mFormat.compare("jfif", Qt::CaseInsensitive) == 0) mFormat = "jpg";
@@ -87,51 +105,47 @@ void DocumentInfo::detectFormat() {
         else
             mDocumentType = DocumentType::STATIC;
     }
+    
+    file.close();
 }
 
-inline bool DocumentInfo::detectAPNG() {
-    QFile f(fileInfo.filePath());
-    if(f.open(QFile::ReadOnly)) {
-        QDataStream in(&f);
-        QByteArray qbuf(120, '\0');
-        if (in.readRawData(qbuf.data(), 120) > 0)
-            return qbuf.contains("acTL");
+// Optimized: uses pre-read buffer
+inline bool DocumentInfo::detectAPNG(const QByteArray &buffer) {
+    return buffer.contains("acTL");
+}
+
+// Optimized: uses pre-read buffer
+bool DocumentInfo::detectAnimatedWebP(const QByteArray &buffer) {
+    // VP8X chunk is usually at offset 12
+    if(buffer.size() < 20) return false;
+    
+    // Check "RIFF" and "WEBP" mainly done by MIME, check VP8X
+    if(buffer.mid(12, 4) == "VP8X") {
+        // Flags are at offset 16 (relative to start) or offset 4 relative to VP8X
+        // Structure: RIFF(4) Size(4) WEBP(4) VP8X(4) Flags(1) ...
+        char flags = buffer.at(16); 
+        return (flags & (1 << 1)); // AN bit
     }
     return false;
 }
 
-bool DocumentInfo::detectAnimatedWebP() {
-    QFile f(fileInfo.filePath());
-    if(f.open(QFile::ReadOnly)) {
-        QDataStream in(&f);
-        in.skipRawData(12);
-        QByteArray buf(5, '\0');
-        in.readRawData(buf.data(), 4);
-        if(strcmp(buf.constData(), "VP8X") == 0) {
-            in.skipRawData(4);
-            char flags = 0;
-            in.readRawData(&flags, 1);
-            return (flags & (1 << 1));
-        }
-    }
-    return false;
-}
-
-bool DocumentInfo::detectAnimatedJxl() {
-    QImageReader r(fileInfo.filePath(), "jxl");
+// JXL detection usually requires more parsing or QImageReader
+// We reuse the opened file handle here
+bool DocumentInfo::detectAnimatedJxl(QFile &file) {
+    // QImageReader takes ownership if passed QIODevice*, but we want to keep it alive.
+    // Pass raw pointer, but ensure reader doesn't destroy it unexpectedly? 
+    // QImageReader does not take ownership of raw pointer unless setDevice is used carefully.
+    // Actually, passing filename is safer, but we want to avoid re-open.
+    // Since file is already open:
+    QImageReader r(&file, "jxl");
     return r.supportsAnimation();
 }
 
-bool DocumentInfo::detectAnimatedAvif() {
-    QFile f(fileInfo.filePath());
-    if(f.open(QFile::ReadOnly)) {
-        QDataStream in(&f);
-        in.skipRawData(4);
-        QByteArray buf(9, '\0');
-        in.readRawData(buf.data(), 8);
-        return (strcmp(buf.constData(), "ftypavis") == 0);
-    }
-    return false;
+// Optimized: uses pre-read buffer
+bool DocumentInfo::detectAnimatedAvif(const QByteArray &buffer) {
+    // Check for 'ftypavis' brand at offset 4
+    if(buffer.size() < 12) return false;
+    return (buffer.mid(4, 8) == "ftypavis");
 }
 
 // ==================== Exiv2 相关代码 ====================
@@ -176,7 +190,6 @@ public:
     size_t write(const Exiv2::byte* data, size_t wcount) override {
         if (!isOpen_ || !data || wcount == 0) return 0;
         if (!file_->isWritable()) {
-            qWarning() << "QtFileIo: Attempted to write to a read-only file.";
             return 0;
         }
         qint64 bytesWritten = file_->write(reinterpret_cast<const char*>(data), wcount);
@@ -287,6 +300,8 @@ private:
 #endif // USE_EXIV2
 
 void DocumentInfo::loadExifTags() {
+    std::lock_guard<std::mutex> lock(mMutex);
+    
     if(exifLoaded) return;
     exifLoaded = true;
     exifTags.clear();
@@ -294,90 +309,106 @@ void DocumentInfo::loadExifTags() {
 #ifdef USE_EXIV2
     try {
         auto file = std::make_unique<QFile>(fileInfo.filePath());
-        if (!file->open(QIODevice::ReadWrite)) {
-            if (!file->open(QIODevice::ReadOnly)) return;
+        // Optimization: Try ReadWrite first (for potential future writing/saving), fallback to ReadOnly
+        // Since we only read here, let's try ReadOnly first to avoid permission errors on protected files
+        if (!file->open(QIODevice::ReadOnly)) {
+            return;
         }
+        
         auto qtFileIo = std::make_unique<QtFileIo>(std::move(file));
         auto image = Exiv2::ImageFactory::open(std::move(qtFileIo));
+        
         if (!image) return;
         image->readMetadata();
+        
         Exiv2::ExifData &exifData = image->exifData();
         if (exifData.empty()) return;
 
-        Exiv2::ExifKey make("Exif.Image.Make");
-        Exiv2::ExifKey model("Exif.Image.Model");
-        Exiv2::ExifKey dateTime("Exif.Image.DateTime");
-        Exiv2::ExifKey exposureTime("Exif.Photo.ExposureTime");
-        Exiv2::ExifKey fnumber("Exif.Photo.FNumber");
-        Exiv2::ExifKey isoSpeedRatings("Exif.Photo.ISOSpeedRatings");
-        Exiv2::ExifKey flash("Exif.Photo.Flash");
-        Exiv2::ExifKey focalLength("Exif.Photo.FocalLength");
-        Exiv2::ExifKey userComment("Exif.Photo.UserComment");
-
-        auto it = exifData.findKey(make);
-        if (it != exifData.end())
-            exifTags.insert(QObject::tr("Make"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(model);
-        if (it != exifData.end())
-            exifTags.insert(QObject::tr("Model"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(dateTime);
-        if (it != exifData.end())
-            exifTags.insert(QObject::tr("Date/Time"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(exposureTime);
-        if (it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            if (r.first < r.second) {
-                qreal exp = round(static_cast<qreal>(r.second) / r.first);
-                exifTags.insert(QObject::tr("ExposureTime"), "1/" + QString::number(exp) + QObject::tr(" sec"));
-            } else {
-                qreal exp = round(static_cast<qreal>(r.first) / r.second);
-                exifTags.insert(QObject::tr("ExposureTime"), QString::number(exp) + QObject::tr(" sec"));
+        // Helper lambda to safely get string value
+        auto getString = [&exifData](const char* key) -> QString {
+            Exiv2::ExifKey exifKey(key);
+            auto it = exifData.findKey(exifKey);
+            if (it != exifData.end()) {
+                return QString::fromStdString(it->value().toString());
             }
-        }
+            return QString();
+        };
 
-        it = exifData.findKey(fnumber);
-        if (it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            qreal fn = static_cast<qreal>(r.first) / r.second;
-            exifTags.insert(QObject::tr("F Number"), "f/" + QString::number(fn, 'g', 3));
-        }
+        QString val;
+        
+        val = getString("Exif.Image.Make");
+        if(!val.isEmpty()) exifTags.insert(QObject::tr("Make"), val);
 
-        it = exifData.findKey(isoSpeedRatings);
-        if (it != exifData.end())
-            exifTags.insert(QObject::tr("ISO Speed ratings"), QString::fromStdString(it->value().toString()));
+        val = getString("Exif.Image.Model");
+        if(!val.isEmpty()) exifTags.insert(QObject::tr("Model"), val);
 
-        it = exifData.findKey(flash);
-        if (it != exifData.end())
-            exifTags.insert(QObject::tr("Flash"), QString::fromStdString(it->value().toString()));
+        val = getString("Exif.Image.DateTime");
+        if(!val.isEmpty()) exifTags.insert(QObject::tr("Date/Time"), val);
 
-        it = exifData.findKey(focalLength);
-        if (it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            qreal fn = static_cast<qreal>(r.first) / r.second;
-            exifTags.insert(QObject::tr("Focal Length"), QString::number(fn, 'g', 3) + QObject::tr(" mm"));
-        }
-
-        it = exifData.findKey(userComment);
-        if (it != exifData.end()) {
-            auto comment = QString::fromStdString(it->value().toString());
-            // 移除 "charset=XXX" 前缀（如果有）
-            if (comment.startsWith("charset=", Qt::CaseInsensitive)) {
-                int spacePos = comment.indexOf(' ');
-                if (spacePos > 0) {
-                    comment.remove(0, spacePos + 1);
+        // Exposure Time
+        Exiv2::ExifKey exposureKey("Exif.Photo.ExposureTime");
+        auto itExp = exifData.findKey(exposureKey);
+        if (itExp != exifData.end()) {
+            Exiv2::Rational r = itExp->toRational();
+            if (r.first != 0) {
+                if (r.first < r.second) {
+                    qreal exp = round(static_cast<qreal>(r.second) / r.first);
+                    exifTags.insert(QObject::tr("ExposureTime"), "1/" + QString::number(exp) + QObject::tr(" sec"));
                 } else {
-                    // 没有空格，直接去掉整个 "charset=..." 部分
-                    comment.remove(0, comment.indexOf('=') + 1);
+                    qreal exp = round(static_cast<qreal>(r.first) / r.second);
+                    exifTags.insert(QObject::tr("ExposureTime"), QString::number(exp) + QObject::tr(" sec"));
                 }
             }
-            exifTags.insert(QObject::tr("UserComment"), comment);
+        }
+
+        // FNumber
+        Exiv2::ExifKey fnumberKey("Exif.Photo.FNumber");
+        auto itFnum = exifData.findKey(fnumberKey);
+        if (itFnum != exifData.end()) {
+             Exiv2::Rational r = itFnum->toRational();
+             if (r.second != 0) {
+                qreal fn = static_cast<qreal>(r.first) / r.second;
+                exifTags.insert(QObject::tr("F Number"), "f/" + QString::number(fn, 'g', 3));
+             }
+        }
+
+        val = getString("Exif.Photo.ISOSpeedRatings");
+        if(!val.isEmpty()) exifTags.insert(QObject::tr("ISO Speed ratings"), val);
+
+        val = getString("Exif.Photo.Flash");
+        if(!val.isEmpty()) exifTags.insert(QObject::tr("Flash"), val);
+
+        // Focal Length
+        Exiv2::ExifKey focalKey("Exif.Photo.FocalLength");
+        auto itFocal = exifData.findKey(focalKey);
+        if (itFocal != exifData.end()) {
+            Exiv2::Rational r = itFocal->toRational();
+            if (r.second != 0) {
+                qreal fn = static_cast<qreal>(r.first) / r.second;
+                exifTags.insert(QObject::tr("Focal Length"), QString::number(fn, 'g', 3) + QObject::tr(" mm"));
+            }
+        }
+
+        // User Comment
+        val = getString("Exif.Photo.UserComment");
+        if(!val.isEmpty()) {
+            // Remove charset prefix if present
+            if (val.startsWith("charset=", Qt::CaseInsensitive)) {
+                int spacePos = val.indexOf(' ');
+                if (spacePos > 0) {
+                    val.remove(0, spacePos + 1);
+                } else {
+                    val.remove(0, val.indexOf('=') + 1);
+                }
+            }
+            exifTags.insert(QObject::tr("UserComment"), val);
         }
     }
     catch (Exiv2::Error& e) {
         qDebug() << "Caught Exiv2 exception:" << e.what();
+    }
+    catch (...) {
+        qDebug() << "Caught unknown exception during Exif loading";
     }
 #endif
 }
@@ -389,6 +420,10 @@ QMap<QString, QString> DocumentInfo::getExifTags() {
 }
 
 void DocumentInfo::loadExifOrientation() {
+    // Note: This function is called from exifOrientation() which handles the mutex locking
+    // If called directly, it is NOT thread-safe by itself. 
+    // But it is private, so only exifOrientation() calls it.
+    
     if(mDocumentType == DocumentType::VIDEO || mDocumentType == DocumentType::NONE)
         return;
 

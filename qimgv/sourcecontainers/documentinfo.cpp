@@ -193,9 +193,10 @@ void DocumentInfo::loadExifTags() {
     try {
         std::unique_ptr<Exiv2::Image> image;
 
-        // 使用 Qt 方式将文件路径转换为 UTF-8 字符串
-        QString filePath = fileInfo.filePath();            // 原始路径（UTF-16）
-        std::string utf8Path = filePath.toUtf8().constData(); // UTF-8 编码
+        // 更健壮的 UTF-8 路径转换
+        QString filePath = fileInfo.filePath();                // 原始路径（UTF-16）
+        QByteArray utf8Bytes = filePath.toUtf8();              // 显式持有 UTF-8 数据
+        std::string utf8Path(utf8Bytes.constData(), utf8Bytes.size()); // 构造 std::string
         image = Exiv2::ImageFactory::open(utf8Path);
 
         assert(image.get() != 0);

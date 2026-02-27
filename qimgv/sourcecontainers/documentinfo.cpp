@@ -1,4 +1,12 @@
 #include "documentinfo.h"
+#include <QDebug>
+#include <QImageReader>
+#include <QMimeDatabase>
+#include <QDataStream>
+#include <memory>   // for std::unique_ptr
+
+// 假设 settings 是全局可访问的，这里仅声明外部变量（实际可能在别处定义）
+extern QSettings* settings;
 
 DocumentInfo::DocumentInfo(QString path)
     : mDocumentType(DocumentType::NONE),
@@ -184,6 +192,170 @@ bool DocumentInfo::detectAnimatedAvif() {
     return result;
 }
 
+// ==================== Exiv2 相关代码 ====================
+#ifdef USE_EXIV2
+#include <exiv2/exiv2.hpp>
+#include <memory>   // for std::unique_ptr
+#include <QFile>
+
+/**
+ * @brief 自定义 Exiv2::BasicIo 实现，通过 QFile 操作文件。
+ * 
+ * 完全绕过路径字符串，直接将 Qt 打开的文件句柄提供给 Exiv2，
+ * 实现零编码转换，完美支持所有 Unicode 文件名。
+ * 
+ * 此类实现了所有 BasicIo 接口方法，包括写入操作，因此未来如需
+ * 修改 EXIF 信息（例如旋转后保存），可直接使用。
+ * 
+ * 注意：mmap 方法返回 nullptr，但对于 EXIF 读取/写入（通常只涉及
+ * 文件头部小数据块），普通读取效率足够，无需内存映射。
+ */
+class QtFileIo : public Exiv2::BasicIo {
+public:
+    /**
+     * @brief 构造函数，接收一个已打开的 QFile 的唯一所有权。
+     * @param file 指向已打开 QFile 对象的 unique_ptr。
+     * 
+     * 注意：QFile 必须以 QIODevice::ReadWrite 模式打开，以便支持写入。
+     */
+    explicit QtFileIo(std::unique_ptr<QFile> file)
+        : file_(std::move(file))
+        , pos_(0)
+        , size_(file_->size())
+        , isOpen_(file_->isOpen())
+    {
+        // 移除断言，允许只读打开（写入方法会自行处理）
+        // Q_ASSERT(file_->openMode() & QIODevice::ReadWrite);
+    }
+
+    QtFileIo(const QtFileIo&) = delete;
+    QtFileIo& operator=(const QtFileIo&) = delete;
+    ~QtFileIo() override = default;
+
+    // BasicIo 接口实现
+    int open() override {
+        if (isOpen_) {
+            pos_ = 0;
+            return 0;
+        }
+        return -1;
+    }
+
+    int close() override {
+        isOpen_ = false;
+        return 0;
+    }
+
+    // --- 写入方法实现 ---
+    long write(const Exiv2::byte* data, long wcount) override {
+        // 基础状态检查
+        if (!isOpen_ || !data || wcount <= 0) return 0;
+        
+        // 权限拦截：如果是以 ReadOnly 模式打开的，直接拦截并返回 0
+        if (!file_->isWritable()) {
+            qWarning() << "QtFileIo: Attempted to write to a read-only file.";
+            return 0;
+        }
+
+        // 执行真正的写入
+        qint64 bytesWritten = file_->write(reinterpret_cast<const char*>(data), wcount);
+        if (bytesWritten > 0) {
+            pos_ += bytesWritten;
+            if (pos_ > size_) size_ = pos_;
+        }
+        return static_cast<long>(bytesWritten);
+    }
+
+    long write(Exiv2::BasicIo& src) override {
+        if (!isOpen_) return 0;
+        const long blockSize = 4096;
+        Exiv2::byte buffer[blockSize];
+        long totalWritten = 0;
+        while (!src.eof()) {
+            long n = src.read(buffer, blockSize);
+            if (n <= 0) break;
+            long written = write(buffer, n);
+            if (written != n) break; // 写入错误
+            totalWritten += written;
+        }
+        return totalWritten;
+    }
+
+    int putb(Exiv2::byte data) override {
+        return (write(&data, 1) == 1) ? data : EOF;
+    }
+
+    // --- 读取方法实现 ---
+    Exiv2::DataBuf read(long rcount) override {
+        if (!isOpen_ || rcount <= 0) return Exiv2::DataBuf();
+        long bytesToRead = rcount;
+        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<long>(size_ - pos_);
+        if (bytesToRead <= 0) return Exiv2::DataBuf();
+        Exiv2::DataBuf buf(bytesToRead);
+        long bytesRead = read(buf.data(), bytesToRead);
+        if (bytesRead > 0) buf.size_ = bytesRead;
+        else buf.size_ = 0;
+        return buf;
+    }
+
+    long read(Exiv2::byte* buf, long rcount) override {
+        if (!isOpen_ || !buf || rcount <= 0) return 0;
+        long bytesToRead = rcount;
+        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<long>(size_ - pos_);
+        if (bytesToRead <= 0) return 0;
+        qint64 bytesRead = file_->read(reinterpret_cast<char*>(buf), bytesToRead);
+        if (bytesRead > 0) pos_ += bytesRead;
+        return static_cast<long>(bytesRead);
+    }
+
+    int getb() override {
+        if (!isOpen_ || pos_ >= size_) return EOF;
+        Exiv2::byte b = 0;
+        return (read(&b, 1) == 1) ? b : EOF;
+    }
+
+    void transfer(Exiv2::BasicIo& src) override {
+        write(src);
+    }
+
+    int seek(long offset, Position pos) override {
+        if (!isOpen_) return -1;
+        qint64 newPos = -1;
+        switch (pos) {
+            case Exiv2::BasicIo::beg: newPos = offset; break;
+            case Exiv2::BasicIo::cur: newPos = pos_ + offset; break;
+            case Exiv2::BasicIo::end: newPos = static_cast<qint64>(size_) + offset; break;
+        }
+        if (newPos < 0 || newPos > static_cast<qint64>(size_)) return -1;
+        if (file_->seek(newPos)) {
+            pos_ = newPos;
+            return 0;
+        }
+        return -1;
+    }
+
+    Exiv2::byte* mmap(bool /*isWriteable*/) override { return nullptr; } // 不需要内存映射
+    int munmap() override { return 0; }
+
+    long tell() const override { return static_cast<long>(pos_); }
+    size_t size() const override { return static_cast<size_t>(size_); }
+    bool isopen() const override { return isOpen_; }
+    int error() const override { return file_->error() != QFile::NoError ? 1 : 0; }
+    bool eof() const override { return pos_ >= size_; }
+    std::string path() const override { return file_->fileName().toStdString(); }
+#ifdef EXV_UNICODE_PATH
+    std::wstring wpath() const override { return file_->fileName().toStdWString(); }
+#endif
+
+private:
+    std::unique_ptr<QFile> file_;
+    qint64 pos_;
+    qint64 size_;
+    bool isOpen_;
+};
+
+#endif // USE_EXIV2
+
 void DocumentInfo::loadExifTags() {
     if(exifLoaded)
         return;
@@ -193,11 +365,21 @@ void DocumentInfo::loadExifTags() {
     try {
         std::unique_ptr<Exiv2::Image> image;
 
-        // 更健壮的 UTF-8 路径转换
-        QString filePath = fileInfo.filePath();                // 原始路径（UTF-16）
-        QByteArray utf8Bytes = filePath.toUtf8();              // 显式持有 UTF-8 数据
-        std::string utf8Path(utf8Bytes.constData(), utf8Bytes.size()); // 构造 std::string
-        image = Exiv2::ImageFactory::open(utf8Path);
+        // --- 最健壮的方式：使用 QFile + 自定义 BasicIo ---
+        // 1. 用 QFile 打开文件（QFile 完美支持 Unicode 路径）
+        auto file = std::make_unique<QFile>(fileInfo.filePath());
+        // 优先尝试读写模式（为以后修改做准备），如果失败则尝试只读
+        if (!file->open(QIODevice::ReadWrite)) {
+            if (!file->open(QIODevice::ReadOnly)) {
+                return; // 彻底打不开才返回
+            }
+        }
+
+        // 2. 将 QFile 的所有权交给 QtFileIo
+        auto qtFileIo = std::make_unique<QtFileIo>(std::move(file));
+
+        // 3. 使用 Exiv2::ImageFactory::open 的重载版本，接受 BasicIo 唯一指针
+        image = Exiv2::ImageFactory::open(std::move(qtFileIo));
 
         assert(image.get() != 0);
         image->readMetadata();
@@ -205,6 +387,7 @@ void DocumentInfo::loadExifTags() {
         if(exifData.empty())
             return;
 
+        // 以下 EXIF 解析代码保持不变
         Exiv2::ExifKey make("Exif.Image.Make");
         Exiv2::ExifKey model("Exif.Image.Model");
         Exiv2::ExifKey dateTime("Exif.Image.DateTime");
@@ -218,7 +401,7 @@ void DocumentInfo::loadExifTags() {
         Exiv2::ExifData::const_iterator it;
 
         it = exifData.findKey(make);
-        if(it != exifData.end() /* && it->count() */)
+        if(it != exifData.end())
             exifTags.insert(QObject::tr("Make"), QString::fromStdString(it->value().toString()));
 
         it = exifData.findKey(model);
@@ -265,7 +448,6 @@ void DocumentInfo::loadExifTags() {
 
         it = exifData.findKey(userComment);
         if(it != exifData.end()) {
-            // crop out 'charset=ascii' etc"
             auto comment = QString::fromStdString(it->value().toString());
             if(comment.startsWith("charset="))
                 comment.remove(0, comment.indexOf(" ") + 1);
@@ -273,7 +455,6 @@ void DocumentInfo::loadExifTags() {
         }
     }
 
-// this should work with both 0.28 and <0.28
 #if not EXIV2_TEST_VERSION(0, 28, 0)
 #ifdef __WIN32
     catch (Exiv2::BasicError<wchar_t>& e) {
@@ -287,7 +468,6 @@ void DocumentInfo::loadExifTags() {
     }
 #endif
 #endif
-
     catch (Exiv2::Error& e) {
         qDebug() << "Caught Exiv2 exception:\n" << e.what() << "\n";
         return;
@@ -306,13 +486,8 @@ void DocumentInfo::loadExifOrientation() {
         return;
 
     QString path = filePath();
-    QImageReader *reader = nullptr;
-    if(!mFormat.isEmpty())
-        reader = new QImageReader(path, mFormat.toStdString().c_str());
-    else
-        reader = new QImageReader(path);
+    QImageReader reader(path, mFormat.isEmpty() ? nullptr : mFormat.toStdString().c_str());
 
-    if(reader->canRead())
-        mOrientation = static_cast<int>(reader->transformation());
-    delete reader;
+    if(reader.canRead())
+        mOrientation = static_cast<int>(reader.transformation());
 }

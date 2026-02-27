@@ -1,12 +1,10 @@
 #include "documentinfo.h"
+#include "settings.h"
 #include <QDebug>
 #include <QImageReader>
 #include <QMimeDatabase>
 #include <QDataStream>
 #include <memory>   // for std::unique_ptr
-
-// 假设 settings 是全局可访问的，这里仅声明外部变量（实际可能在别处定义）
-extern QSettings* settings;
 
 DocumentInfo::DocumentInfo(QString path)
     : mDocumentType(DocumentType::NONE),
@@ -217,6 +215,7 @@ public:
         , pos_(0)
         , size_(file_->size())
         , isOpen_(file_->isOpen())
+        , path_(file_->fileName().toStdString())
     {
         // 移除断言，允许只读打开（写入方法会自行处理）
         // Q_ASSERT(file_->openMode() & QIODevice::ReadWrite);
@@ -281,8 +280,9 @@ public:
         if (bytesToRead == 0) return Exiv2::DataBuf();
         Exiv2::DataBuf buf(bytesToRead);
         size_t bytesRead = read(buf.data(), bytesToRead);
-        if (bytesRead > 0) buf.size = bytesRead;   // 原为 buf.size_
-        else buf.size = 0;                          // 原为 buf.size_
+        if (bytesRead > 0 && bytesRead != bytesToRead) {
+            buf.resize(bytesRead);
+        }
         return buf;
     }
 
@@ -330,7 +330,7 @@ public:
     bool isopen() const override { return isOpen_; }
     int error() const override { return file_->error() != QFile::NoError ? 1 : 0; }
     bool eof() const override { return pos_ >= size_; }
-    std::string path() const override { return file_->fileName().toStdString(); }
+    const std::string& path() const override { return path_; }
 #ifdef EXV_UNICODE_PATH
     std::wstring wpath() const override { return file_->fileName().toStdWString(); }
 #endif
@@ -343,6 +343,7 @@ private:
     qint64 pos_;        // 注意：保持 qint64 以便处理大文件
     qint64 size_;
     bool isOpen_;
+    std::string path_;  // 存储 path 字符串以供 path() 返回引用
 };
 
 #endif // USE_EXIV2

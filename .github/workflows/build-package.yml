@@ -47,7 +47,7 @@ jobs:
       - name: Set Variables
         id: vars
         run: |
-          BNAME="qimgv-x64-qt6"
+          BNAME="qimgv-x64"
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 

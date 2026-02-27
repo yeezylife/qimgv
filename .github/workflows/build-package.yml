@@ -43,13 +43,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 修改点 1：固定输出名称，不使用动态版本号
       - name: Set Variables
         id: vars
         run: |
-          BNAME="qimgv-x64-qt6_$(git describe --tags --always)"
+          BNAME="qimgv-x64-qt6"
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
 
+      # 修改点 2：添加编译标志 -march=x86-64-v3 启用 V3 指令集优化
       - name: Build qimgv
         run: |
           cmake -B build -S . -G Ninja \
@@ -57,7 +59,9 @@ jobs:
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
-            -DCMAKE_PREFIX_PATH=/ucrt64
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_C_FLAGS="-march=x86-64-v3" \
+            -DCMAKE_CXX_FLAGS="-march=x86-64-v3"
           cmake --build build --config Release
 
       - name: Prepare Slim Package
@@ -194,3 +198,4 @@ jobs:
             - **Translations**: Added full multi-language support.
             - **Qt6/KF6 Plugins**: SVG icons, JXL/AVIF image formats, and icon engines.
             - **Recursive Resolver**: All system DLLs (OpenCV, MPV, Qt, etc.) are bundled into the root.
+            - **Optimization**: Compiled with `-march=x86-64-v3` (AVX2, BMI, etc.) for better performance on modern CPUs.

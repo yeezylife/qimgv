@@ -281,8 +281,8 @@ public:
         if (bytesToRead == 0) return Exiv2::DataBuf();
         Exiv2::DataBuf buf(bytesToRead);
         size_t bytesRead = read(buf.data(), bytesToRead);
-        if (bytesRead > 0) buf.size_ = bytesRead;
-        else buf.size_ = 0;
+        if (bytesRead > 0) buf.size = bytesRead;   // 原为 buf.size_
+        else buf.size = 0;                          // 原为 buf.size_
         return buf;
     }
 

@@ -11,16 +11,15 @@
 #include <QMimeType>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 #include "utils/stuff.h"
 #include "settings.h"
 
 #ifdef USE_EXIV2
-
 #include <exiv2/exiv2.hpp>
 #include <iostream>
 #include <iomanip>
 #include <cassert>
-
 #endif
 
 #include <QImageReader>
@@ -55,16 +54,23 @@ private:
     int mOrientation;
     QString mFormat;
     bool exifLoaded;
-    bool orientationLoaded;  // ← 添加这一行
+    bool orientationLoaded;
 
     // guesses file type from its contents
     // and sets extension
     void detectFormat();
     void loadExifOrientation();
-    bool detectAPNG();
-    bool detectAnimatedWebP();
-    bool detectAnimatedJxl();
-    bool detectAnimatedAvif();
+    
+    // Optimized detection methods using buffer
+    bool detectAPNG(const QByteArray &buffer);
+    bool detectAnimatedWebP(const QByteArray &buffer);
+    bool detectAnimatedJxl(QFile &file); // Pass file to reuse handle
+    bool detectAnimatedAvif(const QByteArray &buffer);
+    
     QMap<QString, QString> exifTags;
     QMimeType mMimeType;
+    
+    // Mutex for thread-safe lazy loading
+    mutable std::mutex mMutex;
 };
+

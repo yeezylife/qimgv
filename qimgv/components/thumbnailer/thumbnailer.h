@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QThreadPool>
+#include <memory> // 引入智能指针头文件
 #include "components/thumbnailer/thumbnailerrunnable.h"
 #include "components/cache/thumbnailcache.h"
 #include "settings.h"
@@ -11,22 +12,28 @@ class Thumbnailer : public QObject
 public:
     explicit Thumbnailer();
     ~Thumbnailer();
-    static std::shared_ptr<Thumbnail> getThumbnail(QString filePath, int size);
+    
+    // 优化：参数使用 const 引用传递，减少拷贝开销
+    static std::shared_ptr<Thumbnail> getThumbnail(const QString &filePath, int size);
+    
     void clearTasks();
     void waitForDone();
 
 public slots:
-    void getThumbnailAsync(QString path, int size, bool crop, bool force);
+    // 优化：参数使用 const 引用传递
+    void getThumbnailAsync(const QString &path, int size, bool crop, bool force);
 
 private:
-    ThumbnailCache *cache;
+    // 优化：使用智能指针管理 ThumbnailCache，防止内存泄漏
+    std::unique_ptr<ThumbnailCache> cache;
     QThreadPool *pool;
-    void startThumbnailerThread(QString filePath, int size, bool crop, bool force);
+    
+    void startThumbnailerThread(const QString &filePath, int size, bool crop, bool force);
     QMultiMap<QString, int> runningTasks;
 
 private slots:
-    void onTaskStart(QString filePath, int size);
-    void onTaskEnd(std::shared_ptr<Thumbnail> thumbnail, QString filePath);
+    void onTaskStart(const QString &filePath, int size);
+    void onTaskEnd(std::shared_ptr<Thumbnail> thumbnail, const QString &filePath);
 
 signals:
     void thumbnailReady(std::shared_ptr<Thumbnail> thumbnail, QString filePath);

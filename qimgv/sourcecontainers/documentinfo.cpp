@@ -38,7 +38,6 @@ QDateTime DocumentInfo::lastModified() const { return fileInfo.lastModified(); }
 
 void DocumentInfo::refresh() {
     fileInfo.refresh();
-    orientationLoaded = false;
 }
 
 int DocumentInfo::exifOrientation() const {

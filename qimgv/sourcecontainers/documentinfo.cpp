@@ -330,7 +330,7 @@ public:
     bool isopen() const override { return isOpen_; }
     int error() const override { return file_->error() != QFile::NoError ? 1 : 0; }
     bool eof() const override { return pos_ >= size_; }
-    const std::string& path() const override { return path_; }
+    const std::string& path() const noexcept override { return path_; }
 #ifdef EXV_UNICODE_PATH
     std::wstring wpath() const override { return file_->fileName().toStdWString(); }
 #endif

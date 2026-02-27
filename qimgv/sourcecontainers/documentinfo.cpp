@@ -212,12 +212,6 @@ bool DocumentInfo::detectAnimatedAvif() {
  */
 class QtFileIo : public Exiv2::BasicIo {
 public:
-    /**
-     * @brief 构造函数，接收一个已打开的 QFile 的唯一所有权。
-     * @param file 指向已打开 QFile 对象的 unique_ptr。
-     * 
-     * 注意：QFile 必须以 QIODevice::ReadWrite 模式打开，以便支持写入。
-     */
     explicit QtFileIo(std::unique_ptr<QFile> file)
         : file_(std::move(file))
         , pos_(0)
@@ -232,7 +226,6 @@ public:
     QtFileIo& operator=(const QtFileIo&) = delete;
     ~QtFileIo() override = default;
 
-    // BasicIo 接口实现
     int open() override {
         if (isOpen_) {
             pos_ = 0;
@@ -246,36 +239,31 @@ public:
         return 0;
     }
 
-    // --- 写入方法实现 ---
-    long write(const Exiv2::byte* data, long wcount) override {
-        // 基础状态检查
-        if (!isOpen_ || !data || wcount <= 0) return 0;
-        
-        // 权限拦截：如果是以 ReadOnly 模式打开的，直接拦截并返回 0
+    // --- 写入方法 ---
+    size_t write(const Exiv2::byte* data, size_t wcount) override {
+        if (!isOpen_ || !data || wcount == 0) return 0;
         if (!file_->isWritable()) {
             qWarning() << "QtFileIo: Attempted to write to a read-only file.";
             return 0;
         }
-
-        // 执行真正的写入
         qint64 bytesWritten = file_->write(reinterpret_cast<const char*>(data), wcount);
         if (bytesWritten > 0) {
             pos_ += bytesWritten;
             if (pos_ > size_) size_ = pos_;
         }
-        return static_cast<long>(bytesWritten);
+        return static_cast<size_t>(bytesWritten);
     }
 
-    long write(Exiv2::BasicIo& src) override {
+    size_t write(Exiv2::BasicIo& src) override {
         if (!isOpen_) return 0;
-        const long blockSize = 4096;
+        const size_t blockSize = 4096;
         Exiv2::byte buffer[blockSize];
-        long totalWritten = 0;
+        size_t totalWritten = 0;
         while (!src.eof()) {
-            long n = src.read(buffer, blockSize);
-            if (n <= 0) break;
-            long written = write(buffer, n);
-            if (written != n) break; // 写入错误
+            size_t n = src.read(buffer, blockSize);
+            if (n == 0) break;
+            size_t written = write(buffer, n);
+            if (written != n) break;
             totalWritten += written;
         }
         return totalWritten;
@@ -285,27 +273,27 @@ public:
         return (write(&data, 1) == 1) ? data : EOF;
     }
 
-    // --- 读取方法实现 ---
-    Exiv2::DataBuf read(long rcount) override {
-        if (!isOpen_ || rcount <= 0) return Exiv2::DataBuf();
-        long bytesToRead = rcount;
-        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<long>(size_ - pos_);
-        if (bytesToRead <= 0) return Exiv2::DataBuf();
+    // --- 读取方法 ---
+    Exiv2::DataBuf read(size_t rcount) override {
+        if (!isOpen_ || rcount == 0) return Exiv2::DataBuf();
+        size_t bytesToRead = rcount;
+        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<size_t>(size_ - pos_);
+        if (bytesToRead == 0) return Exiv2::DataBuf();
         Exiv2::DataBuf buf(bytesToRead);
-        long bytesRead = read(buf.data(), bytesToRead);
+        size_t bytesRead = read(buf.data(), bytesToRead);
         if (bytesRead > 0) buf.size_ = bytesRead;
         else buf.size_ = 0;
         return buf;
     }
 
-    long read(Exiv2::byte* buf, long rcount) override {
-        if (!isOpen_ || !buf || rcount <= 0) return 0;
-        long bytesToRead = rcount;
-        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<long>(size_ - pos_);
-        if (bytesToRead <= 0) return 0;
+    size_t read(Exiv2::byte* buf, size_t rcount) override {
+        if (!isOpen_ || !buf || rcount == 0) return 0;
+        size_t bytesToRead = rcount;
+        if (pos_ + bytesToRead > size_) bytesToRead = static_cast<size_t>(size_ - pos_);
+        if (bytesToRead == 0) return 0;
         qint64 bytesRead = file_->read(reinterpret_cast<char*>(buf), bytesToRead);
         if (bytesRead > 0) pos_ += bytesRead;
-        return static_cast<long>(bytesRead);
+        return static_cast<size_t>(bytesRead);
     }
 
     int getb() override {
@@ -318,15 +306,15 @@ public:
         write(src);
     }
 
-    int seek(long offset, Position pos) override {
+    int seek(int64_t offset, Position pos) override {
         if (!isOpen_) return -1;
-        qint64 newPos = -1;
+        int64_t newPos = -1;
         switch (pos) {
             case Exiv2::BasicIo::beg: newPos = offset; break;
             case Exiv2::BasicIo::cur: newPos = pos_ + offset; break;
-            case Exiv2::BasicIo::end: newPos = static_cast<qint64>(size_) + offset; break;
+            case Exiv2::BasicIo::end: newPos = static_cast<int64_t>(size_) + offset; break;
         }
-        if (newPos < 0 || newPos > static_cast<qint64>(size_)) return -1;
+        if (newPos < 0 || newPos > static_cast<int64_t>(size_)) return -1;
         if (file_->seek(newPos)) {
             pos_ = newPos;
             return 0;
@@ -334,10 +322,10 @@ public:
         return -1;
     }
 
-    Exiv2::byte* mmap(bool /*isWriteable*/) override { return nullptr; } // 不需要内存映射
+    Exiv2::byte* mmap(bool /*isWriteable*/) override { return nullptr; }
     int munmap() override { return 0; }
 
-    long tell() const override { return static_cast<long>(pos_); }
+    size_t tell() const override { return static_cast<size_t>(pos_); }
     size_t size() const override { return static_cast<size_t>(size_); }
     bool isopen() const override { return isOpen_; }
     int error() const override { return file_->error() != QFile::NoError ? 1 : 0; }
@@ -347,9 +335,12 @@ public:
     std::wstring wpath() const override { return file_->fileName().toStdWString(); }
 #endif
 
+    // 新增：Exiv2 0.28+ 要求实现 populateFakeData（通常空实现即可）
+    void populateFakeData() override {}
+
 private:
     std::unique_ptr<QFile> file_;
-    qint64 pos_;
+    qint64 pos_;        // 注意：保持 qint64 以便处理大文件
     qint64 size_;
     bool isOpen_;
 };

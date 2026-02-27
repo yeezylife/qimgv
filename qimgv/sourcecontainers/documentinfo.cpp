@@ -193,11 +193,9 @@ void DocumentInfo::loadExifTags() {
     try {
         std::unique_ptr<Exiv2::Image> image;
 
-        // 更健壮的 UTF-8 路径转换
-        QString filePath = fileInfo.filePath();                // 原始路径（UTF-16）
-        QByteArray utf8Bytes = filePath.toUtf8();              // 显式持有 UTF-8 数据
-        std::string utf8Path(utf8Bytes.constData(), utf8Bytes.size()); // 构造 std::string
-        image = Exiv2::ImageFactory::open(utf8Path);
+        // Windows 专用：直接传递 UTF-16 宽字符串，零编码转换
+        std::wstring wPath = fileInfo.filePath().toStdWString();
+        image = Exiv2::ImageFactory::open(wPath);
 
         assert(image.get() != 0);
         image->readMetadata();

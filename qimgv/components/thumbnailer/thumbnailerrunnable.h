@@ -16,14 +16,20 @@
 class ThumbnailerRunnable : public QObject, public QRunnable {
     Q_OBJECT
 public:
-    ThumbnailerRunnable(ThumbnailCache* _cache, QString _path, int _size, bool _crop, bool _force);
+    // 优化：使用 const 引用传递字符串，避免拷贝
+    ThumbnailerRunnable(ThumbnailCache* _cache, const QString &_path, int _size, bool _crop, bool _force);
     ~ThumbnailerRunnable();
-    void run();
-    static std::shared_ptr<Thumbnail> generate(ThumbnailCache *cache, QString path, int size, bool crop, bool force);
+    void run() override;
+    
+    // 优化：静态生成函数同样使用 const 引用
+    static std::shared_ptr<Thumbnail> generate(ThumbnailCache *cache, const QString &path, int size, bool crop, bool force);
+    
 private:
-    static QString generateIdString(QString path, int size, bool crop);
-    static std::pair<QImage*, QSize> createThumbnail(QString path, const char* format, int size, bool crop);
-    static std::pair<QImage*, QSize> createVideoThumbnail(QString path, int size, bool crop);
+    static QString generateIdString(const QString &path, int size, bool crop);
+    // 以下两个耗时函数实际上不再会被调用，但保留声明以维持结构完整性
+    static std::pair<QImage*, QSize> createThumbnail(const QString &path, const char* format, int size, bool crop);
+    static std::pair<QImage*, QSize> createVideoThumbnail(const QString &path, int size, bool crop);
+    
     QString path;
     int size;
     bool crop, force;

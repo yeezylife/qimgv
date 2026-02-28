@@ -363,12 +363,13 @@ void ImageViewerV2::closeImage() {
     reset();
 }
 
-void ImageViewerV2::setScaledPixmap(std::unique_ptr<QPixmap> newFrame) {
-    if(!movie && newFrame->size() != scaledSizeR() * dpr)
+void ImageViewerV2::setScaledPixmap(QPixmap newFrame) {
+    if (!movie && newFrame.size() != scaledSizeR() * dpr)
         return;
-    pixmapScaled = std::move(newFrame);
-    pixmapScaled->setDevicePixelRatio(dpr);
-    pixmapItemScaled.setPixmap(*pixmapScaled);
+    // 如果 pixmapScaled 现在是 QPixmap 类型（而非指针）
+    pixmapScaled = newFrame;
+    pixmapScaled.setDevicePixelRatio(dpr);
+    pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();
     pixmapItemScaled.show();
 }

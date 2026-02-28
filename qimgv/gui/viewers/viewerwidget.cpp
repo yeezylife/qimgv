@@ -28,7 +28,7 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     layout.setSpacing(0);
     this->setLayout(&layout);
 
-    imageViewer.reset(new ImageViewerV2(this));
+    imageViewer = std::make_shared<ImageViewerV2>(this);
     layout.addWidget(imageViewer.get());
     imageViewer->hide();
 
@@ -41,7 +41,7 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     connect(this, &ViewerWidget::setScalingFilter,       imageViewer.get(), &ImageViewerV2::setScalingFilter);
 
 
-    videoPlayer.reset(new VideoPlayerInitProxy(this));
+    videoPlayer = std::make_shared<VideoPlayerInitProxy>(this);
     layout.addWidget(videoPlayer.get());
     videoPlayer->hide();
     videoControls = new VideoControlsProxyWrapper(this);
@@ -225,7 +225,7 @@ bool ViewerWidget::showAnimation(std::shared_ptr<QMovie> movie) {
         return false;
     stopPlayback();
     enableImageViewer();
-    imageViewer->showAnimation(movie);
+    imageViewer->showAnimation(std::move(movie));
     hideCursorTimed(false);
     return true;
 }

@@ -37,9 +37,9 @@ public:
 
 private:
     QVBoxLayout layout;
-    std::unique_ptr<ImageViewerV2> imageViewer;
-    std::unique_ptr<VideoPlayerInitProxy> videoPlayer;
-    std::unique_ptr<ContextMenu> contextMenu;
+    std::shared_ptr<ImageViewerV2> imageViewer;
+    std::shared_ptr<VideoPlayerInitProxy> videoPlayer;
+    std::shared_ptr<ContextMenu> contextMenu;
     VideoControlsProxyWrapper *videoControls;
     ZoomIndicatorOverlayProxy *zoomIndicator;
     ClickZoneOverlay *clickZoneOverlay;

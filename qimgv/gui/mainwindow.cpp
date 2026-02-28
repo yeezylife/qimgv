@@ -14,7 +14,8 @@ MW::MW(QWidget *parent)
       imageInfoOverlay(nullptr),
       floatingMessage(nullptr),
       cropPanel(nullptr),
-      cropOverlay(nullptr)
+      cropOverlay(nullptr),
+      fullUiInitialized(false) // 初始化延迟初始化标志
 {
     setAttribute(Qt::WA_TranslucentBackground, true);
     layout.setContentsMargins(0,0,0,0);
@@ -102,6 +103,8 @@ void MW::setupUi() {
 }
 
 void MW::setupFullUi() {
+    if (fullUiInitialized) return; // 防止重复初始化
+    fullUiInitialized = true;
     setupCropPanel();
     docWidget->allowPanelInit();
     docWidget->setupMainPanel();
@@ -165,6 +168,8 @@ void MW::enableFolderView() {
 }
 
 void MW::enableDocumentView() {
+    // 触发延迟初始化
+    setupFullUi();
     centralWidget->showDocumentView();
     onInfoUpdated();
 }
@@ -794,8 +799,8 @@ void MW::setCurrentInfo(int _index, int _fileCount, QString _filePath, QString _
     onInfoUpdated();
 }
 
-// todo: nuke and rewrite
-void MW::onInfoUpdated() {
+// 计算窗口标题
+QString MW::calculateWindowTitle() {
     QString posString;
     if(info.fileCount)
         posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
@@ -806,18 +811,11 @@ void MW::onInfoUpdated() {
     if(info.fileSize)
         sizeString = this->locale().formattedDataSize(info.fileSize, 1);
 
-    if(renameOverlay)
-        renameOverlay->setName(info.fileName);
-
     QString windowTitle;
     if(centralWidget->currentViewMode() == MODE_FOLDERVIEW) {
         windowTitle = tr("Folder view");
-        infoBarFullscreen->setInfo("", tr("No file opened."), "");
-        infoBarWindowed->setInfo("", tr("No file opened."), "");
     } else if(info.fileName.isEmpty()) {
         windowTitle = qApp->applicationName();
-        infoBarFullscreen->setInfo("", tr("No file opened."), "");
-        infoBarWindowed->setInfo("", tr("No file opened."), "");
     } else {
         windowTitle = info.fileName;
         if(settings->windowTitleExtendedInfo()) {
@@ -843,11 +841,73 @@ void MW::onInfoUpdated() {
             windowTitle.append(" -" + states);
         if(info.edited)
             windowTitle.prepend("* ");
-
-        infoBarFullscreen->setInfo(posString, info.fileName + (info.edited ? "  *" : ""), resString + "  " + sizeString);
-        infoBarWindowed->setInfo(posString, info.fileName + (info.edited ? "  *" : ""), resString + "  " + sizeString + " " + states);
     }
-    setWindowTitle(windowTitle);
+
+    return windowTitle;
+}
+
+// 计算信息栏内容
+void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
+    QString posString;
+    if(info.fileCount)
+        posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
+    QString resString;
+    if(info.imageSize.width())
+        resString = QString::number(info.imageSize.width()) + " x " + QString::number(info.imageSize.height());
+    QString sizeString;
+    if(info.fileSize)
+        sizeString = this->locale().formattedDataSize(info.fileSize, 1);
+
+    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW) {
+        infoText = tr("No file opened.");
+        sizeText = "";
+    } else if(info.fileName.isEmpty()) {
+        infoText = tr("No file opened.");
+        sizeText = "";
+    } else {
+        infoText = info.fileName + (info.edited ? "  *" : "");
+        sizeText = resString + "  " + sizeString;
+
+        // toggleable states
+        QString states;
+        if(info.slideshow)
+            states.append(" [slideshow]");
+        if(info.shuffle)
+            states.append(" [shuffle]");
+        if(viewerWidget->lockZoomEnabled())
+            states.append(" [zoom lock]");
+        if(viewerWidget->lockViewEnabled())
+            states.append(" [view lock]");
+
+        if(!settings->infoBarWindowed() && !states.isEmpty())
+            sizeText.append(" " + states);
+    }
+}
+
+// todo: nuke and rewrite
+void MW::onInfoUpdated() {
+    // 更新重命名对话框的名称
+    if(renameOverlay)
+        renameOverlay->setName(info.fileName);
+
+    // 计算新的窗口标题
+    QString newWindowTitle = calculateWindowTitle();
+    // 只有当标题发生变化时才更新
+    if (newWindowTitle != cachedWindowTitle) {
+        cachedWindowTitle = newWindowTitle;
+        setWindowTitle(newWindowTitle);
+    }
+
+    // 计算新的信息栏内容
+    QString newInfoText, newSizeText;
+    calculateInfoBarContent(newInfoText, newSizeText);
+    // 只有当内容发生变化时才更新
+    if (newInfoText != cachedInfoText || newSizeText != cachedSizeText) {
+        cachedInfoText = newInfoText;
+        cachedSizeText = newSizeText;
+        infoBarFullscreen->setInfo(posString, newInfoText, newSizeText);
+        infoBarWindowed->setInfo(posString, newInfoText, newSizeText);
+    }
 }
 
 // TODO!!! buffer this in mw

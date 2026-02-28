@@ -132,6 +132,16 @@ private:
     void preShowResize(QSize sz);
     void setInteractionEnabled(bool mode);
 
+    // 缓存成员变量
+    QString cachedWindowTitle;
+    QString cachedInfoText;
+    QString cachedSizeText;
+    bool fullUiInitialized; // 延迟初始化标志
+
+    // 辅助方法
+    QString calculateWindowTitle();
+    void calculateInfoBarContent(QString& infoText, QString& sizeText);
+
 private slots:
     void updateCurrentDisplay();
     void readSettings();

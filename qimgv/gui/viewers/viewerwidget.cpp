@@ -271,8 +271,8 @@ ImageFitMode ViewerWidget::fitMode() {
     return imageViewer->fitMode();
 }
 
-void ViewerWidget::onScalingFinished(std::unique_ptr<QPixmap> scaled) {
-    imageViewer->setScaledPixmap(std::move(scaled));
+void ViewerWidget::onScalingFinished(QPixmap scaled) {
+    imageViewer->setScaledPixmap(scaled);
 }
 
 void ViewerWidget::closeImage() {

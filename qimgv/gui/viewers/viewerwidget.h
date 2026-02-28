@@ -29,7 +29,7 @@ public:
 
     bool showImage(std::unique_ptr<QPixmap> pixmap);
     bool showAnimation(std::shared_ptr<QMovie> movie);
-    void onScalingFinished(std::unique_ptr<QPixmap> scaled);
+    void onScalingFinished(QPixmap scaled);
     bool isDisplaying();
     bool lockZoomEnabled();
     bool lockViewEnabled();

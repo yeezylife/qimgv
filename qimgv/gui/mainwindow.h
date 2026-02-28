@@ -67,7 +67,7 @@ class MW : public FloatingWidgetContainer
 public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
-    void onScalingFinished(std::unique_ptr<QPixmap>scaled);
+    void onScalingFinished(QPixmap scaled);
     void showImage(std::unique_ptr<QPixmap> pixmap);
     void showAnimation(std::shared_ptr<QMovie> movie);
     void showVideo(QString file);

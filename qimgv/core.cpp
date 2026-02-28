@@ -1193,11 +1193,13 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 }
 
 // TODO: don't use connect? otherwise there is no point using unique_ptr
-void Core::onScalingFinished(QPixmap *scaled, ScalerRequest req) {
-    if(state.hasActiveImage /* TODO: a better fix > */ && req.path == state.currentFilePath) {
-        mw->onScalingFinished(std::unique_ptr<QPixmap>(scaled));
+void Core::onScalingFinished(QPixmap scaled, ScalerRequest req) {
+    if (state.hasActiveImage && req.path() == state.currentFilePath) {
+        // 假设 mw->onScalingFinished 已调整为接受 QPixmap 值（推荐）
+        // 若 MainWindow 的槽尚未修改，请同步更新其签名
+        mw->onScalingFinished(scaled);
     } else {
-        delete scaled;
+        // scaled 为局部对象，函数结束时自动销毁，无需 delete
     }
 }
 

@@ -4,6 +4,7 @@
 #include <QThreadPool>
 #include <QThread>
 #include <QMutex>
+#include <memory>
 #include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -14,9 +15,10 @@ public:
     explicit Scaler(Cache *_cache, QObject *parent = nullptr);
 
 signals:
-    void scalingFinished(QPixmap* result, ScalerRequest request);
-    void acceptScalingResult(QImage *image, ScalerRequest req);
-    void startBufferedRequest();
+    // 修改为值传递，由接收者管理生命周期，避免裸指针悬挂
+    void scalingFinished(QPixmap result, ScalerRequest request);
+    // 内部信号，同样使用值传递
+    void acceptScalingResult(QImage image, ScalerRequest req);
 
 public slots:
     void requestScaled(ScalerRequest req);
@@ -24,19 +26,21 @@ public slots:
 private slots:
     void onTaskStart(ScalerRequest req);
     void onTaskFinish(QImage* scaled, ScalerRequest req);
-    void slotStartBufferedRequest();
-    void slotForwardScaledResult(QImage *image, ScalerRequest req);
+    void slotForwardScaledResult(QImage image, ScalerRequest req);
 
 private:
     QThreadPool *pool;
     ScalerRunnable *runnable;
-    bool buffered, running;
-    clock_t currentRequestTimestamp;
-    ScalerRequest bufferedRequest, startedRequest;
+    
+    bool buffered;
+    bool running;
+    
+    ScalerRequest bufferedRequest;
+    ScalerRequest startedRequest;
 
     Cache *cache;
 
     void startRequest(ScalerRequest req);
 
-    QSemaphore *sem;
+    mutable QMutex mutex; // 保护 running, buffered, requests, runnable 访问
 };

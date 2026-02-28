@@ -1,129 +1,156 @@
 #include "scaler.h"
-
-/* What this should do in theory:
- * 1 request comes
- * 2 we run it
- * 3a if during scaling no new requests came, we return the result and forget about it. end.
- * 3b if some requests did come, by the end of current task we dispose of its result,
- *    start the last task that came and ignore the middle ones.
- */
+#include <QMutexLocker>
+#include <memory>
 
 Scaler::Scaler(Cache *_cache, QObject *parent)
     : QObject(parent),
       buffered(false),
       running(false),
-      currentRequestTimestamp(0),
       cache(_cache)
 {
-    sem = new QSemaphore(1);
     pool = new QThreadPool(this);
     pool->setMaxThreadCount(1);
     runnable = new ScalerRunnable();
     runnable->setAutoDelete(false);
-    connect(this, &Scaler::startBufferedRequest, this, &Scaler::slotStartBufferedRequest, Qt::DirectConnection);
+    
     connect(runnable, &ScalerRunnable::started, this, &Scaler::onTaskStart, Qt::DirectConnection);
     connect(runnable, &ScalerRunnable::finished, this, &Scaler::onTaskFinish, Qt::DirectConnection);
+    
+    // 使用 QueuedConnection 确保图片转换在主线程进行
     connect(this, &Scaler::acceptScalingResult, this, &Scaler::slotForwardScaledResult, Qt::QueuedConnection);
 }
 
 void Scaler::requestScaled(ScalerRequest req) {
-    sem->acquire(1);
-    if(!running) {
-//////////////////////////////////
-        if(!buffered) {
-            bufferedRequest = req;
-            buffered = true;
-          //qDebug() << "1 requestScaled() - locking..  " <<  req.image->name();
-            cache->reserve(req.image->fileName());
-          //qDebug() << "1 requestScaled() - LOCKED!  " <<  req.image->name();
-            startRequest(req);
-        } else if(bufferedRequest.image != req.image) {
-          //qDebug() << "2 requestScaled() - locking...  " <<  req.image->name();
-            cache->reserve(req.image->fileName());
-          //qDebug() << "2 requestScaled() - LOCKED!  " <<  req.image->name();
-            auto tmp = bufferedRequest;
-            bufferedRequest = req;
-            buffered = true;
-            if(startedRequest.image != tmp.image) {
-                cache->release(tmp.image->fileName());
-              //qDebug() << "2 requestScaled() - RELEASED!  " <<  tmp.image->name();
-            }
-        } else {
-            bufferedRequest = req;
-            buffered = true;
-        }
-//////////////////////////////
-    } else {
-        if(!buffered) {
-            if(req.image != startedRequest.image)
-                cache->reserve(req.image->fileName());
-            bufferedRequest = req;
-            buffered = true;
-        } else {
-            if(req.image == bufferedRequest.image) {
+    QString toReserve;
+    QString toRelease;
+    bool needStart = false;
+    ScalerRequest reqToStart;
+
+    { // 临界区：仅保护内部状态
+        QMutexLocker locker(&mutex);
+
+        // === 状态更新逻辑 ===
+        if (!running) {
+            // 情况 A: 无任务运行
+            if (!buffered) {
+                // A1: 空闲 -> 启动新任务
                 bufferedRequest = req;
                 buffered = true;
+                toReserve = req.image->fileName();
+                needStart = true;
+                reqToStart = req;
             } else {
-                if(bufferedRequest.image != startedRequest.image) {
-                    //qDebug() << "4 RELEASING " << bufferedRequest.image->name();
-                    cache->release(bufferedRequest.image->fileName());
+                // A2: 有缓冲 -> 更新缓冲
+                if (bufferedRequest.image != req.image) {
+                    toRelease = bufferedRequest.image->fileName();
+                    toReserve = req.image->fileName();
+                    bufferedRequest = req;
+                } else {
+                    bufferedRequest = req;
                 }
-                if(req.image != startedRequest.image)
-                    cache->reserve(req.image->fileName());
+            }
+        } else {
+            // 情况 B: 有任务运行
+            if (!buffered) {
+                // B1: 无缓冲 -> 创建缓冲
                 bufferedRequest = req;
                 buffered = true;
+                if (req.image != startedRequest.image) {
+                    toReserve = req.image->fileName();
+                }
+            } else {
+                // B2: 有缓冲 -> 替换缓冲
+                if (bufferedRequest.image != req.image) {
+                    if (bufferedRequest.image != startedRequest.image) {
+                        toRelease = bufferedRequest.image->fileName();
+                    }
+                    if (req.image != startedRequest.image) {
+                        toReserve = req.image->fileName();
+                    }
+                    bufferedRequest = req;
+                } else {
+                    bufferedRequest = req;
+                }
             }
         }
+    } // 解锁
+
+    // === 锁外执行耗时操作 ===
+    if (!toReserve.isEmpty()) {
+        cache->reserve(toReserve);
     }
-    sem->release(1);
+    if (!toRelease.isEmpty()) {
+        cache->release(toRelease);
+    }
+
+    // === 启动任务 ===
+    // 必须在 reserve 之后调用，防止任务启动时图片未被锁定
+    if (needStart) {
+        startRequest(reqToStart);
+    }
 }
 
 void Scaler::onTaskStart(ScalerRequest req) {
-    sem->acquire(1);
+    QMutexLocker locker(&mutex);
     running = true;
-    // clear buffered flag if there were no requests after us
-    if(buffered && bufferedRequest == req) {
+    
+    if (buffered && bufferedRequest == req) {
         buffered = false;
     }
     startedRequest = req;
-  //qDebug() << "onTaskStart(): " << req.image->name();
-    sem->release(1);
 }
 
 void Scaler::onTaskFinish(QImage *scaled, ScalerRequest req) {
-    sem->acquire(1);
-    running = false;
-    if(buffered && bufferedRequest.image == req.image) {
-    } else {
-      //qDebug() << "onTaskFinish() - 2 releasing..  " <<  req.image->name();
-        QString name = req.image->fileName();
-        cache->release(req.image->fileName());
-      //qDebug() << "onTaskFinish() - 2 RELEASED!  " <<  name;
+    // 使用智能指针管理所有权，确保函数退出时必然删除
+    std::unique_ptr<QImage> scaledGuard(scaled);
+    
+    QString toRelease;
+    bool hasBuffered = false;
+    ScalerRequest nextReq;
+
+    { // 临界区
+        QMutexLocker locker(&mutex);
+        running = false;
+
+        // 判断是否需要释放当前图片缓存
+        if (buffered && bufferedRequest.image == req.image) {
+            // 图片将继续使用，不释放
+        } else {
+            toRelease = req.image->fileName();
+        }
+
+        if (buffered) {
+            // 有新请求，丢弃当前结果，准备下次启动
+            hasBuffered = true;
+            nextReq = bufferedRequest;
+        } else {
+            // 无新请求，发送结果
+            // Qt信号值传递会触发隐式共享拷贝，数据安全
+            emit acceptScalingResult(*scaled, req);
+            // scaledGuard 将在离开作用域时自动 delete scaled
+        }
     }
-    if(buffered) {
-      //qDebug() << "onTaskFinish - startingBuffered: " << bufferedRequest.string;
-        delete scaled;
-        //startRequest(bufferedRequest);
-        emit startBufferedRequest();
-        sem->release(1);
-    } else {
-        sem->release(1);
-        emit acceptScalingResult(scaled, req);
+
+    if (!toRelease.isEmpty()) {
+        cache->release(toRelease);
+    }
+
+    if (hasBuffered) {
+        startRequest(nextReq);
     }
 }
 
-void Scaler::slotStartBufferedRequest() {
-    startRequest(bufferedRequest);
-}
-
-void Scaler::slotForwardScaledResult(QImage *image, ScalerRequest req) {
-    QPixmap *pixmap = new QPixmap();
-    *pixmap = QPixmap::fromImage(*image);
-    delete image;
-    emit scalingFinished(pixmap, req);
+void Scaler::slotForwardScaledResult(QImage image, ScalerRequest req) {
+    // 此槽函数通过 QueuedConnection 在主线程执行
+    // image 是值传递，拥有独立数据所有权，安全
+    QPixmap result = QPixmap::fromImage(image);
+    emit scalingFinished(result, req);
 }
 
 void Scaler::startRequest(ScalerRequest req) {
+    QMutexLocker locker(&mutex);
+    // 在任务实际开始前将 running 设为 true，消除窗口期
+    running = true;
     runnable->setRequest(req);
     pool->start(runnable);
 }

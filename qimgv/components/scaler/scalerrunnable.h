@@ -2,9 +2,6 @@
 
 #include <QObject>
 #include <QRunnable>
-#include <QThread>
-#include <QDebug>
-#include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "utils/imagelib.h"
 #include "settings.h"
@@ -13,14 +10,16 @@ class ScalerRunnable : public QObject, public QRunnable
 {
     Q_OBJECT
 public:
-    explicit ScalerRunnable();
-    void setRequest(ScalerRequest r);
-    void run();
+    explicit ScalerRunnable() = default;
+    void setRequest(const ScalerRequest& request) { m_request = request; }
+
+    void run() override;
+
 signals:
-    void started(ScalerRequest);
-    void finished(QImage*, ScalerRequest);
+    void started(const ScalerRequest&);
+    // 注意：finished 传递 QImage*，所有权转移给接收者，接收者必须负责 delete
+    void finished(QImage* scaled, const ScalerRequest&);
 
 private:
-    ScalerRequest req;
-    const float CMPL_FALLBACK_THRESHOLD = 70.0; // equivalent of ~ 5000x3500 @ 32bpp
+    ScalerRequest m_request;
 };

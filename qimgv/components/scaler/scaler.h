@@ -25,7 +25,7 @@ public slots:
 
 private slots:
     void onTaskStart(ScalerRequest req);
-    void onTaskFinish(QImage* scaled, ScalerRequest req);
+    void onTaskFinish(QImage scaled, ScalerRequest req);
     void slotForwardScaledResult(QImage image, ScalerRequest req);
 
 private:

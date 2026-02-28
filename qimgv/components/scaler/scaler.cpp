@@ -36,14 +36,14 @@ void Scaler::requestScaled(ScalerRequest req) {
                 // A1: 空闲 -> 启动新任务
                 bufferedRequest = req;
                 buffered = true;
-                toReserve = req.image->fileName();
+                toReserve = req.image()->fileName();
                 needStart = true;
                 reqToStart = req;
             } else {
                 // A2: 有缓冲 -> 更新缓冲
-                if (bufferedRequest.image != req.image) {
-                    toRelease = bufferedRequest.image->fileName();
-                    toReserve = req.image->fileName();
+                if (bufferedRequest.image() != req.image()) {
+                    toRelease = bufferedRequest.image()->fileName();
+                    toReserve = req.image()->fileName();
                     bufferedRequest = req;
                 } else {
                     bufferedRequest = req;
@@ -55,17 +55,17 @@ void Scaler::requestScaled(ScalerRequest req) {
                 // B1: 无缓冲 -> 创建缓冲
                 bufferedRequest = req;
                 buffered = true;
-                if (req.image != startedRequest.image) {
-                    toReserve = req.image->fileName();
+                if (req.image() != startedRequest.image()) {
+                    toReserve = req.image()->fileName();
                 }
             } else {
                 // B2: 有缓冲 -> 替换缓冲
-                if (bufferedRequest.image != req.image) {
-                    if (bufferedRequest.image != startedRequest.image) {
-                        toRelease = bufferedRequest.image->fileName();
+                if (bufferedRequest.image() != req.image()) {
+                    if (bufferedRequest.image() != startedRequest.image()) {
+                        toRelease = bufferedRequest.image()->fileName();
                     }
-                    if (req.image != startedRequest.image) {
-                        toReserve = req.image->fileName();
+                    if (req.image() != startedRequest.image()) {
+                        toReserve = req.image()->fileName();
                     }
                     bufferedRequest = req;
                 } else {
@@ -113,10 +113,10 @@ void Scaler::onTaskFinish(QImage *scaled, ScalerRequest req) {
         running = false;
 
         // 判断是否需要释放当前图片缓存
-        if (buffered && bufferedRequest.image == req.image) {
+        if (buffered && bufferedRequest.image() == req.image()) {
             // 图片将继续使用，不释放
         } else {
-            toRelease = req.image->fileName();
+            toRelease = req.image()->fileName();
         }
 
         if (buffered) {

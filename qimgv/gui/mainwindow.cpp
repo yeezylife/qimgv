@@ -901,6 +901,12 @@ void MW::onInfoUpdated() {
     // 计算新的信息栏内容
     QString newInfoText, newSizeText;
     calculateInfoBarContent(newInfoText, newSizeText);
+    
+    // 计算 posString（文件位置信息）
+    QString posString;
+    if(info.fileCount)
+        posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
+    
     // 只有当内容发生变化时才更新
     if (newInfoText != cachedInfoText || newSizeText != cachedSizeText) {
         cachedInfoText = newInfoText;

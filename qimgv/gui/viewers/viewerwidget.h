@@ -8,6 +8,7 @@
 #include "gui/overlays/zoomindicatoroverlayproxy.h"
 #include "gui/overlays/clickzoneoverlay.h"
 #include "gui/contextmenu.h"
+#include <QPointer>
 
 enum CurrentWidget {
     IMAGEVIEWER,
@@ -37,9 +38,9 @@ public:
 
 private:
     QVBoxLayout layout;
-    std::shared_ptr<ImageViewerV2> imageViewer;
-    std::shared_ptr<VideoPlayerInitProxy> videoPlayer;
-    std::shared_ptr<ContextMenu> contextMenu;
+    QPointer<ImageViewerV2> imageViewer;
+    QPointer<VideoPlayerInitProxy> videoPlayer;
+    QPointer<ContextMenu> contextMenu;
     VideoControlsProxyWrapper *videoControls;
     ZoomIndicatorOverlayProxy *zoomIndicator;
     ClickZoneOverlay *clickZoneOverlay;

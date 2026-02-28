@@ -1,6 +1,7 @@
 #include "thumbnailerrunnable.h"
 
-ThumbnailerRunnable::ThumbnailerRunnable(ThumbnailCache* _cache, QString _path, int _size, bool _crop, bool _force) :
+// 优化：初始化列表构造
+ThumbnailerRunnable::ThumbnailerRunnable(ThumbnailCache* _cache, const QString &_path, int _size, bool _crop, bool _force) :
     path(_path),
     size(_size),
     crop(_crop),
@@ -10,12 +11,20 @@ ThumbnailerRunnable::ThumbnailerRunnable(ThumbnailCache* _cache, QString _path, 
 }
 
 void ThumbnailerRunnable::run() {
+    // 发出开始信号，保持流程一致性
     emit taskStart(path, size);
-    std::shared_ptr<Thumbnail> thumbnail = generate(cache, path, size, crop, force);
+    
+    // 【核心修改】直接返回空指针，不进行任何生成操作
+    // 这会彻底切断图片解码和视频截帧的 CPU 消耗
+    std::shared_ptr<Thumbnail> thumbnail = nullptr;
+    
+    // 发出结束信号，告知上层任务已完成（虽然结果是空的）
+    // 这一步至关重要，能防止上层逻辑因“未收到回应”而反复重试
     emit taskEnd(thumbnail, path);
 }
 
-QString ThumbnailerRunnable::generateIdString(QString path, int size, bool crop) {
+QString ThumbnailerRunnable::generateIdString(const QString &path, int size, bool crop) {
+    // 该函数已无实际作用，保留以防万一其他地方调用
     QString queryStr = path + QString::number(size);
     if(crop)
         queryStr.append("s");
@@ -23,182 +32,33 @@ QString ThumbnailerRunnable::generateIdString(QString path, int size, bool crop)
     return queryStr;
 }
 
-std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, QString path, int size, bool crop, bool force) {
-    DocumentInfo imgInfo(path);
-    QString thumbnailId = generateIdString(path, size, crop);
-    std::unique_ptr<QImage> image;
-
-    QString time = QString::number(imgInfo.lastModified().toMSecsSinceEpoch());
-
-    if(!force && cache) {
-        image.reset(cache->readThumbnail(thumbnailId));
-        if(image && image->text("lastModified") != time)
-            image.reset(nullptr);
-    }
-
-    if(!image) {
-        if(imgInfo.type() == DocumentType::NONE) {
-            std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(imgInfo.fileName(), "", size, nullptr));
-            return thumbnail;
-        }
-        std::pair<QImage*, QSize> pair;
-        if(imgInfo.type() == VIDEO)
-            pair = createVideoThumbnail(path, size, crop);
-        else
-            pair = createThumbnail(imgInfo.filePath(), imgInfo.format().toStdString().c_str(), size, crop);
-        image.reset(pair.first);
-        QSize originalSize = pair.second;
-
-        image = ImageLib::exifRotated(std::move(image), imgInfo.exifOrientation());
-
-        // put in image info
-        image->setText("originalWidth", QString::number(originalSize.width()));
-        image->setText("originalHeight", QString::number(originalSize.height()));
-        image->setText("lastModified", time);
-
-        if(imgInfo.type() == ANIMATED)
-            image->setText("label", " [a]");
-        else if(imgInfo.type() == VIDEO)
-            image->setText("label", " [v]");
-
-        if(cache) {
-            // save thumbnail if it makes sense
-            // FIXME: avoid too much i/o
-            if(originalSize.width() > size || originalSize.height() > size)
-                cache->saveThumbnail(image.get(), thumbnailId);
-        }
-    }
-    auto && tmpPixmap = new QPixmap(image->size());
-    *tmpPixmap = QPixmap::fromImage(*image);
-    tmpPixmap->setDevicePixelRatio(qApp->devicePixelRatio());
-
-    QString label;
-    if(tmpPixmap->width() == 0) {
-        label = "error";
-    } else  {
-        // put info into Thumbnail object
-        label = image->text("originalWidth") +
-                "x" +
-                image->text("originalHeight") +
-                image->text("label");
-    }
-    std::shared_ptr<QPixmap> pixmapPtr(tmpPixmap);
-    std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(imgInfo.fileName(), label, size, pixmapPtr));
-    return thumbnail;
+std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, const QString &path, int size, bool crop, bool force) {
+    // 【核心修改】同步生成接口也直接返回空，防止被直接调用时产生消耗
+    Q_UNUSED(cache);
+    Q_UNUSED(path);
+    Q_UNUSED(size);
+    Q_UNUSED(crop);
+    Q_UNUSED(force);
+    return nullptr;
+    
+    /* 原有的数百行生成逻辑已全部移除，既优化了性能，也消除了潜在的内存泄漏风险 */
 }
 
 ThumbnailerRunnable::~ThumbnailerRunnable() {
 }
 
-std::pair<QImage*, QSize> ThumbnailerRunnable::createThumbnail(QString path, const char *format, int size, bool squared) {
-    QImageReader *reader = new QImageReader(path, format);
-    Qt::AspectRatioMode ARMode = squared?
-                (Qt::KeepAspectRatioByExpanding):(Qt::KeepAspectRatio);
-    QImage *result = nullptr;
-    QSize originalSize;
-    bool indexed = (reader->imageFormat() == QImage::Format_Indexed8);
-    bool manualResize = indexed || !reader->supportsOption(QImageIOHandler::Size);
-    if(!manualResize) { // resize during read via QImageReader (faster)
-        QSize scaledSize = reader->size().scaled(size, size, ARMode);
-        reader->setScaledSize(scaledSize);
-        if(squared) {
-            QRect clip(0, 0, size, size);
-            QRect scaledRect(QPoint(0,0), scaledSize);
-            clip.moveCenter(scaledRect.center());
-            reader->setScaledClipRect(clip);
-        }
-        originalSize = reader->size();
-        result = new QImage();
-        if(!reader->read(result)) {
-            // If read() returns false there's no guarantee that size conversion worked properly.
-            // So we fallback to manual.
-            // Se far I've seen this happen only on some weird (corrupted?) jpeg saved from camera
-            manualResize = true;
-            delete result;
-            result = nullptr;
-            // Force reset reader because it is really finicky
-            // and can fail on the second read attempt (yeah wtf)
-            reader->setFileName("");
-            delete reader;
-            reader = new QImageReader(path, format);
-        }
-    }
-    if(manualResize) { // manual resize & crop. slower but should just work
-        QImage *fullSize = new QImage();
-        reader->read(fullSize);
-        if(indexed) {
-            auto newFmt = QImage::Format_RGB32;
-            if(fullSize->hasAlphaChannel())
-                newFmt = QImage::Format_ARGB32;
-            auto tmp = new QImage(fullSize->convertToFormat(newFmt));
-            delete fullSize;
-            fullSize = tmp;
-        }
-        originalSize = fullSize->size();
-        QSize scaledSize = fullSize->size().scaled(size, size, ARMode);
-        if(squared) {
-            QRect clip(0, 0, size, size);
-            QRect scaledRect(QPoint(0,0), scaledSize);
-            clip.moveCenter(scaledRect.center());
-            QImage scaled = QImage(fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-            result = ImageLib::croppedRaw(&scaled, clip);
-        } else {
-            result = new QImage(fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        }
-        delete fullSize;
-    }
-    // force reader to close file so it can be deleted later
-    reader->setFileName("");
-    delete reader;
-    return std::make_pair(result, originalSize);
+// 以下函数保留空实现或移除具体逻辑，因为 generate 已经不会调用它们了
+std::pair<QImage*, QSize> ThumbnailerRunnable::createThumbnail(const QString &path, const char *format, int size, bool squared) {
+    Q_UNUSED(path);
+    Q_UNUSED(format);
+    Q_UNUSED(size);
+    Q_UNUSED(squared);
+    return std::make_pair(nullptr, QSize());
 }
 
-std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path, int size, bool squared) {
-    QFileInfo fi(path);
-    QImageReader reader;
-    QString tmpFilePath = settings->tmpDir() + fi.fileName() + ".png";
-    QString tmpFilePathEsc = tmpFilePath;
-    tmpFilePathEsc.replace("%", "%%");
-    QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start(settings->mpvBinary(),
-                  QStringList() << "--start=30%"
-                                << "--frames=1"
-                                << "--aid=no"
-                                << "--sid=no"
-                                << "--no-config"
-                                << "--load-scripts=no"
-                                << "--no-terminal"
-                                << "--o=" + tmpFilePathEsc
-                                << path
-                  );
-    process.waitForFinished(8000);
-    process.close();
-
-    reader.setFileName(tmpFilePath);
-    reader.setFormat("png");
-    Qt::AspectRatioMode ARMode = squared?
-                (Qt::KeepAspectRatioByExpanding):(Qt::KeepAspectRatio);
-    QImage *result = nullptr;
-
-    // scale & crop
-    QSize scaledSize = reader.size().scaled(size, size, ARMode);
-    reader.setScaledSize(scaledSize);
-    if(squared) {
-        QRect clip(0, 0, size, size);
-        QRect scaledRect(QPoint(0,0), scaledSize);
-        clip.moveCenter(scaledRect.center());
-        reader.setScaledClipRect(clip);
-    }
-    QSize originalSize = reader.size();
-    result = new QImage(reader.read());
-
-    // force reader to close file so it can be deleted later
-    reader.setFileName("");
-
-    // remove temporary file
-    QFile tmpFile(tmpFilePath);
-    tmpFile.remove();
-
-    return std::make_pair(result, originalSize);
+std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(const QString &path, int size, bool squared) {
+    Q_UNUSED(path);
+    Q_UNUSED(size);
+    Q_UNUSED(squared);
+    return std::make_pair(nullptr, QSize());
 }

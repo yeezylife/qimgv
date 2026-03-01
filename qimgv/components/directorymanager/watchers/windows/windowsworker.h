@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "../watcherworker.h"
 #include <QDebug>
+#include <vector>
 
 class WindowsWorker : public WatcherWorker {
     Q_OBJECT
@@ -17,11 +18,8 @@ signals:
     void notifyEvent(PFILE_NOTIFY_INFORMATION);
 
 private:
-    HANDLE hDir;
-    WCHAR buffer[1024];
-    DWORD bytesReturned;
+    HANDLE hDir = nullptr;  // 初始化为 nullptr，避免未定义行为
     uint POLL_RATE_MS = 1000;
-    void processEvent(FILE_NOTIFY_INFORMATION *fni);
     void freeHandle();
 };
 

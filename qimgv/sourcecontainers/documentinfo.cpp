@@ -222,7 +222,7 @@ public:
     Exiv2::DataBuf read(size_t rcount) override {
         if (!isOpen_ || rcount == 0) return Exiv2::DataBuf();
         size_t bytesToRead = rcount;
-        if (pos_ + bytesToRead > size_)
+        if (pos_ + bytesToRead > static_cast<size_t>(size_))
             bytesToRead = static_cast<size_t>(size_ - pos_);
         if (bytesToRead == 0) return Exiv2::DataBuf();
 
@@ -241,7 +241,7 @@ public:
     size_t read(Exiv2::byte* buf, size_t rcount) override {
         if (!isOpen_ || !buf || rcount == 0) return 0;
         size_t bytesToRead = rcount;
-        if (pos_ + bytesToRead > size_)
+        if (pos_ + bytesToRead > static_cast<size_t>(size_))
             bytesToRead = static_cast<size_t>(size_ - pos_);
         if (bytesToRead == 0) return 0;
         qint64 bytesRead = file_->read(reinterpret_cast<char*>(buf), bytesToRead);

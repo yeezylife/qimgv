@@ -10,9 +10,9 @@ MW::MW(QWidget *parent)
       copyOverlay(nullptr),
       saveOverlay(nullptr),
       renameOverlay(nullptr),
-      infoBarFullscreen(nullptr),
-      imageInfoOverlay(nullptr),
       floatingMessage(nullptr),
+      imageInfoOverlay(nullptr),
+      infoBarFullscreen(nullptr),
       cropPanel(nullptr),
       cropOverlay(nullptr),
       fullUiInitialized(false) // 初始化延迟初始化标志

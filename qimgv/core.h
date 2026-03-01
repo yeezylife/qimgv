@@ -59,7 +59,7 @@ private:
     MW *mw;
 
     State state;
-    bool loopSlideshow, slideshow, shuffle;
+    bool loopSlideshow, shuffle, slideshow;
     FolderEndAction folderEndAction;
 
     // components

@@ -11,11 +11,11 @@ MW::MW(QWidget *parent)
       saveOverlay(nullptr),
       renameOverlay(nullptr),
       floatingMessage(nullptr),
-      imageInfoOverlay(nullptr),
-      infoBarFullscreen(nullptr),
-      cropPanel(nullptr),
-      cropOverlay(nullptr),
-      fullUiInitialized(false) // 初始化延迟初始化标志
+      cropPanel(nullptr),          // 先初始化 cropPanel
+      cropOverlay(nullptr),        // 再初始化 cropOverlay
+      imageInfoOverlay(nullptr),   // 然后 imageInfoOverlay
+      infoBarFullscreen(nullptr),  // 最后 infoBarFullscreen
+      fullUiInitialized(false)     // fullUiInitialized 始终在最后（因为它在类中最晚声明）
 {
     setAttribute(Qt::WA_TranslucentBackground, true);
     layout.setContentsMargins(0,0,0,0);

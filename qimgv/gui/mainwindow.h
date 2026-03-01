@@ -97,6 +97,7 @@ private:
     CopyOverlay *copyOverlay;
     SaveConfirmOverlay *saveOverlay;
     RenameOverlay *renameOverlay;
+    FloatingMessageProxy *floatingMessage;
     CropPanel *cropPanel;
     CropOverlay *cropOverlay;
     ChangelogWindow *changelogWindow;
@@ -105,7 +106,6 @@ private:
 
     ControlsOverlay *controlsOverlay;
     FullscreenInfoOverlayProxy *infoBarFullscreen;
-    FloatingMessageProxy *floatingMessage;
     std::shared_ptr<InfoBarProxy> infoBarWindowed;
 
     PanelPosition panelPosition;

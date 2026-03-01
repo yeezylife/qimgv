@@ -8,15 +8,20 @@ void ScalerRunnable::run()
 
     auto imageContainer = m_request.image();
     if (!imageContainer)
+    {
+        emit finished(QImage(), m_request);
         return;
+    }
 
     auto imgPtr = imageContainer->getImage();
     if (!imgPtr || imgPtr->isNull())
+    {
+        emit finished(QImage(), m_request);
         return;
+    }
 
     const QImage& sourceImage = *imgPtr;
 
-    // 确定最终使用的滤波算法
     ScalingFilter effectiveFilter = m_request.filter();
 
     bool useNearest =
@@ -27,7 +32,6 @@ void ScalerRunnable::run()
 
     ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
 
-    // 这里解引用 shared_ptr，避免额外构造
     QImage scaled = ImageLib::scaled(sourceImage,
                                      m_request.size(),
                                      filterToUse);

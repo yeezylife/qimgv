@@ -115,10 +115,13 @@ void FileOperations::copyFileTo(const QString &srcFilePath, const QString &destD
         result = FileOpResult::SUCCESS;
         // restore timestamps
         QFile dstF(destFile.absoluteFilePath());
-        dstF.open(QIODevice::ReadWrite);
-        dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
-        dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
-        dstF.close();
+        if (dstF.open(QIODevice::ReadWrite)) {
+            dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
+            dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
+            dstF.close();
+        } else {
+            qWarning() << "Failed to open file for timestamp setting:" << destFile.absoluteFilePath();
+        }
         // ok; remove the backup
         if(exists)
             QFile::remove(tmpPath);
@@ -192,11 +195,14 @@ void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destD
             result = FileOpResult::SUCCESS;
             // restore timestamps
             QFile dstF(destFile.absoluteFilePath());
-            dstF.open(QIODevice::ReadWrite);
-            // dstF.setFileTime(srcBirthTime, QFileDevice::FileBirthTime); // TODO: does not work (linux)
-            dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
-            dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
-            dstF.close();
+            if (dstF.open(QIODevice::ReadWrite)) {
+                // dstF.setFileTime(srcBirthTime, QFileDevice::FileBirthTime); // TODO: does not work (linux)
+                dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
+                dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
+                dstF.close();
+            } else {
+                qWarning() << "Failed to open file for timestamp setting:" << destFile.absoluteFilePath();
+            }
             // remove backup
             if(exists)
                 QFile::remove(tmpPath);

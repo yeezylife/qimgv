@@ -313,7 +313,7 @@ void Core::onPlaybackFinished() {
 
 void Core::syncRandomizer() {
     if(model) {
-        randomizer.setCount(model->fileCount());
+        randomizer.setCount(static_cast<size_t>(model->fileCount()));
         randomizer.shuffle();
         randomizer.setCurrent(model->indexOfFile(state.currentFilePath));
     }
@@ -1358,7 +1358,7 @@ void Core::nextImage() {
         return;
     stopSlideshow();
     if(shuffle) {
-        loadFileIndex(randomizer.next(), true, false);
+        loadFileIndex(static_cast<int>(randomizer.next()), true, false);
         return;
     }
     int newIndex = model->indexOfFile(state.currentFilePath) + 1;
@@ -1382,7 +1382,7 @@ void Core::prevImage() {
         return;
     stopSlideshow();
     if(shuffle) {
-        loadFileIndex(randomizer.prev(), true, false);
+        loadFileIndex(static_cast<int>(randomizer.prev()), true, false);
         return;
     }
 
@@ -1406,7 +1406,7 @@ void Core::nextImageSlideshow() {
     if(model->isEmpty() || mw->currentViewMode() == MODE_FOLDERVIEW)
         return;
     if(shuffle) {
-        loadFileIndex(randomizer.next(), false, false);
+        loadFileIndex(static_cast<int>(randomizer.next()), false, false);
     } else {
         int newIndex = model->indexOfFile(state.currentFilePath) + 1;
         if(newIndex >= model->fileCount()) {

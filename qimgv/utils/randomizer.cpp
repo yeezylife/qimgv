@@ -31,7 +31,7 @@ size_t Randomizer::indexOf(size_t item) {
     std::vector<int>::iterator it;
     size_t i = 0;
     for (it = vec.begin(); it != vec.end(); ++it, ++i) {
-        if(vec[i] == item) {
+        if(vec[i] == static_cast<int>(item)) {
             index = i;
             break;
         }

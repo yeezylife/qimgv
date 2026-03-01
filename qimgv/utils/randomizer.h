@@ -12,7 +12,7 @@
 class Randomizer {
 public:
     Randomizer();
-    Randomizer(int _count);
+    Randomizer(size_t _count);
 
     void setCount(size_t _count);
     size_t next();
@@ -25,5 +25,5 @@ private:
     size_t currentIndex;
     std::vector<int> vec;
     void fill();
-    size_t indexOf(size_t n);
+    size_t indexOf(size_t item);
 };

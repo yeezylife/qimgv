@@ -13,38 +13,39 @@ enum ActiveHighlightZone {
     HIGHLIGHT_RIGHT
 };
 
-class ClickZoneOverlay : public FloatingWidget
-{
+class ClickZoneOverlay : public FloatingWidget {
     Q_OBJECT
 public:
     explicit ClickZoneOverlay(FloatingWidgetContainer *parent);
-    QRect leftZone();
-    QRect rightZone();
+    QRect leftZone() const;
+    QRect rightZone() const;
     void highlightLeft();
     void highlightRight();
     void disableHighlight();
     void setHighlightedZone(ActiveHighlightZone zone);
-    bool isHighlighted();
+    bool isHighlighted() const;
     void setPressed(bool mode);
 
 public slots:
     void readSettings();
 
 private:
-    QPixmap* loadPixmap(QString path);
-    QPixmap *pixmapLeft = nullptr, *pixmapRight = nullptr;
+    QPixmap loadPixmap(const QString& path);
+    QPixmap pixmapLeft;
+    QPixmap pixmapRight;
     QRect mLeftZone, mRightZone;
-    qreal dpr, pixmapDrawScale;
+    qreal dpr = 1.0;
+    qreal pixmapDrawScale = 1.0;
     bool hiResPixmaps = false;
     const int zoneSize = 110;
     bool isPressed = false;
-    bool leftHovered = false, rightHovered = false;
     bool drawZones = true;
     ActiveHighlightZone activeZone = HIGHLIGHT_NONE;
-    void drawPixmap(QPainter &p, QPixmap *pixmap, QRect rect);
+
+    void drawPixmap(QPainter &p, const QPixmap& pixmap, const QRect& rect);
 
 protected:
-    virtual void resizeEvent(QResizeEvent *event);
-    virtual void paintEvent(QPaintEvent *event);
-    virtual void recalculateGeometry();
+    void resizeEvent(QResizeEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void recalculateGeometry() override;
 };

@@ -9,5 +9,5 @@
 
 class ImageFactory {
 public:
-    static std::shared_ptr<Image> createImage(QString path);
+    static std::shared_ptr<Image> createImage(const QString& path);
 };

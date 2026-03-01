@@ -1,26 +1,27 @@
 #include "styledcombobox.h"
 
-StyledComboBox::StyledComboBox(QWidget *parent) : QComboBox(parent), hiResPixmap(false)
+StyledComboBox::StyledComboBox(QWidget *parent)
+    : QComboBox(parent)
+    , hiResPixmap(false)
+    , dpr(devicePixelRatioF())
+    , pixmapDrawScale(1.0)
 {
-    dpr = this->devicePixelRatioF();
-    connect(settings, &Settings::settingsChanged, [this]() {
+    connect(settings, &Settings::settingsChanged, this, [this]() {
         ImageLib::recolor(this->downArrow, settings->colorScheme().icons);
     });
 }
 
-void StyledComboBox::setIconPath(QString path) {
-    if(dpr >= (1.0 + 0.001)) {
-        path.replace(".", "@2x.");
+void StyledComboBox::setIconPath(const QString& path) {
+    QString actualPath = path;
+    if (dpr >= 1.001) {
+        actualPath.replace(".", "@2x.");
         hiResPixmap = true;
-        downArrow.load(path);
-        if(dpr >= (2.0 - 0.001))
-            pixmapDrawScale = dpr;
-        else
-            pixmapDrawScale = 2.0;
+        downArrow.load(actualPath);
+        pixmapDrawScale = (dpr >= 1.999) ? dpr : 2.0;
         downArrow.setDevicePixelRatio(pixmapDrawScale);
     } else {
         hiResPixmap = false;
-        downArrow.load(path);
+        downArrow.load(actualPath);
         pixmapDrawScale = dpr;
     }
     ImageLib::recolor(downArrow, settings->colorScheme().icons);
@@ -30,9 +31,9 @@ void StyledComboBox::setIconPath(QString path) {
 void StyledComboBox::paintEvent(QPaintEvent *e) {
     QComboBox::paintEvent(e);
     QPainter p(this);
-    QPointF pos(0,0);
+    QPointF pos;
 
-    if(hiResPixmap) {
+    if (hiResPixmap) {
         pos = QPointF(width() - 8 - downArrow.width() / pixmapDrawScale,
                       height() / 2 - downArrow.height() / (2 * pixmapDrawScale));
     } else {

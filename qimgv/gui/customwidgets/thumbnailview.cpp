@@ -1,16 +1,7 @@
 #include "thumbnailview.h"
 
 ThumbnailView::ThumbnailView(Qt::Orientation _orientation, QWidget *parent)
-    : QGraphicsView(parent),
-      blockThumbnailLoading(false),
-      mCropThumbnails(false),
-      mouseReleaseSelect(false),
-      mDrawScrollbarIndicator(true),
-      mThumbnailSize(120),
-      rangeSelection(false),
-      selectMode(ACTIVATE_BY_PRESS),
-      lastScrollFrameTime(0),
-      scrollTimeLine(nullptr)
+    : QGraphicsView(parent)
 {
     setAccessibleName("thumbnailView");
     this->setMouseTracking(true);
@@ -28,7 +19,7 @@ ThumbnailView::ThumbnailView(Qt::Orientation _orientation, QWidget *parent)
     lastTouchpadScroll.start();
 
     connect(&loadTimer, &QTimer::timeout, this, &ThumbnailView::loadVisibleThumbnails);
-    loadTimer.setInterval(static_cast<const int>(LOAD_DELAY));
+    loadTimer.setInterval(static_cast<int>(LOAD_DELAY));
     loadTimer.setSingleShot(true);
 
     qreal screenMaxRefreshRate = 60;

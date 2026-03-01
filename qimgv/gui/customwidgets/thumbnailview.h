@@ -76,13 +76,13 @@ signals:
 
 private:
     QTimer loadTimer;
-    bool blockThumbnailLoading;
+    bool blockThumbnailLoading = false;
 
-    int mDrawScrollbarIndicator, lastScrollFrameTime;
+    int mDrawScrollbarIndicator = true, lastScrollFrameTime = 0;
     QList<int> mSelection;
 
-    bool mCropThumbnails, mouseReleaseSelect;
-    ThumbnailSelectMode selectMode;
+    bool mCropThumbnails = false, mouseReleaseSelect = false;
+    ThumbnailSelectMode selectMode = ACTIVATE_BY_PRESS;
     QPoint dragStartPos;
     ThumbnailWidget* dragTarget;
 
@@ -96,13 +96,13 @@ protected:
     QGraphicsScene scene;
     QList<ThumbnailWidget*> thumbnails;
     QScrollBar *scrollBar;
-    QTimeLine *scrollTimeLine;
+    QTimeLine *scrollTimeLine = nullptr;
     QPointF viewportCenter;
-    int mThumbnailSize;
+    int mThumbnailSize = 120;
     int offscreenPreloadArea = 3000;
 
     QList<int> rangeSelectionSnapshot;
-    bool rangeSelection; // true if shift is pressed
+    bool rangeSelection = false; // true if shift is pressed
     bool wayland = false;
 
     QRect indicator;

@@ -21,14 +21,22 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-kwindowsystem
             mingw-w64-ucrt-x86_64-qt6-base
             mingw-w64-ucrt-x86_64-qt6-svg
             mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-qt6-tools
             mingw-w64-ucrt-x86_64-kimageformats
+            mingw-w64-ucrt-x86_64-libjxl
+            mingw-w64-ucrt-x86_64-libraw
+            mingw-w64-ucrt-x86_64-exiv2
             mingw-w64-ucrt-x86_64-opencv
             mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-exiv2
-            mingw-w64-ucrt-x86_64-libraw
+            mingw-w64-ucrt-x86_64-lcms2
+            mingw-w64-ucrt-x86_64-libavif
+            mingw-w64-ucrt-x86_64-libheif
 
       - uses: actions/checkout@v4
 

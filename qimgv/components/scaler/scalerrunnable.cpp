@@ -1,25 +1,24 @@
 #include "scalerrunnable.h"
-
-ScalerRunnable::ScalerRunnable()
-{
-}
-
-void ScalerRunnable::setRequest(const ScalerRequest& r)
-{
-    req = r;
-}
+#include <memory>
+#include "settings.h"
 
 void ScalerRunnable::run()
 {
-    emit started(req);
+    emit started(m_request);
 
-    // Choose filter based on request and settings
-    int filter = req.filter;
-    if (filter == 0 || (req.size.width() > req.image->width() && !settings->smoothUpscaling())) {
-        filter = QI_FILTER_NEAREST;
-    }
+    // 确定最终使用的滤波算法
+    ScalingFilter effectiveFilter = m_request.filter();
+    bool useNearest = (effectiveFilter == QI_FILTER_NEAREST) ||
+                      ( (m_request.size().width() > m_request.image()->width() ||
+                         m_request.size().height() > m_request.image()->height()) &&
+                        !settings->smoothUpscaling() );
 
-    // scaled now returns QImage by value (no pointer)
-    QImage scaled = ImageLib::scaled(req.image->getImage(), req.size, filter);
-    emit finished(scaled, req);
+    ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
+
+    // 调用 ImageLib::scaled 获得堆分配的 QImage*
+    std::unique_ptr<QImage> scaledPtr(ImageLib::scaled(m_request.image()->getImage(),
+                                                       m_request.size(),
+                                                       filterToUse));
+    // 解引用传递值，scaledPtr 自动释放
+    emit finished(*scaledPtr, m_request);
 }

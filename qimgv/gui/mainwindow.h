@@ -43,17 +43,17 @@
 #endif
 
 struct CurrentInfo {
-    int index;
-    int fileCount;
+    int index = 0;
+    int fileCount = 0;
     QString fileName;
     QString filePath;
     QString directoryName;
     QString directoryPath;
     QSize imageSize;
-    qint64 fileSize;
-    bool slideshow;
-    bool shuffle;
-    bool edited;
+    qint64 fileSize = 0;
+    bool slideshow = false;
+    bool shuffle = false;
+    bool edited = false;
 };
 
 enum ActiveSidePanel {
@@ -83,36 +83,40 @@ public:
     DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
 
 private:
-    std::shared_ptr<ViewerWidget> viewerWidget;
-    QHBoxLayout layout;
-    QTimer windowGeometryChangeTimer;
-    int currentDisplay;
-
-    bool cropPanelActive, showInfoBarFullscreen, showInfoBarWindowed, maximized;
-    std::shared_ptr<DocumentWidget> docWidget;
-    std::shared_ptr<FolderViewProxy> folderView;
-    std::shared_ptr<CentralWidget> centralWidget;
-    ActiveSidePanel activeSidePanel;
-    SidePanel *sidePanel;
-    CopyOverlay *copyOverlay;
-    SaveConfirmOverlay *saveOverlay;
-    RenameOverlay *renameOverlay;
-    FloatingMessageProxy *floatingMessage;
-    CropPanel *cropPanel;
-    CropOverlay *cropOverlay;
-    ChangelogWindow *changelogWindow;
-
-    ImageInfoOverlayProxy *imageInfoOverlay;
-
-    ControlsOverlay *controlsOverlay;
-    FullscreenInfoOverlayProxy *infoBarFullscreen;
-    std::shared_ptr<InfoBarProxy> infoBarWindowed;
-
-    PanelPosition panelPosition;
-    CurrentInfo info;
+    std::shared_ptr<ViewerWidget> viewerWidget;            // 默认 nullptr
+    QHBoxLayout layout;                                     // 默认构造
+    QTimer windowGeometryChangeTimer;                       // 默认构造
+    int currentDisplay = 0;
+    bool cropPanelActive = false;
+    bool showInfoBarFullscreen = false;
+    bool showInfoBarWindowed = false;
+    bool maximized = false;
+    std::shared_ptr<DocumentWidget> docWidget;              // 默认 nullptr
+    std::shared_ptr<FolderViewProxy> folderView;            // 默认 nullptr
+    std::shared_ptr<CentralWidget> centralWidget;           // 默认 nullptr
+    ActiveSidePanel activeSidePanel = SIDEPANEL_NONE;
+    SidePanel *sidePanel = nullptr;
+    CopyOverlay *copyOverlay = nullptr;
+    SaveConfirmOverlay *saveOverlay = nullptr;
+    RenameOverlay *renameOverlay = nullptr;
+    FloatingMessageProxy *floatingMessage = nullptr;
+    CropPanel *cropPanel = nullptr;
+    CropOverlay *cropOverlay = nullptr;
+    ChangelogWindow *changelogWindow = nullptr;
+    ImageInfoOverlayProxy *imageInfoOverlay = nullptr;
+    ControlsOverlay *controlsOverlay = nullptr;
+    FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
+    std::shared_ptr<InfoBarProxy> infoBarWindowed;          // 默认 nullptr
+    PanelPosition panelPosition = PANEL_BOTTOM;              // 假设默认值
+    CurrentInfo info;                                        // 默认构造（各字段已初始化）
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QDesktopWidget desktopWidget;
 #endif
+
+    QString cachedWindowTitle;
+    QString cachedInfoText;
+    QString cachedSizeText;
+    bool fullUiInitialized = false;                         // 延迟初始化标志
 
     void saveWindowGeometry();
     void restoreWindowGeometry();
@@ -121,7 +125,7 @@ private:
 
     void applyWindowedBackground();
     void applyFullscreenBackground();
-    void mouseDoubleClickEvent(QMouseEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
 
     void setupCropPanel();
     void setupCopyOverlay();
@@ -129,12 +133,6 @@ private:
     void setupRenameOverlay();
     void preShowResize(QSize sz);
     void setInteractionEnabled(bool mode);
-
-    // 缓存成员变量
-    QString cachedWindowTitle;
-    QString cachedInfoText;
-    QString cachedSizeText;
-    bool fullUiInitialized; // 延迟初始化标志
 
     // 辅助方法
     QString calculateWindowTitle();
@@ -149,19 +147,19 @@ private slots:
     void showScriptSettings();
 
 protected:
-    void mouseMoveEvent(QMouseEvent *event);
-    bool event(QEvent *event);
-    void paintEvent(QPaintEvent *event);
-    void closeEvent(QCloseEvent *event);
-    void dragEnterEvent(QDragEnterEvent *e);
-    void dropEvent(QDropEvent *event);
-    void resizeEvent(QResizeEvent *event);
+    void mouseMoveEvent(QMouseEvent *event) override;
+    bool event(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *e) override;
+    void dropEvent(QDropEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
-    void mousePressEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void wheelEvent(QWheelEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void leaveEvent(QEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
    // bool focusNextPrevChild(bool);
 signals:

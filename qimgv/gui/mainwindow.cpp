@@ -3,19 +3,7 @@
 // TODO: nuke this and rewrite
 
 MW::MW(QWidget *parent)
-    : FloatingWidgetContainer(parent),
-      currentDisplay(0),
-      maximized(false),
-      activeSidePanel(SIDEPANEL_NONE),
-      copyOverlay(nullptr),
-      saveOverlay(nullptr),
-      renameOverlay(nullptr),
-      floatingMessage(nullptr),
-      cropPanel(nullptr),          // 先初始化 cropPanel
-      cropOverlay(nullptr),        // 再初始化 cropOverlay
-      imageInfoOverlay(nullptr),   // 然后 imageInfoOverlay
-      infoBarFullscreen(nullptr),  // 最后 infoBarFullscreen
-      fullUiInitialized(false)     // fullUiInitialized 始终在最后（因为它在类中最晚声明）
+    : FloatingWidgetContainer(parent)   // 现在只初始化基类
 {
     setAttribute(Qt::WA_TranslucentBackground, true);
     layout.setContentsMargins(0,0,0,0);

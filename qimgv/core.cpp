@@ -12,12 +12,12 @@
 #endif
 
 Core::Core()
-    : QObject(),
-      folderEndAction(FOLDER_END_NO_ACTION),
-      loopSlideshow(false),
-      mDrag(nullptr),
-      slideshow(false),
-      shuffle(false)
+        : QObject(),
+            loopSlideshow(false),
+            shuffle(false),
+            slideshow(false),
+            folderEndAction(FOLDER_END_NO_ACTION),
+            mDrag(nullptr)
 {
     loadTranslation();
     initGui();
@@ -978,8 +978,8 @@ std::shared_ptr<ImageStatic> Core::getEditableImage(const QString &filePath) {
     return std::dynamic_pointer_cast<ImageStatic>(model->getImage(filePath));
 }
 
-template<typename... Args>
-void Core::edit_template(bool save, QString action, const std::function<QImage*(std::shared_ptr<const QImage>, Args...)>& editFunc, Args&&... as) {
+template<typename Func, typename... Args>
+void Core::edit_template(bool save, QString action, Func editFunc, Args&&... as) {
     if(model->isEmpty())
         return;
     if(save && !mw->showConfirmation(action, tr("Perform action \"") + action + "\"? \n\n" + tr("Changes will be saved immediately.")))
@@ -988,7 +988,8 @@ void Core::edit_template(bool save, QString action, const std::function<QImage*(
         auto img = getEditableImage(path);
         if(!img)
             continue;
-        img->setEditedImage(std::unique_ptr<const QImage>( editFunc(img->getImage(), std::forward<Args>(as)...) ));
+        QImage result = editFunc(img->getImage(), std::forward<Args>(as)...);
+        img->setEditedImage(std::unique_ptr<const QImage>( new QImage(std::move(result)) ));
         model->updateImage(path, std::static_pointer_cast<Image>(img));
         if(save) {
             saveFile(path);

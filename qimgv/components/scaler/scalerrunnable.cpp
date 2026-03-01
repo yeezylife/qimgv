@@ -15,10 +15,7 @@ void ScalerRunnable::run()
 
     ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
 
-    // 调用 ImageLib::scaled 获得堆分配的 QImage*
-    std::unique_ptr<QImage> scaledPtr(ImageLib::scaled(m_request.image()->getImage(),
-                                                       m_request.size(),
-                                                       filterToUse));
-    // 解引用传递值，scaledPtr 自动释放
-    emit finished(*scaledPtr, m_request);
+    // 调用 ImageLib::scaled，按值返回 QImage
+    QImage scaled = ImageLib::scaled(m_request.image()->getImage(), m_request.size(), filterToUse);
+    emit finished(scaled, m_request);
 }

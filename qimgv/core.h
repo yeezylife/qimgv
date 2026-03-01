@@ -93,8 +93,8 @@ private:
     std::shared_ptr<ImageStatic> getEditableImage(const QString &filePath);
     QList<QString> currentSelection();
 
-    template<typename... Args>
-    void edit_template(bool save, QString actionName, const std::function<QImage*(std::shared_ptr<const QImage>, Args...)>& func, Args&&... as);
+    template<typename Func, typename... Args>
+    void edit_template(bool save, QString actionName, Func func, Args&&... as);
 
     void doInteractiveCopy(QString path, QString destDirectory, DialogResult &overwriteAllFiles);
     void doInteractiveMove(QString path, QString destDirectory, DialogResult &overwriteAllFiles);

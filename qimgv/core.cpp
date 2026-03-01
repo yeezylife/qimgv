@@ -988,7 +988,7 @@ void Core::edit_template(bool save, QString action, Func editFunc, Args&&... as)
         auto img = getEditableImage(path);
         if(!img)
             continue;
-        QImage result = editFunc(img->getImage(), std::forward<Args>(as)...);
+        QImage result = editFunc(*img->getImage(), std::forward<Args>(as)...);
         img->setEditedImage(std::unique_ptr<const QImage>( new QImage(std::move(result)) ));
         model->updateImage(path, std::static_pointer_cast<Image>(img));
         if(save) {

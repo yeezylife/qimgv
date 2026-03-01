@@ -37,8 +37,8 @@ QImage ImageLib::cropped(std::shared_ptr<const QImage> src, QRect newRect) {
     return out;
 }
 
-QImage ImageLib::flippedHRaw(const QImage &src) {
-    return src.mirrored(true, false);
+QImage ImageLib::flippedHRaw(QImage src) {
+    return std::move(src).flipped(Qt::Horizontal);
 }
 
 QImage ImageLib::flippedH(std::shared_ptr<const QImage> src) {
@@ -47,8 +47,8 @@ QImage ImageLib::flippedH(std::shared_ptr<const QImage> src) {
     return out;
 }
 
-QImage ImageLib::flippedVRaw(const QImage &src) {
-    return src.mirrored(false, true);
+QImage ImageLib::flippedVRaw(QImage src) {
+    return std::move(src).flipped(Qt::Vertical);
 }
 
 QImage ImageLib::flippedV(std::shared_ptr<const QImage> src) {

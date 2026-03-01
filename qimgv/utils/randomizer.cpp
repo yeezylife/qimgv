@@ -4,11 +4,11 @@ Randomizer::Randomizer() {
     setCount(0);
 }
 
-Randomizer::Randomizer(int _count) : currentIndex(0) {
+Randomizer::Randomizer(size_t _count) : currentIndex(0) {
     setCount(_count);
 }
 
-void Randomizer::setCount(int _count) {
+void Randomizer::setCount(size_t _count) {
     vec.resize(_count);
     fill();
 }
@@ -18,18 +18,18 @@ void Randomizer::shuffle() {
     std::shuffle(vec.begin(), vec.end(), rng);
 }
 
-void Randomizer::setCurrent(int _current) {
+void Randomizer::setCurrent(size_t _current) {
     currentIndex = indexOf(_current);
 }
 
 // this assumes our array contains shuffled int values [0 ... count]
 // which it does in our case
-int Randomizer::indexOf(int item) {
-    int index = -1;
+size_t Randomizer::indexOf(size_t item) {
+    size_t index = size_t(-1);
     if(item >= vec.size())
         return index;
     std::vector<int>::iterator it;
-    int i = 0;
+    size_t i = 0;
     for (it = vec.begin(); it != vec.end(); ++it, ++i) {
         if(vec[i] == item) {
             index = i;
@@ -56,11 +56,11 @@ void Randomizer::print() {
     qDebug() << "----end----";
 }
 
-int Randomizer::next() {
+size_t Randomizer::next() {
     // re-shuffle when needed
     // because vector gets rearranged this will break prev()
     while(currentIndex == vec.size() - 1) {
-        int currentItem = vec[currentIndex];
+        size_t currentItem = vec[currentIndex];
         shuffle();
         setCurrent(currentItem);
     }
@@ -68,9 +68,9 @@ int Randomizer::next() {
     return vec[currentIndex];
 }
 
-int Randomizer::prev() {
+size_t Randomizer::prev() {
     while(currentIndex == 0) {
-        int currentItem = vec[currentIndex];
+        size_t currentItem = vec[currentIndex];
         shuffle();
         setCurrent(currentItem);
     }

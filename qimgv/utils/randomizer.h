@@ -14,16 +14,16 @@ public:
     Randomizer();
     Randomizer(int _count);
 
-    void setCount(int _count);
-    int next();
-    int prev();
+    void setCount(size_t _count);
+    size_t next();
+    size_t prev();
 
     void shuffle();
     void print();
-    void setCurrent(int _current);
+    void setCurrent(size_t _current);
 private:
-    int currentIndex;
+    size_t currentIndex;
     std::vector<int> vec;
     void fill();
-    int indexOf(int n);
+    size_t indexOf(size_t n);
 };

@@ -644,7 +644,6 @@ void ImageViewerV2::wheelEvent(QWheelEvent *event) {
             }
         } else if(isWheel && settings->imageScrolling() == SCROLL_BY_TRACKPAD_AND_WHEEL) {
             // scroll by interval
-            bool scrollable = false;
             QRect imgRect = scaledRectR();
             // shift by 2px in case of img edge misalignment
             // todo: maybe even increase it to skip small distance scrolls?
@@ -1256,7 +1255,7 @@ QPointF ImageViewerV2::sceneRoundPos(QPointF scenePoint) const {
 // the result is what's actually drawn on screen (incl. size)
 QRectF ImageViewerV2::sceneRoundRect(QRectF sceneRect) const {
     QRectF rounded = QRectF(sceneRoundPos(sceneRect.topLeft()), sceneRect.size());
-    return QRectF(sceneRoundPos(sceneRect.topLeft()), sceneRect.size());
+    return rounded;
 }
 
 // size as it appears on screen (rounded)

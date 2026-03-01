@@ -127,7 +127,7 @@ private slots:
 
     void onDPRChanged();
 private:
-    QGraphicsScene *scene;
+    QGraphicsScene *scene = nullptr;
     std::shared_ptr<QPixmap> pixmap;
     std::unique_ptr<QPixmap> pixmapScaled;
     std::shared_ptr<QMovie> movie;
@@ -135,12 +135,19 @@ private:
     QTimer *animationTimer, *scaleTimer;
     QScrollBar *hs, *vs;
     QPoint mouseMoveStartPos, mousePressPos, drawPos;
-    bool transparencyGrid, expandImage,    smoothAnimatedImages,
-         smoothUpscaling,  forceFastScale, keepFitMode,
-         loopPlayback,     mIsFullscreen,  scrollBarWorkaround,
-         useFixedZoomLevels, trackpadDetection;
+    bool transparencyGrid = false;
+    bool expandImage = false;
+    bool smoothAnimatedImages = true;
+    bool smoothUpscaling = true;
+    bool forceFastScale = false;
+    bool keepFitMode = false;
+    bool loopPlayback = true;
+    bool mIsFullscreen = false;
+    bool scrollBarWorkaround = true;
+    bool useFixedZoomLevels = false;
+    bool trackpadDetection = true;
     QList<float> zoomLevels;
-    MouseInteractionState mouseInteraction;
+    MouseInteractionState mouseInteraction = MOUSE_NONE;
     const int SCROLL_UPDATE_RATE = 7;
     const int DEFAULT_SCROLL_DISTANCE = 240;
     const qreal TRACKPAD_SCROLL_MULTIPLIER = 0.7;
@@ -155,20 +162,27 @@ private:
     bool dragsEnabled = true;
     bool wayland = false;
 
-    float zoomStep = 0.1, dpr;
-    float minScale, maxScale, fitWindowScale, fitWindowStretchScale, expandLimit, lockedScale;
+    float zoomStep = 0.1f;
+    float dpr = 1.0f;
+    float minScale = 0.01f;
+    float maxScale = 500.0f;
+    float fitWindowScale = 0.125f;
+    float fitWindowStretchScale = 0.125f;
+    float expandLimit = 1.0f;
+    float lockedScale = 1.0f;
     QPointF savedViewportPos;
-    ViewLockMode mViewLock;
+    ViewLockMode mViewLock = LOCK_NONE;
 
     QPair<QPointF, QPoint> zoomAnchor; // [pixmap coords, viewport coords]
 
     QElapsedTimer lastTouchpadScroll;
 
-    ImageFitMode imageFitMode, imageFitModeDefault;
+    ImageFitMode imageFitMode = FIT_WINDOW;
+    ImageFitMode imageFitModeDefault = FIT_WINDOW;
     ImageFocusPoint focusIn1to1;
-    ScalingFilter mScalingFilter;
+    ScalingFilter mScalingFilter = QI_FILTER_BILINEAR;
 
-    QPixmap *checkboard;
+    QPixmap *checkboard = nullptr;
 
     void zoomAnchored(float newScale);
     void fitNormal();

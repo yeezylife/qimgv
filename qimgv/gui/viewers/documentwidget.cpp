@@ -1,15 +1,7 @@
 #include "documentwidget.h"
 
 DocumentWidget::DocumentWidget(std::shared_ptr<ViewerWidget> viewWidget, std::shared_ptr<InfoBarProxy> infoBar, QWidget *parent)
-    : FloatingWidgetContainer(parent),
-      mainPanel(nullptr),
-      mPanelPinned(false),
-      mPanelEnabled(false),
-      mPanelFullscreenOnly(false),
-      avoidPanelFlag(false),
-      mIsFullscreen(false),
-      mInteractionEnabled(false),
-      mAllowPanelInit(false)
+    : FloatingWidgetContainer(parent)
 {
     layoutRoot = new QVBoxLayout();
     layoutRoot->setContentsMargins(0,0,0,0);

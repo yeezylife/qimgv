@@ -452,31 +452,31 @@ QRect ViewerWidget::videoControlsArea() {
 bool ViewerWidget::eventFilter(QObject *object, QEvent *event) {
     // catch press and doubleclick
     // force doubleclick to act as press event for click zones
-    if(event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick) {
-        // disable feature for very small windows
-        if(width() <= 250)
-            return false;
+        if(event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick) {
+            // disable feature for very small windows
+            if(width() <= 250)
+                return false;
 
-        auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
-        if(mouseEvent->button() != Qt::LeftButton || mouseEvent->modifiers()) {
-            clickZoneOverlay->disableHighlight();
-            return false;
+            auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
+            if(mouseEvent->button() != Qt::LeftButton || mouseEvent->modifiers()) {
+                clickZoneOverlay->disableHighlight();
+                return false;
+            }
+            if(clickZoneOverlay->leftZone().contains(mouseEvent->position().toPoint())) {
+                clickZoneOverlay->setPressed(true);
+                clickZoneOverlay->highlightLeft();
+                imageViewer->disableDrags();
+                actionManager->invokeAction("prevImage");
+                return true; // do not pass the event to imageViewer
+            }
+            if(clickZoneOverlay->rightZone().contains(mouseEvent->position().toPoint())) {
+                clickZoneOverlay->setPressed(true);
+                clickZoneOverlay->highlightRight();
+                imageViewer->disableDrags();
+                actionManager->invokeAction("nextImage");
+                return true;
+            }
         }
-        if(clickZoneOverlay->leftZone().contains(mouseEvent->pos())) {
-            clickZoneOverlay->setPressed(true);
-            clickZoneOverlay->highlightLeft();
-            imageViewer->disableDrags();
-            actionManager->invokeAction("prevImage");
-            return true; // do not pass the event to imageViewer
-        }
-        if(clickZoneOverlay->rightZone().contains(mouseEvent->pos())) {
-            clickZoneOverlay->setPressed(true);
-            clickZoneOverlay->highlightRight();
-            imageViewer->disableDrags();
-            actionManager->invokeAction("nextImage");
-            return true;
-        }
-    }
     // right click produces QEvent::ContextMenu instead of QEvent::MouseButtonPress
     // this is NOT a QMouseEvent
     if(event->type() == QEvent::ContextMenu) {
@@ -493,12 +493,12 @@ bool ViewerWidget::eventFilter(QObject *object, QEvent *event) {
         QPoint mousePos;
         if(event->type() == QEvent::MouseMove) {
             auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
-            mousePos = mouseEvent->pos();
+            mousePos = mouseEvent->position().toPoint();
             if(mouseEvent->buttons())
                 return false;
         } else {
             auto enterEvent = dynamic_cast<QEnterEvent*>(event);
-            mousePos = enterEvent->pos();
+            mousePos = enterEvent->position().toPoint();
         }
         if(clickZoneOverlay->leftZone().contains(mousePos)) {
             clickZoneOverlay->setPressed(false);

@@ -1,7 +1,7 @@
 name: qimgv-CI-Strict-Check
 on:
   push:
-    branches: [ "**" ]  # 任何分支推送都会触发
+    branches: [ "YoloVibe" ]  # 任何分支推送都会触发
   pull_request:
     branches: [ "**" ]
 

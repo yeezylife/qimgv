@@ -1,7 +1,7 @@
 #include "themestore.h"
 
 ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
-    BaseColorScheme base = {-1};
+    BaseColorScheme base = {};               // 所有成员值初始化：int为0，QColor为无效颜色
     QPalette p;
     switch(name) {
         case COLORS_SYSTEM:
@@ -84,8 +84,8 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
 
 //---------------------------------------------------------------------
 
-ColorScheme::ColorScheme() {
-    tid = -1;
+ColorScheme::ColorScheme() : tid(-1) {
+    // 所有 QColor 成员默认构造为无效颜色
 }
 
 ColorScheme::ColorScheme(BaseColorScheme base) {
@@ -152,4 +152,3 @@ void ColorScheme::createColorVariants() {
     // misc
     input_field_focus = QColor(accent);
 }
-

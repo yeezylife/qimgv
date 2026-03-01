@@ -223,7 +223,7 @@ QImage ImageLib::scaled_CV(std::shared_ptr<const QImage> source, QSize destSize,
     if (!source || source->isNull()) return QImage();
 
     // 尺寸相同时直接返回 - 利用 Qt 隐式共享，无需复制
-    if (destSize == source->size()) return new QImage(*source);
+    if (destSize == source->size()) return *source;
 
     QtOcv::MatColorOrder order;
     cv::Mat srcMat = QtOcv::image2Mat_shared(*source, &order);

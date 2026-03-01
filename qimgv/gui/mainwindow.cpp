@@ -447,8 +447,6 @@ void MW::mouseMoveEvent(QMouseEvent *event) {
 }
 
 bool MW::event(QEvent *event) {
-    // only save maximized state if we are already visible
-    // this filter out out events while the window is still being set up
     if(event->type() == QEvent::WindowStateChange && this->isVisible() && !this->isFullScreen())
         maximized = isMaximized();
     if(event->type() == QEvent::Move || event->type() == QEvent::Resize)
@@ -456,7 +454,6 @@ bool MW::event(QEvent *event) {
     return QWidget::event(event);
 }
 
-// hook up to actionManager
 void MW::keyPressEvent(QKeyEvent *event) {
     event->accept();
     actionManager->processEvent(event);
@@ -479,22 +476,26 @@ void MW::mouseReleaseEvent(QMouseEvent *event) {
 
 void MW::mouseDoubleClickEvent(QMouseEvent *event) {
     event->accept();
-    QMouseEvent *fakePressEvent = new QMouseEvent(
+
+    // Qt6: 使用新的 QMouseEvent 构造函数
+    QMouseEvent fakePressEvent(
         QEvent::MouseButtonPress,
-        event->pos(),
+        event->position(),              // QPointF
+        event->scenePosition(),         // QPointF
+        event->globalPosition(),        // QPointF
         event->button(),
         event->buttons(),
-        event->modifiers()
+        event->modifiers(),
+        event->source()
     );
-    actionManager->processEvent(fakePressEvent);
+
+    actionManager->processEvent(&fakePressEvent);
     actionManager->processEvent(event);
 }
 
 void MW::close() {
     saveWindowGeometry();
     saveCurrentDisplay();
-    // try to close window sooner
-    // since qt6.3 QWidget::close() no longer works on hidden windows (bug?)
 #if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
     this->hide();
 #endif
@@ -504,7 +505,6 @@ void MW::close() {
 }
 
 void MW::closeEvent(QCloseEvent *event) {
-    // catch the close event when user presses X on the window itself
     event->accept();
     actionManager->invokeAction("exit");
 }

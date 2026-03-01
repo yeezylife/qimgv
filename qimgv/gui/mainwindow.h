@@ -94,21 +94,19 @@ private:
     std::shared_ptr<CentralWidget> centralWidget;
     ActiveSidePanel activeSidePanel;
     SidePanel *sidePanel;
+    CopyOverlay *copyOverlay;
+    SaveConfirmOverlay *saveOverlay;
+    RenameOverlay *renameOverlay;
     CropPanel *cropPanel;
     CropOverlay *cropOverlay;
-    SaveConfirmOverlay *saveOverlay;
     ChangelogWindow *changelogWindow;
-
-    CopyOverlay *copyOverlay;
-
-    RenameOverlay *renameOverlay;
 
     ImageInfoOverlayProxy *imageInfoOverlay;
 
     ControlsOverlay *controlsOverlay;
     FullscreenInfoOverlayProxy *infoBarFullscreen;
-    std::shared_ptr<InfoBarProxy> infoBarWindowed;
     FloatingMessageProxy *floatingMessage;
+    std::shared_ptr<InfoBarProxy> infoBarWindowed;
 
     PanelPosition panelPosition;
     CurrentInfo info;

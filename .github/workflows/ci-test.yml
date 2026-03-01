@@ -1,0 +1,49 @@
+name: qimgv-CI-Strict-Check
+on:
+  push:
+    branches: [ "**" ]  # 任何分支推送都会触发
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-kimageformats
+            mingw-w64-ucrt-x86_64-opencv
+            mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-exiv2
+            mingw-w64-ucrt-x86_64-libraw
+
+      - uses: actions/checkout@v4
+
+      - name: Configure & Build (Strict Mode)
+        run: |
+          # 核心逻辑：添加 -Werror 标志
+          # 这会将所有警告（Warning）升级为错误（Error），一旦代码写得不规范，构建立即失败
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DUSE_QT5=OFF \
+            -DVIDEO_SUPPORT=ON \
+            -DOPENCV_SUPPORT=ON \
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
+            -DCMAKE_C_FLAGS="-march=x86-64-v3 -Wall -Werror"
+          
+          echo "--- Starting Compilation ---"
+          cmake --build build --config Debug -j $(nproc)

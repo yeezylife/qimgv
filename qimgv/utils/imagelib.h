@@ -14,21 +14,25 @@
 class ImageLib {
 public:
     static QImage rotatedRaw(const QImage &src, int grad);
-    static QImage rotated(std::shared_ptr<const QImage> src, int grad);
+    // Take by-value so callers can move images in to avoid copies (Qt6 move-friendly)
+    static QImage rotated(QImage src, int grad);
 
     static QImage croppedRaw(const QImage &src, QRect newRect);
-    static QImage cropped(std::shared_ptr<const QImage> src, QRect newRect);
+    // By-value to enable move optimization
+    static QImage cropped(QImage src, QRect newRect);
 
-    static QImage flippedHRaw(const QImage &src);
-    static QImage flippedH(std::shared_ptr<const QImage> src);
-    static QImage flippedVRaw(const QImage &src);
-    static QImage flippedV(std::shared_ptr<const QImage> src);
+    // Accept by-value for operations that produce a new image; callers may move
+    static QImage flippedHRaw(QImage src);
+    static QImage flippedH(QImage src);
+    static QImage flippedVRaw(QImage src);
+    static QImage flippedV(QImage src);
 
-    static QImage scaled(std::shared_ptr<const QImage> source, QSize destSize, ScalingFilter filter);
-    static QImage scaled_Qt(std::shared_ptr<const QImage> source, QSize destSize, bool smooth);
+    // Scale helpers accept by-value to allow move-optimization
+    static QImage scaled(QImage source, QSize destSize, ScalingFilter filter);
+    static QImage scaled_Qt(QImage source, QSize destSize, bool smooth);
 
 #ifdef USE_OPENCV
-    static QImage scaled_CV(std::shared_ptr<const QImage> source, QSize destSize, cv::InterpolationFlags filter, int sharpen);
+    static QImage scaled_CV(QImage source, QSize destSize, cv::InterpolationFlags filter, int sharpen);
 #endif
 
     // EXIF 处理：也改为返回 QImage 以保持一致性

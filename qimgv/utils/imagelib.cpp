@@ -18,10 +18,10 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
     return src.transformed(transform, Qt::SmoothTransformation);
 }
 
-QImage ImageLib::rotated(std::shared_ptr<const QImage> src, int grad) {
-    if (!src || src->isNull()) return QImage();
-    QImage out = rotatedRaw(*src, grad);
-    return out;
+QImage ImageLib::rotated(QImage src, int grad) {
+    if (src.isNull()) return QImage();
+    // 这里 rotatedRaw 接 const QImage&，不涉及 && 优化
+    return rotatedRaw(src, grad);
 }
 
 QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
@@ -31,33 +31,36 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
     return QImage();
 }
 
-QImage ImageLib::cropped(std::shared_ptr<const QImage> src, QRect newRect) {
-    if (!src || src->isNull()) return QImage();
-    QImage out = croppedRaw(*src, newRect);
-    return out;
+QImage ImageLib::cropped(QImage src, QRect newRect) {
+    if (src.isNull()) return QImage();
+    return croppedRaw(src, newRect);
 }
 
+// --- flipped: 利用 Qt6 的 QImage::flipped() && ---
+
 QImage ImageLib::flippedHRaw(QImage src) {
+    if (src.isNull()) return QImage();
+    // 关键：std::move(src) 触发 QImage::flipped(Qt::Axis) &&
     return std::move(src).flipped(Qt::Horizontal);
 }
 
-QImage ImageLib::flippedH(std::shared_ptr<const QImage> src) {
-    if (!src || src->isNull()) return QImage();
-    QImage out = flippedHRaw(*src);
-    return out;
+QImage ImageLib::flippedH(QImage src) {
+    if (src.isNull()) return QImage();
+    return flippedHRaw(std::move(src));
 }
 
 QImage ImageLib::flippedVRaw(QImage src) {
+    if (src.isNull()) return QImage();
     return std::move(src).flipped(Qt::Vertical);
 }
 
-QImage ImageLib::flippedV(std::shared_ptr<const QImage> src) {
-    if (!src || src->isNull()) return QImage();
-    QImage out = flippedVRaw(*src);
-    return out;
+QImage ImageLib::flippedV(QImage src) {
+    if (src.isNull()) return QImage();
+    return flippedVRaw(std::move(src));
 }
 
-// 版本一的 EXIF 旋转逻辑 - 值传递，利用 Qt 隐式共享
+// --- EXIF 旋转：transformed 没有 && 版本，只能深拷贝 ---
+
 QImage ImageLib::exifRotated(QImage src, int orientation) {
     if (src.isNull() || orientation <= 1) return src;
 
@@ -78,41 +81,13 @@ QImage ImageLib::exifRotated(QImage src, int orientation) {
     return needsTransform ? src.transformed(trans, Qt::SmoothTransformation) : src;
 }
 
-// 模板辅助函数 - 使用 Qt 隐式共享，无需 new QImage
-template<typename T>
-static T processExif(T src, int orientation) {
-    if (!src || src->isNull() || orientation <= 1) return src;
-    
-    QTransform trans;
-    bool needsTransform = true;
-    
-    switch (orientation) {
-        case 2: trans.scale(-1, 1); break;
-        case 3: trans.rotate(180); break;
-        case 4: trans.scale(1, -1); break;
-        case 5: trans.scale(-1, 1); trans.rotate(90); break;
-        case 6: trans.rotate(90); break;
-        case 7: trans.scale(1, -1); trans.rotate(90); break;
-        case 8: trans.rotate(-90); break;
-        default: needsTransform = false; break;
-    }
-    
-    if (needsTransform) {
-        // QImage 使用隐式共享，copy() 会创建写时复制的副本
-        // 避免了 new QImage 的手动内存管理
-        return src->transformed(trans, Qt::SmoothTransformation);
-    }
-    
-    return src;
-}
-
 // unique_ptr 版本 - const QImage
 std::unique_ptr<const QImage> ImageLib::exifRotated(std::unique_ptr<const QImage> src, int orientation) {
     if (!src || src->isNull() || orientation <= 1) return src;
-    
+
     QTransform trans;
     bool needsTransform = true;
-    
+
     switch (orientation) {
         case 2: trans.scale(-1, 1); break;
         case 3: trans.rotate(180); break;
@@ -123,23 +98,24 @@ std::unique_ptr<const QImage> ImageLib::exifRotated(std::unique_ptr<const QImage
         case 8: trans.rotate(-90); break;
         default: needsTransform = false; break;
     }
-    
+
     if (needsTransform) {
-        // 利用 Qt 隐式共享创建副本
-        std::unique_ptr<const QImage> result(new QImage(src->transformed(trans, Qt::SmoothTransformation)));
+        std::unique_ptr<const QImage> result(
+            new QImage(src->transformed(trans, Qt::SmoothTransformation))
+        );
         return result;
     }
-    
+
     return src;
 }
 
 // unique_ptr 版本 - 非 const QImage
 std::unique_ptr<QImage> ImageLib::exifRotated(std::unique_ptr<QImage> src, int orientation) {
     if (!src || src->isNull() || orientation <= 1) return src;
-    
+
     QTransform trans;
     bool needsTransform = true;
-    
+
     switch (orientation) {
         case 2: trans.scale(-1, 1); break;
         case 3: trans.rotate(180); break;
@@ -150,61 +126,67 @@ std::unique_ptr<QImage> ImageLib::exifRotated(std::unique_ptr<QImage> src, int o
         case 8: trans.rotate(-90); break;
         default: needsTransform = false; break;
     }
-    
+
     if (needsTransform) {
-        // 利用 Qt 隐式共享创建副本
-        std::unique_ptr<QImage> result(new QImage(src->transformed(trans, Qt::SmoothTransformation)));
+        std::unique_ptr<QImage> result(
+            new QImage(src->transformed(trans, Qt::SmoothTransformation))
+        );
         return result;
     }
-    
+
     return src;
 }
 
-QImage ImageLib::scaled(std::shared_ptr<const QImage> source, QSize destSize, ScalingFilter filter) {
-    if (!source || source->isNull()) return QImage();
+// --- 缩放：Qt 路径 ---
 
-    auto scaleTarget = source;
-    if (source->format() == QImage::Format_Indexed8) {
-        QImage::Format newFmt = source->hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32;
-        scaleTarget = std::make_shared<QImage>(source->convertToFormat(newFmt));
+QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
+    if (source.isNull()) return QImage();
+
+    QImage scaleTarget = std::move(source);
+    if (scaleTarget.format() == QImage::Format_Indexed8) {
+        QImage::Format newFmt = scaleTarget.hasAlphaChannel()
+                                ? QImage::Format_ARGB32
+                                : QImage::Format_RGB32;
+        scaleTarget = scaleTarget.convertToFormat(newFmt);
     }
 
 #ifdef USE_OPENCV
-    if (filter > 1 && !QtOcv::isSupported(scaleTarget->format())) filter = QI_FILTER_BILINEAR;
+    if (filter > 1 && !QtOcv::isSupported(scaleTarget.format()))
+        filter = QI_FILTER_BILINEAR;
 #endif
 
     QImage result;
     switch (filter) {
         case QI_FILTER_NEAREST: {
-            QImage tmp = scaled_Qt(scaleTarget, destSize, false);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, false);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
         case QI_FILTER_BILINEAR: {
-            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, true);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
 #ifdef USE_OPENCV
         case QI_FILTER_CV_BILINEAR_SHARPEN: {
-            QImage tmp = scaled_CV(scaleTarget, destSize, cv::INTER_LINEAR, 0);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
         case QI_FILTER_CV_CUBIC: {
-            QImage tmp = scaled_CV(scaleTarget, destSize, cv::INTER_CUBIC, 0);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
         case QI_FILTER_CV_CUBIC_SHARPEN: {
-            QImage tmp = scaled_CV(scaleTarget, destSize, cv::INTER_CUBIC, 1);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
 #endif
         default: {
-            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
-            if (!tmp.isNull()) { result = std::move(tmp); }
+            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, true);
+            if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
     }
@@ -212,29 +194,28 @@ QImage ImageLib::scaled(std::shared_ptr<const QImage> source, QSize destSize, Sc
     return result;
 }
 
-QImage ImageLib::scaled_Qt(std::shared_ptr<const QImage> source, QSize destSize, bool smooth) {
-    if (!source || source->isNull()) return QImage();
-    QImage out = source->scaled(destSize, Qt::IgnoreAspectRatio, smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-    return out;
+QImage ImageLib::scaled_Qt(QImage source, QSize destSize, bool smooth) {
+    if (source.isNull()) return QImage();
+    return source.scaled(destSize,
+                         Qt::IgnoreAspectRatio,
+                         smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
 }
 
 #ifdef USE_OPENCV
-QImage ImageLib::scaled_CV(std::shared_ptr<const QImage> source, QSize destSize, cv::InterpolationFlags filter, int sharpen) {
-    if (!source || source->isNull()) return QImage();
+QImage ImageLib::scaled_CV(QImage source, QSize destSize,
+                           cv::InterpolationFlags filter, int sharpen) {
+    if (source.isNull()) return QImage();
 
-    // 尺寸相同时直接返回 - 利用 Qt 隐式共享，无需复制
-    if (destSize == source->size()) return *source;
+    if (destSize == source.size()) return source;
 
     QtOcv::MatColorOrder order;
-    cv::Mat srcMat = QtOcv::image2Mat_shared(*source, &order);
+    cv::Mat srcMat = QtOcv::image2Mat_shared(source, &order);
 
-    // 版本一的优化逻辑：缩小超过 50% 时使用 INTER_AREA
     cv::InterpolationFlags actualFilter = filter;
     int actualSharpen = sharpen;
 
-    if (destSize.width() < source->width()) {
-        float scale = static_cast<float>(destSize.width()) / source->width();
-
+    if (destSize.width() < source.width()) {
+        float scale = static_cast<float>(destSize.width()) / source.width();
         if (scale < 0.5f && filter != cv::INTER_NEAREST) {
             actualFilter = cv::INTER_AREA;
             if (filter == cv::INTER_CUBIC) {
@@ -244,9 +225,10 @@ QImage ImageLib::scaled_CV(std::shared_ptr<const QImage> source, QSize destSize,
     }
 
     cv::Mat dstMat;
-    cv::resize(srcMat, dstMat, cv::Size(destSize.width(), destSize.height()), 0, 0, actualFilter);
+    cv::resize(srcMat, dstMat,
+               cv::Size(destSize.width(), destSize.height()),
+               0, 0, actualFilter);
 
-    // 锐化处理
     if (actualSharpen && actualFilter != cv::INTER_NEAREST) {
         double amount = 0.25 * actualSharpen;
         cv::Mat blurred;
@@ -254,7 +236,7 @@ QImage ImageLib::scaled_CV(std::shared_ptr<const QImage> source, QSize destSize,
         cv::addWeighted(dstMat, 1.0 + amount, blurred, -amount, 0, dstMat);
     }
 
-    QImage out = QtOcv::mat2Image(dstMat, order, source->format());
+    QImage out = QtOcv::mat2Image(dstMat, order, source.format());
     return out;
 }
 #endif

@@ -106,15 +106,15 @@ public slots:
     bool lockViewEnabled();
 
 protected:
-    virtual void mousePressEvent(QMouseEvent *event);
-    virtual void mouseMoveEvent(QMouseEvent* event);
-    virtual void mouseReleaseEvent(QMouseEvent *event);
-    virtual void resizeEvent(QResizeEvent* event);
-    void wheelEvent(QWheelEvent *event);
-    void showEvent(QShowEvent *event);
-    void drawBackground(QPainter *painter, const QRectF &rect);
+    virtual void mousePressEvent(QMouseEvent *event) override;
+    virtual void mouseMoveEvent(QMouseEvent* event) override;
+    virtual void mouseReleaseEvent(QMouseEvent *event) override;
+    virtual void resizeEvent(QResizeEvent* event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void drawBackground(QPainter *painter, const QRectF &rect) override;
 
-    bool eventFilter(QObject *o, QEvent *ev);
+    bool eventFilter(QObject *o, QEvent *ev) override;
 protected slots:
     void onAnimationTimer();
 
@@ -148,13 +148,13 @@ private:
     bool trackpadDetection = true;
     QList<float> zoomLevels;
     MouseInteractionState mouseInteraction = MOUSE_NONE;
-    const int SCROLL_UPDATE_RATE = 7;
-    const int DEFAULT_SCROLL_DISTANCE = 240;
-    const qreal TRACKPAD_SCROLL_MULTIPLIER = 0.7;
-    const qreal WHEEL_SCROLL_MULTIPLIER = 2.0f;
-    const int ANIMATION_SPEED = 150;
-    const float FAST_SCALE_THRESHOLD = 1.0f;
-    const int LARGE_VIEWPORT_SIZE = 2073600;
+    static constexpr int SCROLL_UPDATE_RATE = 7;
+    static constexpr int DEFAULT_SCROLL_DISTANCE = 240;
+    static constexpr qreal TRACKPAD_SCROLL_MULTIPLIER = 0.7;
+    static constexpr qreal WHEEL_SCROLL_MULTIPLIER = 2.0f;
+    static constexpr int ANIMATION_SPEED = 150;
+    static constexpr float FAST_SCALE_THRESHOLD = 1.0f;
+    static constexpr int LARGE_VIEWPORT_SIZE = 2073600;
     // how many px you can move while holding RMB until it counts as a zoom attempt
     int zoomThreshold = 4;
     int dragThreshold = 10;
@@ -182,7 +182,7 @@ private:
     ImageFocusPoint focusIn1to1;
     ScalingFilter mScalingFilter = QI_FILTER_BILINEAR;
 
-    QPixmap *checkboard = nullptr;
+    QPixmap checkboard;
 
     void zoomAnchored(float newScale);
     void fitNormal();

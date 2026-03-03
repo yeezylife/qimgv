@@ -1,5 +1,11 @@
 #include "imageviewerv2.h"
 
+namespace {
+    static constexpr int OFFSCREEN_POS = 10000;
+    static constexpr int SCALE_TIMER_INTERVAL = 80;
+    static constexpr int SCENE_SIZE = 200000;
+}
+
 ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent)
 {
     setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
@@ -11,18 +17,17 @@ ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent)
     if(qApp->platformName() == "wayland")
         wayland = true;
 
-    dpr = this->devicePixelRatioF();
+    // 延迟初始化 dpr，避免在构造函数中访问未完全初始化的对象
+    dpr = 1.0f; // 默认值
     hs = horizontalScrollBar();
     vs = verticalScrollBar();
 
-    scrollTimeLineY = new QTimeLine();
+    scrollTimeLineY = new QTimeLine(ImageViewerV2::ANIMATION_SPEED, this);
     scrollTimeLineY->setEasingCurve(QEasingCurve::OutSine);
-    scrollTimeLineY->setDuration(ANIMATION_SPEED);
-    scrollTimeLineY->setUpdateInterval(SCROLL_UPDATE_RATE);
-    scrollTimeLineX = new QTimeLine();
+    scrollTimeLineY->setUpdateInterval(ImageViewerV2::SCROLL_UPDATE_RATE);
+    scrollTimeLineX = new QTimeLine(ImageViewerV2::ANIMATION_SPEED, this);
     scrollTimeLineX->setEasingCurve(QEasingCurve::OutSine);
-    scrollTimeLineX->setDuration(ANIMATION_SPEED);
-    scrollTimeLineX->setUpdateInterval(SCROLL_UPDATE_RATE);
+    scrollTimeLineX->setUpdateInterval(ImageViewerV2::SCROLL_UPDATE_RATE);
     connect(scrollTimeLineX, &QTimeLine::finished, this, &ImageViewerV2::onScrollTimelineFinished);
     connect(scrollTimeLineY, &QTimeLine::finished, this, &ImageViewerV2::onScrollTimelineFinished);
 
@@ -31,9 +36,9 @@ ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent)
 
     scaleTimer = new QTimer(this);
     scaleTimer->setSingleShot(true);
-    scaleTimer->setInterval(80);
+    scaleTimer->setInterval(SCALE_TIMER_INTERVAL);
 
-    checkboard = new QPixmap(":res/icons/common/other/checkerboard.png");
+    checkboard = QPixmap(":res/icons/common/other/checkerboard.png");
 
     lastTouchpadScroll.start();
 
@@ -41,17 +46,17 @@ ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent)
 
     pixmapItem.setTransformationMode(Qt::SmoothTransformation);
     pixmapItem.setScale(1.0f);
-    pixmapItem.setOffset(10000, 10000);
-    pixmapItem.setTransformOriginPoint(10000, 10000);
+    pixmapItem.setOffset(OFFSCREEN_POS, OFFSCREEN_POS);
+    pixmapItem.setTransformOriginPoint(OFFSCREEN_POS, OFFSCREEN_POS);
     pixmapItemScaled.setScale(1.0f);
-    pixmapItemScaled.setOffset(10000, 10000);
-    pixmapItemScaled.setTransformOriginPoint(10000, 10000);
+    pixmapItemScaled.setOffset(OFFSCREEN_POS, OFFSCREEN_POS);
+    pixmapItemScaled.setTransformOriginPoint(OFFSCREEN_POS, OFFSCREEN_POS);
 
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    scene = new QGraphicsScene();
-    scene->setSceneRect(0,0,200000,200000);
+    scene = new QGraphicsScene(this);
+    scene->setSceneRect(0,0,SCENE_SIZE,SCENE_SIZE);
     scene->setBackgroundBrush(QColor(60,60,103));
     scene->addItem(&pixmapItem);
     scene->addItem(&pixmapItemScaled);
@@ -74,6 +79,8 @@ ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent)
 }
 
 ImageViewerV2::~ImageViewerV2() {
+    stopAnimation();
+    stopPosAnimation();
 }
 
 // devicePixelRatioF() does not provide correct value on wayland until the first paint event occurs
@@ -200,8 +207,7 @@ void ImageViewerV2::onAnimationTimer() {
         }
     }
     emit frameChanged(movie->currentFrameNumber());
-    std::unique_ptr<QPixmap> newFrame(new QPixmap());
-    *newFrame = movie->currentPixmap();
+    auto newFrame = std::make_unique<QPixmap>(movie->currentPixmap());
     updatePixmap(std::move(newFrame));
     animationTimer->start(movie->nextFrameDelay());
 }
@@ -244,8 +250,7 @@ bool ImageViewerV2::showAnimationFrame(int frame) {
         }
     }
     emit frameChanged(movie->currentFrameNumber());
-    std::unique_ptr<QPixmap> newFrame(new QPixmap());
-    *newFrame = movie->currentPixmap();
+    auto newFrame = std::make_unique<QPixmap>(movie->currentPixmap());
     updatePixmap(std::move(newFrame));
     return true;
 }
@@ -265,8 +270,7 @@ void ImageViewerV2::showAnimation(std::shared_ptr<QMovie> _movie) {
         movie->jumpToFrame(0);
         Qt::TransformationMode mode = smoothAnimatedImages ? Qt::SmoothTransformation : Qt::FastTransformation;
         pixmapItem.setTransformationMode(mode);
-        std::unique_ptr<QPixmap> newFrame(new QPixmap());
-        *newFrame = movie->currentPixmap();
+        auto newFrame = std::make_unique<QPixmap>(movie->currentPixmap());
         updatePixmap(std::move(newFrame));
         emit durationChanged(movie->frameCount());
         emit frameChanged(0);
@@ -325,11 +329,11 @@ void ImageViewerV2::reset() {
     pixmapScaled.reset(nullptr);
     pixmapItem.setPixmap(QPixmap());
     pixmapItem.setScale(1.0f);
-    pixmapItem.setOffset(10000,10000);
+    pixmapItem.setOffset(OFFSCREEN_POS,OFFSCREEN_POS);
     pixmap.reset();
     stopAnimation();
     movie = nullptr;
-    centerOn(10000,10000);
+    centerOn(QPointF(OFFSCREEN_POS, OFFSCREEN_POS));
     // when this view is not in focus this it won't update the background
     // so we force it here
     viewport()->update();
@@ -491,10 +495,10 @@ void ImageViewerV2::mousePressEvent(QMouseEvent *event) {
         QWidget::mousePressEvent(event);
         return;
     }
-    mouseMoveStartPos = event->pos();
+    mouseMoveStartPos = event->position().toPoint();
     mousePressPos = mouseMoveStartPos;
     if(event->button() & Qt::RightButton) {
-        setZoomAnchor(event->pos());
+        setZoomAnchor(event->position().toPoint());
     } else {
         QGraphicsView::mousePressEvent(event);
     }
@@ -520,8 +524,8 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
         }
         // emit a signal to start dnd; set flag to ignore further mouse move events
         if(mouseInteraction == MouseInteractionState::MOUSE_DRAG_BEGIN) {
-            if( (abs(mousePressPos.x() - event->pos().x()) > dragThreshold) ||
-                 abs(mousePressPos.y() - event->pos().y()) > dragThreshold)
+            if( (abs(mousePressPos.x() - event->position().toPoint().x()) > dragThreshold) ||
+                 abs(mousePressPos.y() - event->position().toPoint().y()) > dragThreshold)
             {
                 mouseInteraction = MouseInteractionState::MOUSE_NONE;
                 emit draggedOut();
@@ -535,7 +539,7 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
     } else if(event->buttons() & Qt::RightButton) {
         // ------------------- ZOOM ----------------------
         // filter out possible mouse jitter by ignoring low delta drags
-        if(mouseInteraction == MouseInteractionState::MOUSE_ZOOM || abs(mousePressPos.y() - event->pos().y()) > zoomThreshold / dpr) {
+        if(mouseInteraction == MouseInteractionState::MOUSE_ZOOM || abs(mousePressPos.y() - event->position().toPoint().y()) > zoomThreshold / dpr) {
             if(cursor().shape() != Qt::SizeVerCursor) {
                 setCursor(Qt::SizeVerCursor);
             }
@@ -669,7 +673,7 @@ void ImageViewerV2::wheelEvent(QWheelEvent *event) {
 void ImageViewerV2::showEvent(QShowEvent *event) {
     QGraphicsView::showEvent(event);
     // ensure we are properly resized
-    qApp->processEvents();
+    viewport()->update();
     // reapply fitmode to fix viewport position
     if(imageFitMode == FIT_ORIGINAL)
         applyFitMode();
@@ -679,7 +683,7 @@ void ImageViewerV2::drawBackground(QPainter *painter, const QRectF &rect) {
     QGraphicsView::drawBackground(painter, rect);
     if(!isDisplaying() || !transparencyGrid || !pixmap->hasAlphaChannel())
         return;
-    painter->drawTiledPixmap(pixmapItem.sceneBoundingRect(), *checkboard);
+    painter->drawTiledPixmap(pixmapItem.sceneBoundingRect(), checkboard);
 }
 
 // simple pan behavior (cursor stops at the screen edges)
@@ -687,9 +691,9 @@ inline
 void ImageViewerV2::mousePan(QMouseEvent *event) {
     if(scaledImageFits())
         return;
-    mouseMoveStartPos -= event->pos();
+    mouseMoveStartPos -= event->position().toPoint();
     scroll(mouseMoveStartPos.x(), mouseMoveStartPos.y(), false);
-    mouseMoveStartPos = event->pos();
+    mouseMoveStartPos = event->position().toPoint();
     saveViewportPos();
 }
 
@@ -700,10 +704,10 @@ void ImageViewerV2::mousePan(QMouseEvent *event) {
 inline
 void ImageViewerV2::mouseMoveZoom(QMouseEvent *event) {
     float stepMultiplier = 0.003f; // this one feels ok
-    int currentPos = event->pos().y();
+    int currentPos = event->position().toPoint().y();
     int moveDistance = mouseMoveStartPos.y() - currentPos;
     float newScale = currentScale() * (1.0f + stepMultiplier * moveDistance * dpr);
-    mouseMoveStartPos = event->pos();
+    mouseMoveStartPos = event->position().toPoint();
     imageFitMode = FIT_FREE;
 
     zoomAnchored(newScale);
@@ -1011,7 +1015,6 @@ void ImageViewerV2::scrollToX(int x) {
     centerIfNecessary();
     snapToEdges();
     update();
-    qApp->processEvents();
 }
 
 // used by scrollTimeLine
@@ -1020,7 +1023,6 @@ void ImageViewerV2::scrollToY(int y) {
     centerIfNecessary();
     snapToEdges();
     update();
-    qApp->processEvents();
 }
 
 void ImageViewerV2::onScrollTimelineFinished() {
@@ -1231,7 +1233,7 @@ void ImageViewerV2::snapToEdges() {
 void ImageViewerV2::doZoom(float newScale) {
     if(!pixmap)
         return;
-    newScale = qBound(minScale, newScale, 500.0f);
+    newScale = qBound(minScale, newScale, maxScale);
     // fix scene position to integer values
     auto tl = pixmapItem.sceneBoundingRect().topLeft().toPoint();
     pixmapItem.setOffset(tl);

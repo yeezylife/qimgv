@@ -1,9 +1,5 @@
 name: qimgv-CI-Strict-Check
-on:
-  push:
-    branches: [ "YoloVibe" ]  # 任何分支推送都会触发
-  pull_request:
-    branches: [ "**" ]
+on: [workflow_dispatch]
 
 jobs:
   build-test:

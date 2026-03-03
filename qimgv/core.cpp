@@ -719,7 +719,13 @@ void Core::outputError(const FileOpResult &error) const {
 }
 
 void Core::showOpenDialog() {
-    mw->showOpenDialog(model->directoryPath());
+    QString path;
+    if(model && !model->directoryPath().isEmpty()) {
+        path = model->directoryPath();
+    } else {
+        path = QDir::homePath();
+    }
+    mw->showOpenDialog(path);
 }
 
 void Core::showInDirectory() {

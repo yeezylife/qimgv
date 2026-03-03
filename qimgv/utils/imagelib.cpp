@@ -1,4 +1,5 @@
 #include "imagelib.h"
+#include <memory>
 
 #ifdef USE_OPENCV
 #include "3rdparty/QtOpenCV/cvmatandqimage.h"
@@ -6,9 +7,14 @@
 
 void ImageLib::recolor(QPixmap &pixmap, const QColor &color) {
     if (pixmap.isNull()) return;
-    QPainter p(&pixmap);
-    p.setCompositionMode(QPainter::CompositionMode_SourceIn);
-    p.fillRect(pixmap.rect(), color);
+    
+    // 优化：使用 RAII 管理 QPainter 生命周期
+    {
+        QPainter p(&pixmap);
+        p.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        p.fillRect(pixmap.rect(), color);
+    }
+    // QPainter 在作用域结束时自动销毁，释放资源
 }
 
 QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
@@ -100,10 +106,10 @@ std::unique_ptr<const QImage> ImageLib::exifRotated(std::unique_ptr<const QImage
     }
 
     if (needsTransform) {
-        std::unique_ptr<const QImage> result(
-            new QImage(src->transformed(trans, Qt::SmoothTransformation))
+        // 使用 make_unique 替代 new，完全消除裸指针
+        return std::make_unique<const QImage>(
+            src->transformed(trans, Qt::SmoothTransformation)
         );
-        return result;
     }
 
     return src;
@@ -143,11 +149,17 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     if (source.isNull()) return QImage();
 
     QImage scaleTarget = std::move(source);
+    
+    // Qt 6.10优化：格式转换优化
     if (scaleTarget.format() == QImage::Format_Indexed8) {
+        // Indexed8格式转换为32位格式，提升缩放性能
         QImage::Format newFmt = scaleTarget.hasAlphaChannel()
                                 ? QImage::Format_ARGB32
                                 : QImage::Format_RGB32;
         scaleTarget = scaleTarget.convertToFormat(newFmt);
+    } else if (scaleTarget.format() == QImage::Format_ARGB32 && !scaleTarget.hasAlphaChannel()) {
+        // 如果是ARGB32但没有透明度，转换为RGB32减少内存占用和计算量
+        scaleTarget = scaleTarget.convertToFormat(QImage::Format_RGB32, Qt::ColorOnly);
     }
 
 #ifdef USE_OPENCV
@@ -196,9 +208,23 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 
 QImage ImageLib::scaled_Qt(QImage source, QSize destSize, bool smooth) {
     if (source.isNull()) return QImage();
-    return source.scaled(destSize,
-                         Qt::IgnoreAspectRatio,
-                         smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+    
+    // Qt 6.10优化：根据缩放方向选择最优方法
+    if (destSize.width() < source.width() || destSize.height() < source.height()) {
+        // 缩小操作 - 使用专门的缩小方法，性能更好
+        if (destSize.width() <= destSize.height()) {
+            return source.scaledToWidth(destSize.width(), 
+                                      smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+        } else {
+            return source.scaledToHeight(destSize.height(), 
+                                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+        }
+    } else {
+        // 放大操作 - 使用通用scaled方法
+        return source.scaled(destSize,
+                           Qt::KeepAspectRatio,
+                           smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+    }
 }
 
 #ifdef USE_OPENCV

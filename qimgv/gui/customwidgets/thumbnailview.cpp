@@ -359,16 +359,20 @@ void ThumbnailView::unloadAllThumbnails() {
 
 void ThumbnailView::loadVisibleThumbnails() {
     loadTimer.stop();
-    if(isVisible() && !blockThumbnailLoading) {
-        QRectF visRect = mapToScene(viewport()->geometry()).boundingRect();
-        QRectF offRectBack;
-        QRectF offRectFront;
-        if(mOrientation == Qt::Horizontal) {
-            offRectBack  = QRectF(visRect.left() - offscreenPreloadArea, visRect.top(),
-                                  offscreenPreloadArea, visRect.height());
-            offRectFront = QRectF(visRect.right(), visRect.top(),
-                                  offscreenPreloadArea, visRect.height());
-        } else {
+    // 完全禁用缩略图请求
+    if(!settings->useThumbnailCache() || !isVisible() || blockThumbnailLoading) {
+        return;
+    }
+    
+    QRectF visRect = mapToScene(viewport()->geometry()).boundingRect();
+    QRectF offRectBack;
+    QRectF offRectFront;
+    if(mOrientation == Qt::Horizontal) {
+        offRectBack  = QRectF(visRect.left() - offscreenPreloadArea, visRect.top(),
+                              offscreenPreloadArea, visRect.height());
+        offRectFront = QRectF(visRect.right(), visRect.top(),
+                              offscreenPreloadArea, visRect.height());
+    } else {
             offRectBack  = QRectF(visRect.left(), visRect.top() - offscreenPreloadArea,
                                   visRect.width(), offscreenPreloadArea);
             offRectFront = QRectF(visRect.left(), visRect.bottom(),

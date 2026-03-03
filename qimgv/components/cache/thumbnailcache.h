@@ -3,27 +3,27 @@
 #include <QObject>
 #include <QDir>
 #include <QMutex>
-#include <QDebug>
+#include <QImage>
+#include <QStringView>
+#include <memory>
 #include "settings.h"
 #include "sourcecontainers/thumbnail.h"
 
 class ThumbnailCache : public QObject
 {
     Q_OBJECT
+    Q_DISABLE_COPY_MOVE(ThumbnailCache)
+
 public:
-    explicit ThumbnailCache();
+    explicit ThumbnailCache(QObject *parent = nullptr);
+    ~ThumbnailCache() override = default;
 
-    void saveThumbnail(QImage *image, QString id);
-    QImage* readThumbnail(QString id);
-    QString thumbnailPath(QString id);
-    bool exists(QString id);
-
-signals:
-
-public slots:
+    void saveThumbnail(const QImage &image, QStringView id);
+    std::unique_ptr<QImage> readThumbnail(QStringView id);
+    QString thumbnailPath(QStringView id) const;
+    bool exists(QStringView id) const noexcept;
 
 private:
-    // we are still bottlenecked by disk access anyway
-    QMutex mutex;
+    mutable QMutex mutex;
     QString cacheDirPath;
 };

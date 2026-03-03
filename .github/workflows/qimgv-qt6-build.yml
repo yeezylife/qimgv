@@ -1,0 +1,201 @@
+name: qimgv-qt6-build
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    outputs:
+      build_name: ${{ steps.vars.outputs.build_name }}
+      build_file_name: ${{ steps.vars.outputs.build_file_name }}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            p7zip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-kwindowsystem
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-kimageformats
+            mingw-w64-ucrt-x86_64-libjxl
+            mingw-w64-ucrt-x86_64-libraw
+            mingw-w64-ucrt-x86_64-exiv2
+            mingw-w64-ucrt-x86_64-opencv
+            mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-lcms2
+            mingw-w64-ucrt-x86_64-libavif
+            mingw-w64-ucrt-x86_64-libheif
+            python3
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 修改点 1：固定输出名称，不使用动态版本号
+      - name: Set Variables
+        id: vars
+        run: |
+          BNAME="qimgv-x64"
+          echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
+          echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
+
+      # 修改点 2：添加编译标志 -march=x86-64-v3 启用 V3 指令集优化
+      - name: Build qimgv
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_QT5=OFF \
+            -DVIDEO_SUPPORT=ON \
+            -DOPENCV_SUPPORT=ON \
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
+            -DCMAKE_C_FLAGS="-march=x86-64-v3 -Wall -Werror"
+          cmake --build build --config Release
+
+      - name: Prepare Slim Package
+        run: |
+          TARGET="./${{ steps.vars.outputs.build_name }}"
+          
+          # 1. 创建完整的目录布局
+          mkdir -p "$TARGET/imageformats"
+          mkdir -p "$TARGET/platforms"
+          mkdir -p "$TARGET/styles"
+          mkdir -p "$TARGET/iconengines"
+          mkdir -p "$TARGET/plugins"
+
+          echo "--- Copying Core Executable & Local Build Artifacts ---"
+          cp build/qimgv/qimgv.exe "$TARGET/"
+          
+          # 拷贝你编译出的视频插件 (核心缺项)
+          if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
+            cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
+            echo "Successfully copied player_mpv.dll"
+          fi
+
+          # 拷贝编译生成的翻译文件 (核心缺项)
+          if [ -d "build/qimgv/translations" ]; then
+            cp -r build/qimgv/translations "$TARGET/"
+            echo "Successfully copied translations"
+          fi
+
+          echo "--- Collecting Qt Plugins from MSYS2 ---"
+          PLUGIN_SOURCES=(
+            "/ucrt64/lib/qt6/plugins"
+            "/ucrt64/share/qt6/plugins"
+            "/ucrt64/lib/kf6/plugins"
+          )
+
+          for src in "${PLUGIN_SOURCES[@]}"; do
+            if [ -d "$src" ]; then
+              echo "Checking $src..."
+              [ -d "$src/platforms" ] && cp -n "$src/platforms/qwindows.dll" "$TARGET/platforms/" 2>/dev/null || true
+              [ -d "$src/imageformats" ] && cp -n "$src/imageformats"/*.dll "$TARGET/imageformats/" 2>/dev/null || true
+              [ -d "$src/styles" ] && cp -n "$src/styles"/*.dll "$TARGET/styles/" 2>/dev/null || true
+              [ -d "$src/iconengines" ] && cp -n "$src/iconengines"/*.dll "$TARGET/iconengines/" 2>/dev/null || true
+            fi
+          done
+
+          echo "--- Creating qt.conf ---"
+          # 指定 Prefix 为当前目录，Qt 将会正确加载同级的 plugins 和 imageformats
+          echo -e "[Paths]\nPrefix = .\nPlugins = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
+
+          echo "--- Starting Enhanced Dependency Resolver ---"
+          # 改进后的 Python 脚本：递归扫描所有子目录并统一提取依赖至根目录
+          python3 - <<EOF
+          import os, subprocess, shutil
+          from pathlib import Path
+
+          target_dir = os.path.abspath("$TARGET")
+          
+          def get_ntldd_deps(file_path):
+              try:
+                  # 获取所有依赖项，重点抓取包含 ucrt64 的路径
+                  out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
+                  deps = []
+                  for line in out.splitlines():
+                      if "=>" in line and "ucrt64" in line.lower():
+                          # 提取 => 之后的路径部分
+                          parts = line.split("=>")
+                          if len(parts) > 1:
+                              path = parts[1].split("(")[0].strip()
+                              if os.path.exists(path):
+                                  deps.append(path)
+                  return deps
+              except:
+                  return []
+
+          scanned_files = set()
+          while True:
+              found_new = False
+              # 使用 rglob 递归扫描整个包（包括根目录、plugins、imageformats 等所有 dll 和 exe）
+              current_files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
+              
+              for f in current_files:
+                  f_path = str(f.absolute())
+                  if f_path in scanned_files: continue
+                  
+                  deps = get_ntldd_deps(f_path)
+                  for d in deps:
+                      d_name = os.path.basename(d)
+                      # 所有的依赖 DLL 必须放在 exe 同级的根目录下才能被 Windows 自动加载
+                      dest = os.path.join(target_dir, d_name) 
+                      
+                      if not os.path.exists(dest):
+                          print(f"  [+] Found dependency: {d_name} (needed by {f.name})")
+                          shutil.copy2(d, dest)
+                          found_new = True
+                  scanned_files.add(f_path)
+              
+              if not found_new: break
+          
+          print("Dependency resolution complete.")
+          EOF
+
+          echo "--- Final Verification ---"
+          echo "Checking key files existence:"
+          ls -R "$TARGET" | grep -E "player_mpv.dll|qwindows.dll|libmpv.*.dll|translations"
+          du -sh "$TARGET"
+
+      - name: Compress
+        run: |
+          7z a -mx=9 "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qimgv-binary
+          path: ${{ steps.vars.outputs.build_file_name }}
+
+  upload-release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: success()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: qimgv-binary
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ needs.build.outputs.build_file_name }}
+          prerelease: true
+          tag_name: latest-dev-qt6-slim
+          name: ${{ needs.build.outputs.build_name }}
+          body: |
+            ### Slim Portable Build (Auto-generated)
+            - **Internal Plugins**: Included `player_mpv.dll` for video support.
+            - **Translations**: Added full multi-language support.
+            - **Qt6/KF6 Plugins**: SVG icons, JXL/AVIF image formats, and icon engines.
+            - **Recursive Resolver**: All system DLLs (OpenCV, MPV, Qt, etc.) are bundled into the root.
+            - **Optimization**: Compiled with `-march=x86-64-v3` (AVX2, BMI, etc.) for better performance on modern CPUs.

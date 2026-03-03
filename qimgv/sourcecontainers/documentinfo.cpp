@@ -150,6 +150,8 @@ bool DocumentInfo::detectAnimatedAvif(const QByteArray &buffer) {
 
 // ==================== Exiv2 相关代码 ====================
 #ifdef USE_EXIV2
+// 强制启用宽字符路径支持（如果 Exiv2 编译时支持）
+#define EXV_UNICODE_PATH
 #include <exiv2/exiv2.hpp>
 #include <QFile>
 
@@ -159,6 +161,10 @@ bool DocumentInfo::detectAnimatedAvif(const QByteArray &buffer) {
  * 完全绕过路径字符串，直接将 Qt 打开的文件句柄提供给 Exiv2，
  * 实现零编码转换，完美支持所有 Unicode 文件名。
  * 适配 Exiv2 0.28+ API。
+ * 
+ * 修改：path() 返回本地 8 位编码（Windows ANSI），
+ *       避免 Exiv2 内部使用 ANSI API 打开文件时失败。
+ *       同时提供 wpath() 返回宽字符串，优先使用 Unicode 路径。
  */
 class QtFileIo : public Exiv2::BasicIo {
 public:
@@ -167,7 +173,7 @@ public:
         , pos_(0)
         , size_(file_->size())
         , isOpen_(file_->isOpen())
-        , path_(file_->fileName().toStdString())
+        , path_(QFile::encodeName(file_->fileName()).toStdString()) // 【修改】使用本地 8 位编码
     {}
 
     QtFileIo(const QtFileIo&) = delete;
@@ -285,6 +291,7 @@ public:
     bool eof() const override { return pos_ >= size_; }
     const std::string& path() const noexcept override { return path_; }
 #ifdef EXV_UNICODE_PATH
+    // wpath() 按值返回宽字符串，无需存储成员
     std::wstring wpath() const override { return file_->fileName().toStdWString(); }
 #endif
     void populateFakeData() override {}
@@ -294,7 +301,7 @@ private:
     qint64 pos_;
     qint64 size_;
     bool isOpen_;
-    std::string path_;
+    std::string path_; // 存储本地 8 位编码的路径
 };
 
 #endif // USE_EXIV2

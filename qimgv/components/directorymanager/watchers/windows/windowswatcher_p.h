@@ -25,13 +25,18 @@ static inline QString lastError() {
 }
 
 class WindowsWatcherPrivate : public DirectoryWatcherPrivate {
+    Q_OBJECT                                // 添加 Q_OBJECT 宏，启用信号槽机制
     Q_DECLARE_PUBLIC(WindowsWatcher)
+    
 public:
     explicit WindowsWatcherPrivate(WindowsWatcher* qq);
     
     HANDLE requestDirectoryHandle(const QString& path);
+
+public slots:                               // 将 dispatchNotify 声明为槽函数
     void dispatchNotify(const QString& fileName, DWORD action);
 
+private:
     QString oldFileName;                    // 用于重命名时暂存旧文件名
 };
 

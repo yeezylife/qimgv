@@ -5,15 +5,13 @@ WindowsWatcherPrivate::WindowsWatcherPrivate(WindowsWatcher* qq)
     : DirectoryWatcherPrivate(static_cast<DirectoryWatcher*>(qq), new WindowsWorker())
 {
     auto windowsWorker = static_cast<WindowsWorker*>(worker.data());
-    // 移除指针类型注册，改用字符串传递
-    // qRegisterMetaType<PFILE_NOTIFY_INFORMATION>("PFILE_NOTIFY_INFORMATION");
-
-    // 新增：注册 DWORD 类型，确保信号槽能识别
+    
+    // 注册 DWORD 类型，确保信号槽能识别
     qRegisterMetaType<DWORD>("DWORD"); 
 
-    // 修改：连接信号传递 QString 和 DWORD
-    connect(windowsWorker, SIGNAL(notifyEvent(QString, DWORD)),
-            this, SLOT(dispatchNotify(QString, DWORD)));
+    // 使用新式信号槽连接（推荐）
+    connect(windowsWorker, &WindowsWorker::notifyEvent,
+            this, &WindowsWatcherPrivate::dispatchNotify);
 }
 
 HANDLE WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)

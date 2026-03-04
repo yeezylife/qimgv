@@ -376,7 +376,7 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
                     newEntry.path = path;
                     newEntry.isDirectory = false;
                     newEntry.size = fileInfo.size();
-                    newEntry.modifyTime = std::filesystem::file_time_type::clock::from_time_t(fileInfo.lastModified().toSecsSinceEpoch());
+                    newEntry.modifyTime = std::filesystem::last_write_time(std::filesystem::path(fileInfo.filePath().toStdWString()));
                     entryVec.emplace_back(newEntry);
                 } catch (...) {
                     qDebug() << "[DirectoryManager] Error creating file entry for:" << path;

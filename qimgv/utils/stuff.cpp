@@ -17,14 +17,6 @@ int probeOS() {
 #endif
 }
 
-StdString toStdString(QString str) {
-#ifdef _WIN32
-    return str.toStdWString();
-#else
-    return str.toStdString();
-#endif
-}
-
 QString fromStdString(StdString str) {
 #ifdef _WIN32
     return QString::fromStdWString(str);

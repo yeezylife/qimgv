@@ -70,7 +70,7 @@ void DirectoryPresenter::disconnectView() {
 //------------------------------------------------------------------------------
 
 // 辅助函数：将文件索引转换为视图中的绝对索引
-inline int DirectoryPresenter::fileIndexToViewIndex(int fileIndex) const {
+int DirectoryPresenter::fileIndexToViewIndex(int fileIndex) const {
     return mShowDirs ? fileIndex + model->dirCount() : fileIndex;
 }
 

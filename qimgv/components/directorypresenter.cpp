@@ -1,4 +1,4 @@
-﻿#include "directorypresenter.h"
+#include "directorypresenter.h"
 
 DirectoryPresenter::DirectoryPresenter(QObject *parent) : QObject(parent), mShowDirs(false) {
     connect(&thumbnailer, &Thumbnailer::thumbnailReady, this, &DirectoryPresenter::onThumbnailReady);
@@ -69,11 +69,16 @@ void DirectoryPresenter::disconnectView() {
 
 //------------------------------------------------------------------------------
 
+// 辅助函数：将文件索引转换为视图中的绝对索引
+inline int DirectoryPresenter::fileIndexToViewIndex(int fileIndex) const {
+    return mShowDirs ? fileIndex + model->dirCount() : fileIndex;
+}
+
 void DirectoryPresenter::onFileRemoved(QString filePath, int index) {
     Q_UNUSED(filePath)
     if(!view)
         return;
-    view->removeItem(mShowDirs ? index + model->dirCount() : index);
+    view->removeItem(fileIndexToViewIndex(index));
 }
 
 void DirectoryPresenter::onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo) {
@@ -81,13 +86,15 @@ void DirectoryPresenter::onFileRenamed(QString fromPath, int indexFrom, QString 
     Q_UNUSED(toPath)
     if(!view)
         return;
-    if(mShowDirs) {
-        indexFrom += model->dirCount();
-        indexTo += model->dirCount();
-    }
+    
+    // 转换为视图索引
+    indexFrom = fileIndexToViewIndex(indexFrom);
+    indexTo = fileIndexToViewIndex(indexTo);
+    
     auto oldSelection = view->selection();
     view->removeItem(indexFrom);
     view->insertItem(indexTo);
+    
     // re-select if needed
     if(oldSelection.contains(indexFrom)) {
         if(oldSelection.count() == 1) {
@@ -103,14 +110,14 @@ void DirectoryPresenter::onFileAdded(QString filePath) {
     if(!view)
         return;
     int index = model->indexOfFile(filePath);
-    view->insertItem(mShowDirs ? model->dirCount() + index : index);
+    view->insertItem(fileIndexToViewIndex(index));
 }
 
 void DirectoryPresenter::onFileModified(QString filePath) {
     if(!view)
         return;
     int index = model->indexOfFile(filePath);
-    view->reloadItem(mShowDirs ? model->dirCount() + index : index);
+    view->reloadItem(fileIndexToViewIndex(index));
 }
 
 void DirectoryPresenter::onDirRemoved(QString dirPath, int index) {
@@ -159,17 +166,27 @@ void DirectoryPresenter::setShowDirs(bool mode) {
 
 QList<QString> DirectoryPresenter::selectedPaths() const {
     QList<QString> paths;
-    if(!view)
+    if(!view || !model)
         return paths;
+        
+    const auto selection = view->selection();
+    const int dirCount = model->dirCount();
+    
     if(mShowDirs) {
-        for(auto i : view->selection()) {
-            if(i < model->dirCount())
+        // 预分配容量以提高性能
+        paths.reserve(selection.size());
+        
+        for(auto i : selection) {
+            if(i < dirCount)
                 paths << model->dirPathAt(i);
             else
-                paths << model->filePathAt(i - model->dirCount());
+                paths << model->filePathAt(i - dirCount);
         }
     } else {
-        for(auto i : view->selection()) {
+        // 预分配容量以提高性能
+        paths.reserve(selection.size());
+        
+        for(auto i : selection) {
             paths << model->filePathAt(i);
         }
     }
@@ -177,36 +194,59 @@ QList<QString> DirectoryPresenter::selectedPaths() const {
 }
 
 void DirectoryPresenter::generateThumbnails(QList<int> indexes, int size, bool crop, bool force) {
+    // 完全跳过缩略图生成
+    if(!settings->useThumbnailCache()) {
+        return;
+    }
+    
     if(!view || !model)
         return;
+    
     thumbnailer.clearTasks();
+    
+    // 如果不显示目录，直接批量处理文件
     if(!mShowDirs) {
         for(int i : indexes)
             thumbnailer.getThumbnailAsync(model->filePathAt(i), size, crop, force);
         return;
     }
+    
+    // 预分配目录缩略图，避免重复创建
+    static QPixmap *cachedDirPixmap = nullptr;
+    static int cachedDirSize = 0;
+    static QSvgRenderer *cachedSvgRenderer = nullptr;
+    
+    // 如果缓存的缩略图大小不匹配，则重新创建
+    if(!cachedDirPixmap || cachedDirSize != size) {
+        if(cachedDirPixmap) {
+            delete cachedDirPixmap;
+            cachedDirPixmap = nullptr;
+        }
+        if(cachedSvgRenderer) {
+            delete cachedSvgRenderer;
+            cachedSvgRenderer = nullptr;
+        }
+        
+        cachedSvgRenderer = new QSvgRenderer();
+        cachedSvgRenderer->load(QString(":/res/icons/common/other/folder32-scalable.svg"));
+        int factor = (size * 0.90f) / cachedSvgRenderer->defaultSize().width();
+        cachedDirPixmap = new QPixmap(cachedSvgRenderer->defaultSize() * factor);
+        cachedDirPixmap->fill(Qt::transparent);
+        QPainter pixPainter(cachedDirPixmap);
+        cachedSvgRenderer->render(&pixPainter);
+        pixPainter.end();
+        
+        ImageLib::recolor(*cachedDirPixmap, settings->colorScheme().icons);
+        cachedDirSize = size;
+    }
+    
+    // 批量处理索引
     for(int i : indexes) {
         if(i < model->dirCount()) {
-            // tmp ------------------------------------------------------------
-            // gen thumb for a directory
-            // TODO: optimize & move dir icon loading to shared res; then overlay
-            // the mini-thumbs on top (similar to dolphin)
-            QSvgRenderer svgRenderer;
-            svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
-            int factor = (size * 0.90f) / svgRenderer.defaultSize().width();
-            QPixmap *pixmap = new QPixmap(svgRenderer.defaultSize() * factor);
-            pixmap->fill(Qt::transparent);
-            QPainter pixPainter(pixmap);
-            svgRenderer.render(&pixPainter);
-            pixPainter.end();
-
-            ImageLib::recolor(*pixmap, settings->colorScheme().icons);
-
-            std::shared_ptr<Thumbnail> thumb(new Thumbnail(model->dirNameAt(i),
-                                                           "Folder",
-                                                           size,
-                                                           std::shared_ptr<QPixmap>(pixmap)));
-            // ^----------------------------------------------------------------
+            // 使用缓存的目录图标
+            std::shared_ptr<QPixmap> dirPixmap = std::make_shared<QPixmap>(*cachedDirPixmap);
+            std::shared_ptr<Thumbnail> thumb = std::make_shared<Thumbnail>(
+                model->dirNameAt(i), "Folder", size, dirPixmap);
             view->setThumbnail(i, thumb);
         } else {
             QString path = model->filePathAt(i - model->dirCount());
@@ -254,25 +294,33 @@ void DirectoryPresenter::onDroppedInto(const QMimeData *data, QObject *source, i
         return;
 
     // ignore drops into selected / current folder when we are the source of dropEvent
-    if(source && (view->selection().contains(targetIndex) || targetIndex == -1) )
+    if(source && (view->selection().contains(targetIndex) || targetIndex == -1))
         return;
+        
     // ignore drops into a file
     // todo: drop into a current dir when target is a file
     if(showDirs() && targetIndex >= model->dirCount())
         return;
 
-    // convert urls to qstrings
+    // convert urls to qstrings using range-based for loop
     QStringList pathList;
-    QList<QUrl> urlList = data->urls();
-    for(int i = 0; i < urlList.size(); ++i)
-        pathList.append(urlList.at(i).toLocalFile());
+    const QList<QUrl> urlList = data->urls();
+    pathList.reserve(urlList.size()); // 预分配容量
+    
+    for(const QUrl &url : urlList) {
+        pathList.append(url.toLocalFile());
+    }
 
     // get target dir path
     QString destDir;
-    if(showDirs() && targetIndex < model->dirCount())
-       destDir = model->dirPathAt(targetIndex);
-    if(destDir.isEmpty()) // fallback to the current dir
+    if(showDirs() && targetIndex < model->dirCount()) {
+        destDir = model->dirPathAt(targetIndex);
+    }
+    
+    if(destDir.isEmpty()) { // fallback to the current dir
         destDir = model->directoryPath();
+    }
+    
     pathList.removeAll(destDir); // remove target dir from source list
 
     // pass to core
@@ -282,12 +330,13 @@ void DirectoryPresenter::onDroppedInto(const QMimeData *data, QObject *source, i
 void DirectoryPresenter::selectAndFocus(QString path) {
     if(!model || !view || path.isEmpty())
         return;
+        
     if(model->containsDir(path) && showDirs()) {
         int dirIndex = model->indexOfDir(path);
         view->select(dirIndex);
         view->focusOn(dirIndex);
     } else if(model->containsFile(path)) {
-        int fileIndex = showDirs() ? model->indexOfFile(path) + model->dirCount() : model->indexOfFile(path);
+        int fileIndex = fileIndexToViewIndex(model->indexOfFile(path));
         view->select(fileIndex);
         view->focusOn(fileIndex);
     }

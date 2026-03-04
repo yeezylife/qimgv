@@ -62,4 +62,7 @@ private:
     std::shared_ptr<DirectoryModel> model = nullptr;
     Thumbnailer thumbnailer;
     bool mShowDirs;
+    
+    // 辅助函数：将文件索引转换为视图中的绝对索引
+    inline int fileIndexToViewIndex(int fileIndex) const;
 };

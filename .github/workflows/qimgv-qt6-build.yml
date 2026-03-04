@@ -60,8 +60,9 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/ucrt64 \
-            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
-            -DCMAKE_C_FLAGS="-march=x86-64-v3 -Wall -Werror"
+            -DQT_NO_DEBUG_OUTPUT=ON \
+            -DCMAKE_CXX_FLAGS="-DQT_NO_DEBUG_OUTPUT -march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
+            -DCMAKE_C_FLAGS="-DQT_NO_DEBUG_OUTPUT -march=x86-64-v3 -Wall -Werror"
           cmake --build build --config Release
 
       - name: Prepare Slim Package

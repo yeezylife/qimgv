@@ -3,8 +3,7 @@
 
 ResizeDialog::ResizeDialog(QSize originalSize,  QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::ResizeDialog),
-    lastEdited(0)
+    ui(new Ui::ResizeDialog)
 {
     ui->setupUi(this);
     setWindowModality(Qt::ApplicationModal);
@@ -27,7 +26,7 @@ ResizeDialog::ResizeDialog(QSize originalSize,  QWidget *parent) :
     connect(ui->percent, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::percentChanged);
     connect(ui->width,  qOverload<int>(&QSpinBox::valueChanged), this, &ResizeDialog::widthChanged);
     connect(ui->height, qOverload<int>(&QSpinBox::valueChanged), this, &ResizeDialog::heightChanged);
-    connect(ui->keepAspectRatio, &QCheckBox::toggled, this, &ResizeDialog::onAspectRatioCheckbox);
+    // 移除了 keepAspectRatio 的连接
     connect(ui->resComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &ResizeDialog::setCommonResolution);
     connect(ui->fitDesktopButton, &QPushButton::pressed, this, &ResizeDialog::fitDesktop);
     connect(ui->fillDesktopButton, &QPushButton::pressed, this, &ResizeDialog::fillDesktop);
@@ -62,10 +61,7 @@ void ResizeDialog::setCommonResolution(int index) {
         case 11: res = QSize(3840, 2160); break;
         default: res = originalSize; break;
     }
-    if(ui->keepAspectRatio->isChecked())
-        targetSize = originalSize.scaled(res, Qt::KeepAspectRatio);
-    else
-        targetSize = originalSize.scaled(res, Qt::IgnoreAspectRatio);
+    targetSize = originalSize.scaled(res, Qt::KeepAspectRatio);
     updateToTargetValues();
 }
 
@@ -74,22 +70,18 @@ QSize ResizeDialog::newSize() {
 }
 
 void ResizeDialog::widthChanged(int newWidth) {
-    lastEdited = 0;
+    // 始终按原始比例计算高度
     float factor = static_cast<float>(newWidth) / originalSize.width();
     targetSize.setWidth(newWidth);
-    if(ui->keepAspectRatio->isChecked()) {
-        targetSize.setHeight(static_cast<int>(originalSize.height() * factor));
-    }
+    targetSize.setHeight(static_cast<int>(originalSize.height() * factor));
     updateToTargetValues();
 }
 
 void ResizeDialog::heightChanged(int newHeight) {
-    lastEdited = 1;
+    // 始终按原始比例计算宽度
     float factor = static_cast<float>(newHeight) / originalSize.height();
     targetSize.setHeight(newHeight);
-    if(ui->keepAspectRatio->isChecked()) {
-        targetSize.setWidth(static_cast<int>(originalSize.width() * factor));
-    }
+    targetSize.setWidth(static_cast<int>(originalSize.width() * factor));
     updateToTargetValues();
 }
 
@@ -112,45 +104,39 @@ void ResizeDialog::fillDesktop() {
     updateToTargetValues();
 }
 
-void ResizeDialog::onAspectRatioCheckbox() {
-    resetResCheckBox();
-    (lastEdited)?heightChanged(ui->height->value()):widthChanged(ui->width->value());
-}
+// 移除了 onAspectRatioCheckbox 函数
 
 void ResizeDialog::onAbsoluteSizeRadioButton() {
     ui->width->blockSignals(true);
     ui->height->blockSignals(true);
     ui->percent->blockSignals(true);
-    ui->keepAspectRatio->blockSignals(true);
+    // 不再操作 keepAspectRatio
 
     ui->width->setEnabled(true);
     ui->height->setEnabled(true);
     ui->percent->setEnabled(false);
-    ui->keepAspectRatio->setEnabled(true);
+    // 复选框已被移除，不需要设置其状态
 
     ui->width->blockSignals(false);
     ui->height->blockSignals(false);
     ui->percent->blockSignals(false);
-    ui->keepAspectRatio->blockSignals(false);
 }
 
 void ResizeDialog::onPercentageRadioButton() {
     ui->width->blockSignals(true);
     ui->height->blockSignals(true);
     ui->percent->blockSignals(true);
-    ui->keepAspectRatio->blockSignals(true);
+    // 不再操作 keepAspectRatio
 
     ui->width->setEnabled(false);
     ui->height->setEnabled(false);
     ui->percent->setEnabled(true);
-    ui->keepAspectRatio->setChecked(true);
-    ui->keepAspectRatio->setEnabled(false);
+    // 复选框已被移除，不再强制选中或禁用
     percentChanged(ui->percent->value());
 
     ui->width->blockSignals(false);
     ui->height->blockSignals(false);
     ui->percent->blockSignals(false);
-    ui->keepAspectRatio->blockSignals(false);
 }
 
 void ResizeDialog::resetResCheckBox() {
@@ -161,9 +147,8 @@ void ResizeDialog::resetResCheckBox() {
 
 void ResizeDialog::percentChanged(double newPercent) {
     double scale = newPercent / 100.;
-    targetSize.setWidth(originalSize.width()*scale);
-    targetSize.setHeight(originalSize.height()*scale);
-
+    targetSize.setWidth(originalSize.width() * scale);
+    targetSize.setHeight(originalSize.height() * scale);
     updateToTargetValues();
 }
 

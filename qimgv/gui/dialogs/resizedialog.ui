@@ -258,28 +258,6 @@
          </layout>
         </item>
         <item>
-         <widget class="QCheckBox" name="keepAspectRatio">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Keep aspect ratio</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -606,7 +584,6 @@
   <tabstop>percent</tabstop>
   <tabstop>width</tabstop>
   <tabstop>height</tabstop>
-  <tabstop>keepAspectRatio</tabstop>
   <tabstop>comboBox</tabstop>
   <tabstop>resComboBox</tabstop>
   <tabstop>fitDesktopButton</tabstop>

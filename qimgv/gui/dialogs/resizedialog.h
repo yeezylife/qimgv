@@ -21,7 +21,7 @@ class ResizeDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit ResizeDialog(QSize initialSize, QWidget *parent = nullptr);
+    explicit ResizeDialog(QSize originalSize, QWidget *parent = nullptr);
     ~ResizeDialog();
     QSize newSize();
 
@@ -35,8 +35,7 @@ private:
     Ui::ResizeDialog *ui;
     QSize originalSize, targetSize, desktopSize;
     void updateToTargetValues();
-    int lastEdited; // 0 - width, 1 - height
-    void resetResCheckBox();
+    void resetResCheckBox();   // 重置分辨率下拉框
 
 private slots:
     void widthChanged(int);
@@ -48,7 +47,7 @@ private slots:
     void reset();
     void fitDesktop();
     void fillDesktop();
-    void onAspectRatioCheckbox();
+    // 移除了 onAspectRatioCheckbox 槽
     void onPercentageRadioButton();
     void onAbsoluteSizeRadioButton();
 signals:

@@ -14,8 +14,8 @@ public:
     void setDirectoryHandle(HANDLE handle);
 
 signals:
-    // 修改：传递 QString 和 DWORD 而不是原始指针
-    void notifyEvent(const QString& fileName, DWORD action);
+    // 修改：传递 QString 和 uint 而不是原始指针
+    void notifyEvent(const QString& fileName, uint action);
     void finished();
     void started();
 

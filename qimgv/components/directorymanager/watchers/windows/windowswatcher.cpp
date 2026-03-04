@@ -8,12 +8,12 @@ WindowsWatcherPrivate::WindowsWatcherPrivate(WindowsWatcher* qq)
     // 移除指针类型注册，改用字符串传递
     // qRegisterMetaType<PFILE_NOTIFY_INFORMATION>("PFILE_NOTIFY_INFORMATION");
 
-    // 新增：注册 DWORD 类型，确保信号槽能识别
-    qRegisterMetaType<DWORD>("DWORD"); 
+    // 新增：注册 uint 类型，确保信号槽能识别
+    qRegisterMetaType<uint>("uint"); 
 
-    // 修改：连接信号传递 QString 和 DWORD
-    connect(windowsWorker, SIGNAL(notifyEvent(QString, DWORD)),
-            this, SLOT(dispatchNotify(QString, DWORD)));
+    // 修改：连接信号传递 QString 和 uint
+    connect(windowsWorker, SIGNAL(notifyEvent(QString, uint)),
+            this, SLOT(dispatchNotify(QString, uint)));
 }
 
 HANDLE WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
@@ -47,7 +47,7 @@ HANDLE WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
     return hDirectory;
 }
 
-void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, DWORD action) {
+void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, uint action) {
     Q_Q(WindowsWatcher);
 
     // 验证文件名有效性（安全检查）

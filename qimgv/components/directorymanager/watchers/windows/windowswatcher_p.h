@@ -30,7 +30,7 @@ public:
     explicit WindowsWatcherPrivate(WindowsWatcher* qq);
     
     HANDLE requestDirectoryHandle(const QString& path);
-    void dispatchNotify(const QString& fileName, DWORD action);
+    void dispatchNotify(const QString& fileName, uint action);
 
     QString oldFileName;                    // 用于重命名时暂存旧文件名
 };

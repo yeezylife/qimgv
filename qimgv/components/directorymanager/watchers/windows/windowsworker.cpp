@@ -18,7 +18,7 @@ void WindowsWorker::run() {
         return;
     }
 
-    DWORD bytesReturned = 0;
+    uint bytesReturned = 0;
     
     while (true) {
         // 使用持续有效的缓冲区
@@ -63,7 +63,7 @@ void WindowsWorker::run() {
                 reinterpret_cast<wchar_t*>(notify->FileName), 
                 len);
             
-            DWORD action = notify->Action;
+            uint action = notify->Action;
             
             // 发送安全的字符串副本，而不是原始指针
             emit notifyEvent(fileName, action);

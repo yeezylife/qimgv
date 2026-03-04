@@ -1,30 +1,41 @@
 #pragma once
 
 #include <QImage>
+#include <QImageReader>
 #include <QImageWriter>
-#include <QSemaphore>
 #include <QCryptographicHash>
+#include <QIcon>
+#include <QStringView>
+#include <optional>
+#include <memory>
 #include "image.h"
 #include "utils/imagelib.h"
-#include <settings.h>
-#include <QIcon>
 
 class ImageStatic : public Image {
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(ImageStatic)
+
 public:
-    ImageStatic(QString _path);
-    ImageStatic(std::unique_ptr<DocumentInfo> _info);
-    ~ImageStatic();
+    explicit ImageStatic(QString path);
+    explicit ImageStatic(std::unique_ptr<DocumentInfo> info);
+    ~ImageStatic() override = default;
+    
+    using Image::save;
 
-    std::unique_ptr<QPixmap> getPixmap();
-    std::shared_ptr<const QImage> getSourceImage();
-    std::shared_ptr<const QImage> getImage();
+    // 使用 std::optional 表示可能失败的操作
+    std::unique_ptr<QPixmap> getPixmap() const override;
+    std::shared_ptr<const QImage> getSourceImage() const noexcept;
+    std::shared_ptr<const QImage> getImage() const noexcept override;
 
-    int height();
-    int width();
-    QSize size();
+    // const 成员函数
+    int height() const noexcept override;
+    int width() const noexcept override;
+    QSize size() const noexcept override;
 
+    // 编辑相关
     bool setEditedImage(std::unique_ptr<const QImage> imageEditedNew);
-    bool discardEditedImage();
+    bool discardEditedImage() noexcept;
+    bool isEdited() const noexcept { return mEdited; }
 
 public slots:
     void crop(QRect newRect);
@@ -33,8 +44,11 @@ public slots:
 
 private:
     void load();
-    std::shared_ptr<const QImage> image, imageEdited;
     void loadGeneric();
     void loadICO();
-    QString generateHash(QString str);
+    static QString generateHash(QStringView str) noexcept;
+    static int getSaveQuality(QStringView ext) noexcept;
+    
+    std::shared_ptr<const QImage> image;
+    std::shared_ptr<const QImage> imageEdited;
 };

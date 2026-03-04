@@ -68,11 +68,11 @@ bool ImageAnimated::save() {
 }
 
 // in case of gif returns current frame
-std::unique_ptr<QPixmap> ImageAnimated::getPixmap() {
+std::unique_ptr<QPixmap> ImageAnimated::getPixmap() const {
     return std::unique_ptr<QPixmap>(new QPixmap(mPath, mDocInfo->format().toStdString().c_str()));
 }
 
-std::shared_ptr<const QImage> ImageAnimated::getImage() {
+std::shared_ptr<const QImage> ImageAnimated::getImage() const {
     std::shared_ptr<const QImage> img(new QImage(mPath, mDocInfo->format().toStdString().c_str()));
     return img;
 }
@@ -83,14 +83,14 @@ std::shared_ptr<QMovie> ImageAnimated::getMovie() {
     return movie;
 }
 
-int ImageAnimated::height() {
+int ImageAnimated::height() const {
     return mSize.height();
 }
 
-int ImageAnimated::width() {
+int ImageAnimated::width() const {
     return mSize.width();
 }
 
-QSize ImageAnimated::size() {
+QSize ImageAnimated::size() const {
     return mSize;
 }

@@ -9,13 +9,15 @@ public:
     ImageAnimated(QString _path);
     ImageAnimated(std::unique_ptr<DocumentInfo> _info);
     ~ImageAnimated();
+    
+    using Image::save;
 
-    std::unique_ptr<QPixmap> getPixmap();
-    std::shared_ptr<const QImage> getImage();
+    std::unique_ptr<QPixmap> getPixmap() const override;
+    std::shared_ptr<const QImage> getImage() const override;
     std::shared_ptr<QMovie> getMovie();
-    int height();
-    int width();
-    QSize size();
+    int height() const override;
+    int width() const override;
+    QSize size() const override;
 
     bool isEditable();
     bool isEdited();

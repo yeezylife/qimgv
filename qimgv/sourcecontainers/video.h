@@ -11,11 +11,11 @@ public:
     Video(QString _path);
     Video(std::unique_ptr<DocumentInfo> _info);
 
-    std::unique_ptr<QPixmap> getPixmap();
-    std::shared_ptr<const QImage> getImage();
-    int height();
-    int width();
-    QSize size();
+    std::unique_ptr<QPixmap> getPixmap() const override;
+    std::shared_ptr<const QImage> getImage() const override;
+    int height() const override;
+    int width() const override;
+    QSize size() const override;
 
 public slots:
     bool save();

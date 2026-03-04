@@ -56,26 +56,26 @@ bool Video::save() {
     return false;
 }
 
-std::unique_ptr<QPixmap> Video::getPixmap() {
+std::unique_ptr<QPixmap> Video::getPixmap() const {
     qDebug() << "[Video] getPixmap() is not implemented.";
     //TODO: find out some easy way to get frames from video source
     return nullptr;
 }
 
-std::shared_ptr<const QImage> Video::getImage() {
+std::shared_ptr<const QImage> Video::getImage() const {
     qDebug() << "[Video] getImage() is not implemented.";
     //TODO: find out some easy way to get frames from video source
     return nullptr;
 }
 
-int Video::height() {
+int Video::height() const {
     return srcHeight;
 }
 
-int Video::width() {
+int Video::width() const {
     return srcWidth;
 }
 
-QSize Video::size() {
+QSize Video::size() const {
     return QSize(srcWidth, srcHeight);
 }

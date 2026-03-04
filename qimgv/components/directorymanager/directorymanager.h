@@ -92,9 +92,9 @@ public:
 
 private:
     // 增量排序优化：记录上次排序的比较函数，避免不必要的重新排序
-    CompareFunction mLastCompareFunction;
-    bool mFilesSorted;
-    bool mDirsSorted;
+    CompareFunction mLastCompareFunction = nullptr;
+    bool mFilesSorted = false;
+    bool mDirsSorted = false;
     
     // 增量排序辅助方法
     void sortFileEntryListsIncremental();
@@ -104,13 +104,13 @@ private:
     QRegularExpression regex;
     QCollator collator;
     std::vector<FSEntry> fileEntryVec, dirEntryVec;
-    const FSEntry defaultEntry;
+    const FSEntry defaultEntry{};
     QString mDirectoryPath;
+    DirectoryWatcher* watcher = nullptr;
+    SortingMode mSortingMode = SORT_NAME;
+    FileListSource mListSource = SOURCE_DIRECTORY;
 
-    DirectoryWatcher* watcher;
     void readSettings();
-    SortingMode mSortingMode;
-    FileListSource mListSource;
     void loadEntryList(QString directoryPath, bool recursive);
 
     bool path_entry_compare(const FSEntry &e1, const FSEntry &e2) const;

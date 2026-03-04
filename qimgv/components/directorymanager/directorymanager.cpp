@@ -2,13 +2,7 @@
 
 namespace fs = std::filesystem;
 
-DirectoryManager::DirectoryManager() :
-    watcher(nullptr),
-    mSortingMode(SORT_NAME),
-    mLastCompareFunction(nullptr),
-    mFilesSorted(false),
-    mDirsSorted(false)
-{
+DirectoryManager::DirectoryManager() {
     regex.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
     collator.setNumericMode(true);
 
@@ -341,10 +335,14 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
     }
     
     // 设置过滤器，只获取文件和目录
+    // 注意：默认情况下 filters 不包含 QDir::Hidden，因此不会显示隐藏文件
     QDir::Filters filters = QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot;
-    if (!settings->showHiddenFiles()) {
-        filters |= QDir::NoHidden;
+    
+    // 修正逻辑：如果设置要求显示隐藏文件，则添加 Hidden 标志
+    if (settings->showHiddenFiles()) {
+        filters |= QDir::Hidden;
     }
+    // 如果不显示隐藏文件，不需要做任何操作，因为默认就不包含 Hidden
     
     // 设置排序方式，提高后续排序效率
     QDir::SortFlags sortFlags = QDir::Name | QDir::IgnoreCase;
@@ -354,6 +352,7 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
     for (const QFileInfo &fileInfo : entries) {
         QString name = fileInfo.fileName();
         QString path = fileInfo.absoluteFilePath();
+
         
         if (fileInfo.isDir()) {
             // 处理目录

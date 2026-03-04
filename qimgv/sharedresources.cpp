@@ -9,7 +9,23 @@ SharedResources::SharedResources()
 }
 
 SharedResources::~SharedResources() {
-    delete shrRes;
+    // 【修正说明】
+    // 1. 移除了 delete shrRes;
+    //    原因：shrRes 指向 this，在析构函数中 delete this 会导致双重释放崩溃。
+    // 2. 添加了 shrRes = nullptr;
+    //    原因：防止外部再次调用 getInstance() 时返回悬空指针。
+    // 3. 补充了成员变量的清理。
+    //    原因：原代码存在内存泄漏，单例销毁时未释放 QPixmap 内存。
+    
+    if (shrRes == this) {
+        shrRes = nullptr;
+    }
+
+    delete mLoadingIcon72;
+    mLoadingIcon72 = nullptr;
+    
+    delete mLoadingErrorIcon72;
+    mLoadingErrorIcon72 = nullptr;
 }
 
 QPixmap *SharedResources::getPixmap(ShrIcon icon, qreal dpr) {

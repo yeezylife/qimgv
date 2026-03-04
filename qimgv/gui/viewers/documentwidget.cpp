@@ -125,13 +125,13 @@ void DocumentWidget::mouseMoveEvent(QMouseEvent *event) {
         return;
     // ignore if we are doing something with the mouse (zoom / drag)
     if(event->buttons() != Qt::NoButton) {
-        if(mainPanel->triggerRect().contains(event->pos()))
+        if(mainPanel->triggerRect().contains(event->position().toPoint()))
             avoidPanelFlag = true;
         return;
     }
     // show on hover event
     if(mPanelEnabled && (mIsFullscreen|| !mPanelFullscreenOnly)) {
-        if(mainPanel->triggerRect().contains(event->pos()) && !avoidPanelFlag) {
+        if(mainPanel->triggerRect().contains(event->position().toPoint()) && !avoidPanelFlag) {
             mainPanel->show();
         }
     }
@@ -142,11 +142,11 @@ void DocumentWidget::mouseMoveEvent(QMouseEvent *event) {
         // it still fcks up Fitts law as the buttons are not receiving hover on screen border
 
         // alright this also only works when in root window. sad.
-        if(!mainPanel->triggerRect().adjusted(-8,-8,8,8).contains(event->pos())) {
+        if(!mainPanel->triggerRect().adjusted(-8,-8,8,8).contains(event->position().toPoint())) {
             mainPanel->hideAnimated();
         }
     }
-    if(!mainPanel->triggerRect().contains(event->pos()))
+    if(!mainPanel->triggerRect().contains(event->position().toPoint()))
         avoidPanelFlag = false;
 }
 

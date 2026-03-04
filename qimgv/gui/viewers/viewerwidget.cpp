@@ -384,10 +384,10 @@ void ViewerWidget::mouseMoveEvent(QMouseEvent *event) {
     mWaylandCursorWorkaround = false;
     if(!(event->buttons() & Qt::LeftButton) && !(event->buttons() & Qt::RightButton)) {
         showCursor();
-        hideCursorTimed(true);
+        hideCursorTimed(false);
     }
     if(currentWidget == VIDEOPLAYER || imageViewer->hasAnimation()) {
-        if(videoControlsArea().contains(event->pos()))
+        if(videoControlsArea().contains(event->position().toPoint()))
             videoControls->show();
         else
             videoControls->hide();

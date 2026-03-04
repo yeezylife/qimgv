@@ -643,7 +643,7 @@ void ThumbnailView::scrollSmooth(int angleDelta) {
 void ThumbnailView::mousePressEvent(QMouseEvent *event) {
     mouseReleaseSelect = false;
     dragStartPos = QPoint(0,0);
-    ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->pos()));
+    ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->position().toPoint()));
     if(item) {
         int index = thumbnails.indexOf(item);
         if(event->button() == Qt::LeftButton) {
@@ -664,7 +664,7 @@ void ThumbnailView::mousePressEvent(QMouseEvent *event) {
             } else {
                 mouseReleaseSelect = true;
             }
-            dragStartPos = event->pos();
+            dragStartPos = event->position().toPoint();
         } else if(event->button() == Qt::RightButton) { // todo: context menu maybe?
             select(index);
             return;
@@ -677,7 +677,7 @@ void ThumbnailView::mouseMoveEvent(QMouseEvent *event) {
     QGraphicsView::mouseMoveEvent(event);
     if(event->buttons() != Qt::LeftButton || !selection().count())
         return;
-    if(QLineF(dragStartPos, event->pos()).length() >= 40) {
+    if(QLineF(dragStartPos, event->position().toPoint()).length() >= 40) {
         auto *item = dynamic_cast<ThumbnailWidget*>(itemAt(dragStartPos));
         if(item && selection().contains(thumbnails.indexOf(item)))
             emit draggedOut();
@@ -686,8 +686,8 @@ void ThumbnailView::mouseMoveEvent(QMouseEvent *event) {
 
 void ThumbnailView::mouseReleaseEvent(QMouseEvent *event) {
     QGraphicsView::mouseReleaseEvent(event);
-    if(mouseReleaseSelect && QLineF(dragStartPos, event->pos()).length() < 40) {
-        ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->pos()));
+    if(mouseReleaseSelect && QLineF(dragStartPos, event->position().toPoint()).length() < 40) {
+        ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->position().toPoint()));
         if(item) {
             int index = thumbnails.indexOf(item);
             select(index);

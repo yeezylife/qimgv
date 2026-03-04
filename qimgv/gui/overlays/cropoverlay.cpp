@@ -437,14 +437,14 @@ QPoint CropOverlay::mapPointToImage(QPoint p) {
 //------------------------------------------------------------------------------
 void CropOverlay::mousePressEvent(QMouseEvent *event) {
     if(event->buttons() & Qt::LeftButton) {
-        cursorAction = hoverTarget(event->pos() * dpr);
+        cursorAction = hoverTarget(event->position().toPoint() * dpr);
         setCursorAction(cursorAction);
         setResizeAnchor(cursorAction);
-        moveStartPos = event->pos();
+        moveStartPos = event->position().toPoint();
         // start selection!
         if(!hasSelection()) {
             cursorAction = SELECTION_START; // move to hovertarget??
-            QPoint point = mapPointToImage(event->pos() * dpr);
+            QPoint point = mapPointToImage(event->position().toPoint() * dpr);
             selectionRect.setTopLeft(point);
             selectionRect.setBottomRight(point);
             resizeAnchor = point;
@@ -461,16 +461,16 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
     if(event->buttons() & Qt::LeftButton /*&& hasSelection()*/) {
         if(cursorAction == SELECTION_START) {
             // skip if cursor hasn't been moved in some direction
-            if(event->pos().x() == moveStartPos.x() || event->pos().y() == moveStartPos.y())
+            if(event->position().x() == moveStartPos.x() || event->position().y() == moveStartPos.y())
                 return;
             // determine direction
-            if(event->pos().x() > moveStartPos.x())
-                if(event->pos().y() > moveStartPos.y())
+            if(event->position().x() > moveStartPos.x())
+                if(event->position().y() > moveStartPos.y())
                     cursorAction = DRAG_BOTTOMRIGHT;
                 else
                     cursorAction = DRAG_TOPRIGHT;
             else
-                if(event->pos().y() > moveStartPos.y())
+                if(event->position().y() > moveStartPos.y())
                     cursorAction = DRAG_BOTTOMLEFT;
                 else
                     cursorAction = DRAG_TOPLEFT;
@@ -478,10 +478,10 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         if(cursorAction == NO_DRAG || cursorAction == SELECTION_START)
             return;
         // continue with resizing
-        QPointF delta = QPointF(event->pos() - moveStartPos) * dpr;
+        QPointF delta = QPointF(event->position().toPoint() - moveStartPos) * dpr;
         if(cursorAction == DRAG_MOVE) { // moving selection
             setCursor(Qt::ClosedHandCursor);
-            moveStartPos = event->pos();
+            moveStartPos = event->position().toPoint();
             selectionRect.translate(delta.toPoint() / scale);
             if(!imageRect.contains(selectionRect)) {
                 selectionRect = placeInside(selectionRect, imageRect);
@@ -509,7 +509,7 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         */
         } else { // resizing selection
             resizeSelection(delta.toPoint() / scale);
-            moveStartPos = event->pos();
+            moveStartPos = event->position().toPoint();
             update();
         }
         emit selectionChanged(selectionRect);
@@ -517,7 +517,7 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         if(!hasSelection())
             setCursor(QCursor(Qt::ArrowCursor));
         else
-            setCursorAction(hoverTarget(event->pos() * dpr));
+            setCursorAction(hoverTarget(event->position().toPoint() * dpr));
     }
 }
 
@@ -527,7 +527,7 @@ void CropOverlay::mouseReleaseEvent(QMouseEvent *event) {
     if(cursorAction == SELECTION_START)
         clearSelection();
     cursorAction = NO_DRAG;
-    setCursorAction(hoverTarget(event->pos() * dpr));
+    setCursorAction(hoverTarget(event->position().toPoint() * dpr));
     update();
 }
 

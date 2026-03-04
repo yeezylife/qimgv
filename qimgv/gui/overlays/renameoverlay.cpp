@@ -94,6 +94,6 @@ void RenameOverlay::keyPressEvent(QKeyEvent *event) {
 
 void RenameOverlay::mousePressEvent(QMouseEvent *event) {
     event->accept();
-    if(qApp->widgetAt(mapToGlobal(event->pos())) == this)
+    if(qApp->widgetAt(mapToGlobal(event->position().toPoint())) == this)
         this->onCancel();
 }

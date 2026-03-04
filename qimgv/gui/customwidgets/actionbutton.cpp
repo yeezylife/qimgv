@@ -42,7 +42,7 @@ void ActionButton::mousePressEvent(QMouseEvent *event) {
 
 void ActionButton::mouseReleaseEvent(QMouseEvent *event) {
     IconButton::mouseReleaseEvent(event);
-    if(mTriggerMode == TriggerMode::ClickTrigger && rect().contains(event->pos()) && event->button() == Qt::LeftButton)
+    if(mTriggerMode == TriggerMode::ClickTrigger && rect().contains(event->position().toPoint()) && event->button() == Qt::LeftButton)
         actionManager->invokeAction(actionName);
 
 }

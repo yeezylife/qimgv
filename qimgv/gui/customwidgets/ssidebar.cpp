@@ -36,7 +36,7 @@ void SSideBar::mousePressEvent(QMouseEvent *event) {
     event->accept();
     if(!(event->buttons() & Qt::LeftButton))
         return;
-    selectEntryAt(event->pos());
+    selectEntryAt(event->position().toPoint());
 
 }
 
@@ -44,7 +44,7 @@ void SSideBar::mouseMoveEvent(QMouseEvent *event) {
     event->accept();
     if(!(event->buttons() & Qt::LeftButton))
         return;
-    selectEntryAt(event->pos());
+    selectEntryAt(event->position().toPoint());
 }
 
 void SSideBar::selectEntryAt(QPoint pos) {

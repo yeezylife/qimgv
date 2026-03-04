@@ -6,14 +6,14 @@ VideoSlider::VideoSlider(QWidget *parent) : QSlider(parent) {
 void VideoSlider::mousePressEvent(QMouseEvent *event) {
     if(event->button() == Qt::LeftButton) {
         event->accept();
-        setValueAtCursor(event->pos());
+        setValueAtCursor(event->position().toPoint());
     }
 }
 
 void VideoSlider::mouseMoveEvent(QMouseEvent *event) {
     if(event->buttons() & Qt::LeftButton) {
         event->accept();
-        setValueAtCursor(event->pos());
+        setValueAtCursor(event->position().toPoint());
     }
 }
 

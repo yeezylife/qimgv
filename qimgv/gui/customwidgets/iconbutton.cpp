@@ -43,7 +43,7 @@ void IconButton::mousePressEvent(QMouseEvent *event) {
 void IconButton::mouseReleaseEvent(QMouseEvent *event) {
     Q_UNUSED(event)
     mPressed = false;
-    if(rect().contains(event->pos()) && !mCheckable) {
+    if(rect().contains(event->position().toPoint()) && !mCheckable) {
         emit clicked();
     }
     if(!mChecked) {
@@ -56,7 +56,7 @@ void IconButton::mouseReleaseEvent(QMouseEvent *event) {
 void IconButton::mouseMoveEvent(QMouseEvent *event) {
     if(mChecked || !mPressed)
         return;
-    if(rect().contains(event->pos())) {
+    if(rect().contains(event->position().toPoint())) {
         if(!property("pressed").toBool()) {
             setProperty("pressed", true);
             style()->unpolish(this);

@@ -88,7 +88,7 @@ void PrintDialog::updatePreview() {
                                imgRect.width() * scale, imgRect.height() * scale).toRect());
     QPixmap pagePixmap(fullRectScaled.size() * qApp->devicePixelRatio());
     pagePixmap.setDevicePixelRatio(qApp->devicePixelRatio());
-    auto scaledImg = img->scaled(imgRectScaled.size() * qApp->devicePixelRatio(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    auto scaledImg = img->scaled(imgRectScaled.size() * qApp->devicePixelRatio(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if(ui->grayscale->isChecked())
         scaledImg = scaledImg.convertToFormat(QImage::Format_Grayscale8);
     scaledImg.setDevicePixelRatio(qApp->devicePixelRatio());

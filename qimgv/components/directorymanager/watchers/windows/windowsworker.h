@@ -1,7 +1,7 @@
 #ifndef WINDOWSWORKER_H
 #define WINDOWSWORKER_H
 
-#include "watcherworker.h"
+#include "../watcherworker.h"
 #include <windows.h>
 #include <QString>
 

@@ -91,6 +91,16 @@ public:
     QStringList fileList() const;
 
 private:
+    // 增量排序优化：记录上次排序的比较函数，避免不必要的重新排序
+    CompareFunction mLastCompareFunction;
+    bool mFilesSorted;
+    bool mDirsSorted;
+    
+    // 增量排序辅助方法
+    void sortFileEntryListsIncremental();
+    void sortDirEntryListsIncremental();
+
+private:
     QRegularExpression regex;
     QCollator collator;
     std::vector<FSEntry> fileEntryVec, dirEntryVec;

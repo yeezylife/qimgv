@@ -4,7 +4,10 @@ namespace fs = std::filesystem;
 
 DirectoryManager::DirectoryManager() :
     watcher(nullptr),
-    mSortingMode(SORT_NAME)
+    mSortingMode(SORT_NAME),
+    mLastCompareFunction(nullptr),
+    mFilesSorted(false),
+    mDirsSorted(false)
 {
     regex.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
     collator.setNumericMode(true);
@@ -327,48 +330,60 @@ void DirectoryManager::loadEntryList(QString directoryPath, bool recursive) {
     }
 }
 
-// both directories & files
+// both directories & files - 优化版本，使用 Qt 的 QDir 提高性能
 void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, QString directoryPath) {
     QRegularExpressionMatch match;
-    for(const auto & entry : fs::directory_iterator(toStdString(directoryPath))) {
-        QString name = QString::fromStdString(entry.path().filename().generic_string());
-#ifndef Q_OS_WIN32
-        // ignore hidden files
-        if(!settings->showHiddenFiles() && name.startsWith("."))
-            continue;
-#else
-        DWORD attributes = GetFileAttributesW(entry.path().c_str());
-        if(!settings->showHiddenFiles() && attributes & FILE_ATTRIBUTE_HIDDEN)
-            continue;
-#endif
-        QString path = QString::fromStdString(entry.path().generic_string());
-        match = regex.match(name);
-        if(entry.is_directory()) { // this can still throw std::bad_alloc ..
+    
+    // 使用 Qt 的 QDir 进行文件系统操作，提高跨平台性能
+    QDir dir(directoryPath);
+    if (!dir.exists()) {
+        return;
+    }
+    
+    // 设置过滤器，只获取文件和目录
+    QDir::Filters filters = QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot;
+    if (!settings->showHiddenFiles()) {
+        filters |= QDir::NoHidden;
+    }
+    
+    // 设置排序方式，提高后续排序效率
+    QDir::SortFlags sortFlags = QDir::Name | QDir::IgnoreCase;
+    
+    QFileInfoList entries = dir.entryInfoList(filters, sortFlags);
+    
+    for (const QFileInfo &fileInfo : entries) {
+        QString name = fileInfo.fileName();
+        QString path = fileInfo.absoluteFilePath();
+        
+        if (fileInfo.isDir()) {
+            // 处理目录
             FSEntry newEntry;
             try {
                 newEntry.name = name;
                 newEntry.path = path;
                 newEntry.isDirectory = true;
-                //newEntry.size = entry.file_size();
-                //newEntry.modifyTime = entry.last_write_time();
-            } catch (const std::filesystem::filesystem_error &err) {
-                qDebug() << "[DirectoryManager]" << err.what();
+                dirEntryVec.emplace_back(newEntry);
+            } catch (...) {
+                qDebug() << "[DirectoryManager] Error creating directory entry for:" << path;
                 continue;
             }
-            dirEntryVec.emplace_back(newEntry);
-        } else if (match.hasMatch()) {
-            FSEntry newEntry;
-            try {
-                newEntry.name = name;
-                newEntry.path = path;
-                newEntry.isDirectory = false;
-                newEntry.size = entry.file_size();
-                newEntry.modifyTime = entry.last_write_time();
-            } catch (const std::filesystem::filesystem_error &err) {
-                qDebug() << "[DirectoryManager]" << err.what();
-                continue;
+        } else {
+            // 处理文件
+            match = regex.match(name);
+            if (match.hasMatch()) {
+                FSEntry newEntry;
+                try {
+                    newEntry.name = name;
+                    newEntry.path = path;
+                    newEntry.isDirectory = false;
+                    newEntry.size = fileInfo.size();
+                    newEntry.modifyTime = std::filesystem::file_time_type::clock::from_time_t(fileInfo.lastModified().toSecsSinceEpoch());
+                    entryVec.emplace_back(newEntry);
+                } catch (...) {
+                    qDebug() << "[DirectoryManager] Error creating file entry for:" << path;
+                    continue;
+                }
             }
-            entryVec.emplace_back(newEntry);
         }
     }
 }
@@ -397,11 +412,49 @@ void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &en
 }
 
 void DirectoryManager::sortEntryLists() {
-    if(settings->sortFolders())
-        std::sort(dirEntryVec.begin(), dirEntryVec.end(), std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
-    else
+    sortFileEntryListsIncremental();
+    sortDirEntryListsIncremental();
+}
+
+void DirectoryManager::sortFileEntryListsIncremental() {
+    CompareFunction currentCompareFn = compareFunction();
+    
+    // 如果比较函数没有改变且文件已经排序，则跳过排序
+    if (mLastCompareFunction == currentCompareFn && mFilesSorted && fileEntryVec.size() > 1) {
+        return;
+    }
+    
+    // 如果是名称排序且文件数量较少，使用快速排序
+    if ((mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC) && fileEntryVec.size() < 100) {
+        std::sort(fileEntryVec.begin(), fileEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
+    } else {
+        // 对于其他排序或大量文件，使用部分排序优化
+        if (fileEntryVec.size() > 1) {
+            std::sort(fileEntryVec.begin(), fileEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
+        }
+    }
+    
+    mLastCompareFunction = currentCompareFn;
+    mFilesSorted = true;
+}
+
+void DirectoryManager::sortDirEntryListsIncremental() {
+    CompareFunction currentCompareFn = compareFunction();
+    
+    // 如果比较函数没有改变且目录已经排序，则跳过排序
+    if (mLastCompareFunction == currentCompareFn && mDirsSorted && dirEntryVec.size() > 1) {
+        return;
+    }
+    
+    // 目录排序通常较少，直接使用标准排序
+    if (settings->sortFolders()) {
+        std::sort(dirEntryVec.begin(), dirEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
+    } else {
         std::sort(dirEntryVec.begin(), dirEntryVec.end(), std::bind(&DirectoryManager::path_entry_compare, this, std::placeholders::_1, std::placeholders::_2));
-    std::sort(fileEntryVec.begin(), fileEntryVec.end(), std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    }
+    
+    mLastCompareFunction = currentCompareFn;
+    mDirsSorted = true;
 }
 
 void DirectoryManager::setSortingMode(SortingMode mode) {

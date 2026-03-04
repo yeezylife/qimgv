@@ -5,6 +5,9 @@ DirectoryModel::DirectoryModel(QObject *parent) :
     fileListSource(SOURCE_DIRECTORY)
 {
     scaler = new Scaler(&cache);
+    
+    // 设置缓存大小限制为30个项目
+    cache.setMaxCacheSize(30);
 
     connect(&dirManager, &DirectoryManager::fileRemoved,  this, &DirectoryModel::onFileRemoved);
     connect(&dirManager, &DirectoryManager::fileAdded,    this, &DirectoryModel::onFileAdded);
@@ -335,4 +338,20 @@ void DirectoryModel::reload(QString filePath) {
 void DirectoryModel::preload(QString filePath) {
     if(containsFile(filePath) && !cache.contains(filePath))
         loader.loadAsync(filePath);
+}
+
+// 线程安全的辅助方法
+bool DirectoryModel::isCacheFull() const {
+    QMutexLocker locker(&mMutex);
+    return cache.currentCacheSize() >= 30; // 可配置的缓存限制
+}
+
+void DirectoryModel::clearCache() {
+    QMutexLocker locker(&mMutex);
+    cache.clear();
+}
+
+int DirectoryModel::getCacheSize() const {
+    QMutexLocker locker(&mMutex);
+    return cache.currentCacheSize();
 }

@@ -2,7 +2,7 @@
 #include "windowsworker.h"
 
 WindowsWatcherPrivate::WindowsWatcherPrivate(WindowsWatcher* qq)
-    : DirectoryWatcherPrivate(qq, new WindowsWorker())
+    : DirectoryWatcherPrivate(static_cast<DirectoryWatcher*>(qq), new WindowsWorker())
 {
     auto windowsWorker = static_cast<WindowsWorker*>(worker.data());
     // 移除指针类型注册，改用字符串传递

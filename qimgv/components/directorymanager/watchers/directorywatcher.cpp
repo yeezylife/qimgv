@@ -74,6 +74,17 @@ void DirectoryWatcher::stopObserving()
 {
     Q_D(DirectoryWatcher);
     d->worker->setRunning(false);
+    
+    // 等待线程完全停止
+    if (d->workerThread->isRunning()) {
+        d->workerThread->quit();
+        // 等待最多1秒确保线程安全退出
+        if (!d->workerThread->wait(1000)) {
+            qDebug() << "[DirectoryWatcher] Warning: Worker thread did not exit gracefully, forcing termination";
+            d->workerThread->terminate();
+            d->workerThread->wait(1000);
+        }
+    }
 }
 
 bool DirectoryWatcher::isObserving()

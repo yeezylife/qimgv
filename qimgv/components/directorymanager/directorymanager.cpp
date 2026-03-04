@@ -86,12 +86,19 @@ void DirectoryManager::stopFileWatcher() {
     if(!watcher)
         return;
 
-    watcher->stopObserving();
-
+    // 先断开所有信号连接，防止在停止过程中收到事件
     disconnect(watcher, &DirectoryWatcher::fileCreated,  this, &DirectoryManager::onFileAddedExternal);
     disconnect(watcher, &DirectoryWatcher::fileDeleted,  this, &DirectoryManager::onFileRemovedExternal);
     disconnect(watcher, &DirectoryWatcher::fileModified, this, &DirectoryManager::onFileModifiedExternal);
     disconnect(watcher, &DirectoryWatcher::fileRenamed,  this, &DirectoryManager::onFileRenamedExternal);
+
+    // 停止文件监视
+    watcher->stopObserving();
+    
+    // 确保监视器完全停止
+    if (watcher->isObserving()) {
+        qDebug() << "[DirectoryManager] Warning: File watcher did not stop properly";
+    }
 }
 
 // ##############################################################

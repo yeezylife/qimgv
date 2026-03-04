@@ -1,57 +1,17 @@
 #include "image.h"
 
-Image::Image(QString _path)
-    : mDocInfo(new DocumentInfo(_path)),
-      mLoaded(false),
-      mEdited(false),
-      mPath(_path)
+// 构造函数优化：QString 按值传递后移动，避免多余的深拷贝
+Image::Image(QString path)
+    : mDocInfo(std::make_unique<DocumentInfo>(path)),
+      mPath(std::move(path))
+{
+    // mLoaded 和 mEdited 已在头文件中初始化，无需在此设置
+}
+
+Image::Image(std::unique_ptr<DocumentInfo> info)
+    : mDocInfo(std::move(info)),
+      mPath(mDocInfo ? mDocInfo->filePath() : QString())
 {
 }
 
-Image::Image(std::unique_ptr<DocumentInfo> _info)
-    : mDocInfo(std::move(_info)),
-      mLoaded(false),
-      mEdited(false),
-      mPath(mDocInfo->filePath())
-{
-}
-
-Image::~Image() {
-}
-
-QString Image::filePath() const {
-    return mPath;
-}
-
-bool Image::isLoaded() const {
-    return mLoaded;
-}
-
-DocumentType Image::type() const {
-    return mDocInfo->type();
-}
-
-QString Image::fileName() const {
-    return mDocInfo->fileName();
-}
-
-QString Image::baseName() const {
-    return mDocInfo->baseName();
-}
-
-bool Image::isEdited() const {
-    return mEdited;
-}
-
-qint64 Image::fileSize() const {
-    return mDocInfo->fileSize();
-}
-
-QDateTime Image::lastModified() const {
-    return mDocInfo->lastModified();
-}
-
-QMap<QString, QString> Image::getExifTags() {
-    return mDocInfo->getExifTags();
-}
-
+// 【修改1】移除了析构函数的定义，由编译器自动生成内联默认析构函数

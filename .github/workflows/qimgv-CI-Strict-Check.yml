@@ -46,8 +46,8 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/ucrt64 \
-            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
-            -DCMAKE_C_FLAGS="-march=x86-64-v3 -Wall -Werror"
+            -DCMAKE_CXX_FLAGS="-DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
+            -DCMAKE_C_FLAGS="-DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -Wall -Werror"
           
           echo "--- Starting Compilation ---"
           cmake --build build --config Debug -j $(nproc)

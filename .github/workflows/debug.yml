@@ -59,8 +59,8 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/ucrt64 \
-            -DCMAKE_C_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Werror" \
-            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Wextra -Werror -Wno-unused-parameter"
+            -DCMAKE_C_FLAGS="-march=x86-64-v3 -g -O3 -Wall -Werror" \
+            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -g -O3 -Wall -Wextra -Werror -Wno-unused-parameter"
           cmake --build build --config Debug
 
       - name: Prepare Debug Package

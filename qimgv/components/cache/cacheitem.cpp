@@ -28,3 +28,7 @@ void CacheItem::unlock() {
 int CacheItem::lockStatus() {
     return sem->available();
 }
+
+bool CacheItem::isLocked() const {
+    return sem->available() == 0;
+}

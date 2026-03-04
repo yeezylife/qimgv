@@ -22,8 +22,17 @@ bool Cache::insert(std::shared_ptr<Image> img) {
         return false;
     }
     
+    // 检查是否需要淘汰 LRU 项目
+    if (mMaxCacheSize > 0 && items.size() >= mMaxCacheSize) {
+        evictLRUItems();
+    }
+    
     // 使用 make_shared 创建对象
     items.insert(path, std::make_shared<CacheItem>(img));
+    
+    // 更新 LRU 信息
+    updateLRU(path);
+    
     return true;
 }
 
@@ -67,6 +76,8 @@ void Cache::clear() {
 std::shared_ptr<Image> Cache::get(QString path) {
     QMutexLocker locker(&mMutex);
     if (items.contains(path)) {
+        // 更新 LRU 信息，标记为最近使用
+        updateLRU(path);
         return items.value(path)->getContents();
     }
     return nullptr;
@@ -103,6 +114,11 @@ void Cache::trimTo(QStringList pathList) {
         for (const auto &key : keys) {
             if (!keepSet.contains(key)) {
                 itemsToRemove.append(items.take(key));
+                // 清理 LRU 信息
+                if (lruMap.contains(key)) {
+                    lruList.erase(lruMap[key]);
+                    lruMap.remove(key);
+                }
             }
         }
     }
@@ -162,76 +178,16 @@ void Cache::evictLRUItems() {
         // 安全移除项目
         std::shared_ptr<CacheItem> itemPtr = items.take(lruPath);
         if (itemPtr) {
-            itemPtr->lock(); // 等待资源释放
-        }
-    }
-}
-
-// 重写 insert 方法以支持 LRU
-bool Cache::insert(std::shared_ptr<Image> img) {
-    if (!img) {
-        return false;
-    }
-    
-    QMutexLocker locker(&mMutex);
-    const QString &path = img->filePath();
-    
-    // 如果已存在，则不插入
-    if (items.contains(path)) {
-        return false;
-    }
-    
-    // 检查是否需要淘汰 LRU 项目
-    if (mMaxCacheSize > 0 && items.size() >= mMaxCacheSize) {
-        evictLRUItems();
-    }
-    
-    // 使用 make_shared 创建对象
-    items.insert(path, std::make_shared<CacheItem>(img));
-    
-    // 更新 LRU 信息
-    updateLRU(path);
-    
-    return true;
-}
-
-// 重写 get 方法以支持 LRU
-std::shared_ptr<Image> Cache::get(QString path) {
-    QMutexLocker locker(&mMutex);
-    if (items.contains(path)) {
-        // 更新 LRU 信息，标记为最近使用
-        updateLRU(path);
-        return items.value(path)->getContents();
-    }
-    return nullptr;
-}
-
-// 重写 trimTo 方法以维护 LRU 信息
-void Cache::trimTo(QStringList pathList) {
-    // 转为 QSet 进行 O(1) 查找，大幅提升性能
-    QSet<QString> keepSet(pathList.begin(), pathList.end());
-    
-    QList<std::shared_ptr<CacheItem>> itemsToRemove;
-    
-    {
-        QMutexLocker locker(&mMutex);
-        auto keys = items.keys();
-        for (const auto &key : keys) {
-            if (!keepSet.contains(key)) {
-                itemsToRemove.append(items.take(key));
-                // 清理 LRU 信息
-                if (lruMap.contains(key)) {
-                    lruList.erase(lruMap[key]);
-                    lruMap.remove(key);
-                }
+            // 只有未锁定的项目才立即释放，锁定的项目会在解锁时自动清理
+            if (!itemPtr->isLocked()) {
+                // 项目未被使用，可以安全删除
+                // shared_ptr 离开作用域会自动释放内存
             }
-        }
-    }
-    
-    // 安全释放
-    for (auto &item : itemsToRemove) {
-        if (item) {
-            item->lock();
+            // 如果项目正在被使用(isLocked)，我们仍然从缓存中移除了它
+            // 当使用者调用 unlock() 时，shared_ptr 会自动清理
         }
     }
 }
+
+
+

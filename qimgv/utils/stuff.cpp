@@ -1,26 +1,22 @@
 #include "stuff.h"
+#include <algorithm> // std::clamp
 
+// 使用 C++17 标准库
 int clamp(int x, int lower, int upper) {
-    return qMin(upper, qMax(x, lower));
+    return std::clamp(x, lower, upper);
 }
 
-// 0 - mac, 1 - linux, 2 - windows, 3 - other
+// 既然只在 Windows 上运行，直接返回 2 即可
+// 这也消除了不必要的宏展开逻辑
 int probeOS() {
-#ifdef TARGET_OS_MAC
-    return 0;
-#elif defined(__linux__) || defined(__FreeBSD__)
-    return 1;
-#elif defined _WIN32 || defined _WIN64
     return 2;
-#else
-    return 3;
-#endif
 }
 
-QString fromStdString(StdString str) {
-#ifdef _WIN32
+// 直接转换，无需任何宏判断
+StdString toStdString(const QString& str) {
+    return str.toStdWString();
+}
+
+QString fromStdString(const StdString& str) {
     return QString::fromStdWString(str);
-#else
-    return QString::fromStdString(str);
-#endif
 }

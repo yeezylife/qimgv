@@ -1,24 +1,17 @@
 #pragma once
 
 #include <QString>
-#include <QStringView>
+#include <string>
 
-#ifdef _WIN32
-    #define StdString std::wstring
-    #define CharType wchar_t
-#else
-    #define StdString std::string
-    #define CharType char
-#endif
+// 既然只在 Windows 上，直接定义类型，不再使用宏判断
+// 使用 using 代替 #define 是更现代的 C++ 写法
+using StdString = std::wstring;
+using CharType = wchar_t;
 
-int clamp(int x, int lower, int upper);
-int probeOS();
+// 函数声明
+[[nodiscard]] int clamp(int x, int lower, int upper);
+[[nodiscard]] int probeOS();
 
-// 新增：使用 QStringView 的版本，避免不必要的字符串复制
-StdString toStdString(QStringView str);
-QString fromStdString(StdString str);
-
-// 保持向后兼容：原有的 QString 版本调用 QStringView 版本
-inline StdString toStdString(QString str) { 
-    return toStdString(QStringView(str)); 
-}
+// 参数使用 const & 避免拷贝，提升性能
+[[nodiscard]] StdString toStdString(const QString& str);
+[[nodiscard]] QString fromStdString(const StdString& str);

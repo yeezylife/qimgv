@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <atomic>
 
 class WatcherWorker : public QObject
 {
@@ -10,7 +11,7 @@ public:
     virtual void run() = 0;
 
 public Q_SLOTS:
-    void setRunning(bool running);
+    void setRunning(bool running) noexcept;
 
 Q_SIGNALS:
     void error(const QString& errorMessage);
@@ -18,5 +19,5 @@ Q_SIGNALS:
     void finished();
 
 protected:
-    QAtomicInt isRunning;
+    std::atomic<bool> isRunning{false};
 };

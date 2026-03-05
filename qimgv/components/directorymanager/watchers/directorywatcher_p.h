@@ -5,26 +5,28 @@
 #include "watcherevent.h"
 #include "watcherworker.h"
 
-#include <QStringList>
+#include <QString>
 #include <QThread>
-#include <QtDebug>
-#include <QTimerEvent>
-#include <QVariant>
+#include <QVector>
 #include <QSharedPointer>
+#include <QScopedPointer>
 
 class DirectoryWatcherPrivate : public QObject {
     Q_OBJECT
+    Q_DECLARE_PUBLIC(DirectoryWatcher)
+
 public:
-    explicit DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker *w);
+    explicit DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* worker);
+    ~DirectoryWatcherPrivate() override = default;
 
     DirectoryWatcher* q_ptr;
+    QString currentDirectory;
     QVector<QSharedPointer<WatcherEvent>> directoryEvents;
     QScopedPointer<WatcherWorker> worker;
     QScopedPointer<QThread> workerThread;
-    QString currentDirectory;
 
 private:
-    Q_DECLARE_PUBLIC(DirectoryWatcher)
+    Q_DISABLE_COPY_MOVE(DirectoryWatcherPrivate)
 };
 
 #endif // DIRECTORYWATCHER_P_H

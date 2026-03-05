@@ -2,97 +2,91 @@
 
 #if defined(__linux__) || defined(__FreeBSD__)
 #include "linux/linuxwatcher.h"
-#elif _WIN32
+#elif defined(_WIN32)
 #include "windows/windowswatcher.h"
-#elif __unix__
-// TODO: implement this
+#elif defined(__APPLE__)
 #include "dummywatcher.h"
-#elif __APPLE__
-// TODO: implement this
+#elif defined(__unix__)
 #include "dummywatcher.h"
 #else
-// TODO: implement this
 #include "dummywatcher.h"
 #endif
 
-#define TAG         "[DirectoryWatcher]"
-
-DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* w) :
-    q_ptr(qq),
-    worker(w),
-    workerThread(new QThread())
+DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* w)
+    : QObject(nullptr)
+    , q_ptr(qq)
+    , worker(w)
+    , workerThread(new QThread())
 {
 }
 
-DirectoryWatcher::~DirectoryWatcher() {
+DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr)
+    : QObject(nullptr)
+    , d_ptr(ptr)
+{
+}
+
+DirectoryWatcher::~DirectoryWatcher()
+{
+    stopObserving();
     delete d_ptr;
-    d_ptr = nullptr;
 }
 
-// Move this function to some creational class
-DirectoryWatcher *DirectoryWatcher::newInstance()
+DirectoryWatcher* DirectoryWatcher::newInstance()
 {
-    DirectoryWatcher* watcher;
-
 #if defined(__linux__) || defined(__FreeBSD__)
-        watcher = new LinuxWatcher();
-#elif _WIN32
-        watcher = new WindowsWatcher();
-#elif __unix__
-        watcher = new DummyWatcher();
-#elif __APPLE__
-        watcher = new DummyWatcher();
+    return new LinuxWatcher();
+#elif defined(_WIN32)
+    return new WindowsWatcher();
+#elif defined(__APPLE__)
+    return new DummyWatcher();
+#elif defined(__unix__)
+    return new DummyWatcher();
 #else
-        watcher = new DummyWatcher();
+    return new DummyWatcher();
 #endif
-
-    return watcher;
 }
 
-void DirectoryWatcher::setWatchPath(const QString& path) {
+void DirectoryWatcher::setWatchPath(const QString& path)
+{
     Q_D(DirectoryWatcher);
     d->currentDirectory = path;
 }
 
-QString DirectoryWatcher::watchPath() const {
+QString DirectoryWatcher::watchPath() const
+{
     Q_D(const DirectoryWatcher);
     return d->currentDirectory;
+}
+
+bool DirectoryWatcher::isObserving() const
+{
+    Q_D(const DirectoryWatcher);
+    return d->workerThread->isRunning();
 }
 
 void DirectoryWatcher::observe()
 {
     Q_D(DirectoryWatcher);
-    if(!isObserving()) {
-        // Reuse worker instance
+    if (!isObserving()) {
         d->worker->setRunning(true);
         d->workerThread->start();
     }
-    //qDebug() << TAG << "Observing path:" << d->currentDirectory;
 }
 
 void DirectoryWatcher::stopObserving()
 {
     Q_D(DirectoryWatcher);
-    d->worker->setRunning(false);
     
-    // 等待线程完全停止
-    if (d->workerThread->isRunning()) {
-        d->workerThread->quit();
-        // 等待最多1秒确保线程安全退出
-        if (!d->workerThread->wait(1000)) {
-            qDebug() << "[DirectoryWatcher] Warning: Worker thread did not exit gracefully, forcing termination";
-            d->workerThread->terminate();
-            d->workerThread->wait(1000);
-        }
+    if (!d->workerThread->isRunning()) {
+        return;
     }
-}
 
-bool DirectoryWatcher::isObserving()
-{
-    Q_D(DirectoryWatcher);
-    return d->workerThread->isRunning();
-}
-
-DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr) {
-    d_ptr = ptr;
+    d->worker->setRunning(false);
+    d->workerThread->quit();
+    
+    if (!d->workerThread->wait(1000)) {
+        d->workerThread->terminate();
+        d->workerThread->wait(1000);
+    }
 }

@@ -1,4 +1,5 @@
 #include "cmdoptionsrunner.h"
+#include <QStringBuilder>
 
 void CmdOptionsRunner::generateThumbs(QString dirPath, int size) {
     if(size <= 50 || size > 400) {
@@ -46,10 +47,14 @@ void CmdOptionsRunner::showBuildOptions() {
 #ifdef USE_OPENCV
     features << "USE_OPENCV";
 #endif
+    
     qDebug() << "\nEnabled build options:";
-    if(!features.count())
+    if(!features.count()) {
         qDebug() << "   --";
-    for(int i = 0; i < features.count(); i++)
-        qDebug() << "   " << features.at(i);
+    } else {
+        for(const auto& feature : features) {
+            qDebug() << "   " << feature;
+        }
+    }
     QCoreApplication::quit();
 }

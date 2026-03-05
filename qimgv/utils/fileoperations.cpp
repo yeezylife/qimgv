@@ -1,4 +1,38 @@
 #include "fileoperations.h"
+#include <QStandardPaths>
+#include <QDir>
+#include <QDateTime>
+#include <QFile>
+#include <QFileInfo>
+#include <QCryptographicHash>
+#include <QDebug>
+
+namespace {
+    // Helper function to check if file exists and is writable
+    bool isFileValid(const QString& path, bool checkWritable = false) {
+        QFileInfo file(path);
+        if (!file.exists()) return false;
+        if (checkWritable && !file.isWritable()) return false;
+        return true;
+    }
+    
+    // Helper function to restore file timestamps
+    void restoreFileTimestamps(const QString& destPath, const QDateTime& modTime, const QDateTime& readTime) {
+        QFile dstF(destPath);
+        if (dstF.open(QIODevice::ReadWrite)) {
+            dstF.setFileTime(modTime, QFileDevice::FileModificationTime);
+            dstF.setFileTime(readTime, QFileDevice::FileAccessTime);
+            dstF.close();
+        } else {
+            qWarning() << "Failed to open file for timestamp setting:" << destPath;
+        }
+    }
+    
+    // Helper function to generate unique backup path
+    QString generateBackupPath(const QString& originalPath) {
+        return originalPath + "_" + QString(QCryptographicHash::hash(originalPath.toUtf8(), QCryptographicHash::Md5).toHex());
+    }
+}
 
 QString FileOperations::generateHash(const QString &str) {
     return QString(QCryptographicHash::hash(str.toUtf8(), QCryptographicHash::Md5).toHex());
@@ -67,24 +101,24 @@ void FileOperations::copyFileTo(const QString &srcFilePath, const QString &destD
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
     bool exists = false;
+    
     // error checks
     if(destDirPath == srcFile.absolutePath()) {
         result = FileOpResult::NOTHING_TO_DO;
         return;
     }
-    if(!srcFile.exists()) {
+    
+    if(!isFileValid(srcFilePath)) {
         result = FileOpResult::SOURCE_DOES_NOT_EXIST;
         return;
     }
+    
     QFileInfo destDir(destDirPath);
-    if(!destDir.exists()) {
-        result = FileOpResult::DESTINATION_DOES_NOT_EXIST;
-        return;
-    }
-    if(!destDir.isWritable()) {
+    if(!destDir.exists() || !destDir.isWritable()) {
         result = FileOpResult::DESTINATION_NOT_WRITABLE;
         return;
     }
+    
     QFileInfo destFile(destDirPath + "/" + srcFile.fileName());
     if(destFile.exists()) {
 #ifdef Q_OS_WIN32
@@ -101,66 +135,54 @@ void FileOperations::copyFileTo(const QString &srcFilePath, const QString &destD
             result = FileOpResult::DESTINATION_FILE_EXISTS;
             return;
         }
-        // remove just in case it exists
-        tmpPath = destFile.absoluteFilePath() + "_" + generateHash(destFile.absoluteFilePath());
+        // create backup
+        tmpPath = generateBackupPath(destFile.absoluteFilePath());
         QFile::remove(tmpPath);
-        // move backup
         QFile::rename(destFile.absoluteFilePath(), tmpPath);
         exists = true;
     }
-    // copy
+    
+    // copy file
     auto srcModTime = srcFile.lastModified();
     auto srcReadTime = srcFile.lastRead();
+    
     if(QFile::copy(srcFile.absoluteFilePath(), destFile.absoluteFilePath())) {
         result = FileOpResult::SUCCESS;
         // restore timestamps
-        QFile dstF(destFile.absoluteFilePath());
-        if (dstF.open(QIODevice::ReadWrite)) {
-            dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
-            dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
-            dstF.close();
-        } else {
-            qWarning() << "Failed to open file for timestamp setting:" << destFile.absoluteFilePath();
-        }
-        // ok; remove the backup
+        restoreFileTimestamps(destFile.absoluteFilePath(), srcModTime, srcReadTime);
+        // remove backup if successful
         if(exists)
             QFile::remove(tmpPath);
     } else {
         result = FileOpResult::OTHER_ERROR;
-        // fail; revert
-        QFile::rename(tmpPath, destFile.absoluteFilePath());
+        // revert on failure
+        if(exists)
+            QFile::rename(tmpPath, destFile.absoluteFilePath());
     }
-    return;
 }
 
 void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result) {
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
     bool exists = false;
+    
     // error checks
     if(destDirPath == srcFile.absolutePath()) {
         result = FileOpResult::NOTHING_TO_DO;
         return;
     }
-    if(!srcFile.exists()) {
-        result = FileOpResult::SOURCE_DOES_NOT_EXIST;
-        return;
-    }
-    #ifdef Q_OS_WIN32
-    if(!srcFile.isWritable()) {
+    
+    if(!isFileValid(srcFilePath, true)) {
         result = FileOpResult::SOURCE_NOT_WRITABLE;
         return;
     }
-    #endif
+    
     QFileInfo destDir(destDirPath);
-    if(!destDir.exists()) {
-        result = FileOpResult::DESTINATION_DOES_NOT_EXIST;
-        return;
-    }
-    if(!destDir.isWritable()) {
+    if(!destDir.exists() || !destDir.isWritable()) {
         result = FileOpResult::DESTINATION_NOT_WRITABLE;
         return;
     }
+    
     QFileInfo destFile(destDirPath + "/" + srcFile.fileName());
     if(destFile.exists()) {
 #ifdef Q_OS_WIN32
@@ -177,33 +199,26 @@ void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destD
             result = FileOpResult::DESTINATION_FILE_EXISTS;
             return;
         }
-        tmpPath = destFile.absoluteFilePath() + "_" + generateHash(destFile.absoluteFilePath());
+        // create backup
+        tmpPath = generateBackupPath(destFile.absoluteFilePath());
         QFile::remove(tmpPath);
-        // move backup
         QFile::rename(destFile.absoluteFilePath(), tmpPath);
         exists = true;
     }
-    // move
+    
+    // move file
     auto srcModTime = srcFile.lastModified();
     auto srcReadTime = srcFile.lastRead();
+    
     if(QFile::copy(srcFile.absoluteFilePath(), destFile.absoluteFilePath())) {
         // remove original file
         FileOpResult removeResult;
         removeFile(srcFile.absoluteFilePath(), removeResult);
         if(removeResult == FileOpResult::SUCCESS) {
-            // OK
             result = FileOpResult::SUCCESS;
             // restore timestamps
-            QFile dstF(destFile.absoluteFilePath());
-            if (dstF.open(QIODevice::ReadWrite)) {
-                // dstF.setFileTime(srcBirthTime, QFileDevice::FileBirthTime); // TODO: does not work (linux)
-                dstF.setFileTime(srcModTime, QFileDevice::FileModificationTime);
-                dstF.setFileTime(srcReadTime, QFileDevice::FileAccessTime);
-                dstF.close();
-            } else {
-                qWarning() << "Failed to open file for timestamp setting:" << destFile.absoluteFilePath();
-            }
-            // remove backup
+            restoreFileTimestamps(destFile.absoluteFilePath(), srcModTime, srcReadTime);
+            // remove backup if successful
             if(exists)
                 QFile::remove(tmpPath);
             return;
@@ -213,38 +228,37 @@ void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destD
         if(QFile::remove(destFile.absoluteFilePath()))
             result = FileOpResult::OTHER_ERROR;
     } else {
-        // could not COPY
         result = FileOpResult::OTHER_ERROR;
     }
-    if(exists) // failed; revert backup
+    
+    // revert backup on failure
+    if(exists)
         QFile::rename(tmpPath, destFile.absoluteFilePath());
-    return;
 }
 
 void FileOperations::rename(const QString &srcFilePath, const QString &newName, bool force, FileOpResult &result) {
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
+    
     // error checks
-    if(!srcFile.exists()) {
-        result = FileOpResult::SOURCE_DOES_NOT_EXIST;
-        return;
-    }
-#ifdef Q_OS_WIN32
-    if(!srcFile.isWritable()) {
+    if(!isFileValid(srcFilePath, true)) {
         result = FileOpResult::SOURCE_NOT_WRITABLE;
         return;
     }
-#endif
+    
     if(newName.isEmpty() || newName == srcFile.fileName()) {
         result = FileOpResult::NOTHING_TO_DO;
         return;
     }
+    
     QString newFilePath = srcFile.absolutePath() + "/" + newName;
     QFileInfo destFile(newFilePath);
     if(destFile.exists()) {
 #ifdef Q_OS_WIN32
-        if(!destFile.isWritable())
+        if(!destFile.isWritable()) {
             result = FileOpResult::DESTINATION_NOT_WRITABLE;
+            return;
+        }
 #endif
         if(destFile.isDir()) {
             result = FileOpResult::DESTINATION_DIR_EXISTS;
@@ -254,11 +268,12 @@ void FileOperations::rename(const QString &srcFilePath, const QString &newName, 
             result = FileOpResult::DESTINATION_FILE_EXISTS;
             return;
         }
-        tmpPath = newFilePath + "_" + generateHash(newFilePath);
+        // create backup
+        tmpPath = generateBackupPath(newFilePath);
         QFile::remove(tmpPath);
-        // move dest file
         QFile::rename(newFilePath, tmpPath);
     }
+    
     if(QFile::rename(srcFile.filePath(), newFilePath)) {
         result = FileOpResult::SUCCESS;
         if(QFile::exists(tmpPath))
@@ -266,25 +281,22 @@ void FileOperations::rename(const QString &srcFilePath, const QString &newName, 
     } else {
         result = FileOpResult::OTHER_ERROR;
         // restore dest file
-        QFile::rename(tmpPath, newFilePath);
+        if(!tmpPath.isEmpty())
+            QFile::rename(tmpPath, newFilePath);
     }
 }
 
 void FileOperations::moveToTrash(const QString &filePath, FileOpResult &result) {
     QFileInfo file(filePath);
-    if(!file.exists()) {
-        result = FileOpResult::SOURCE_DOES_NOT_EXIST;
-#ifdef Q_OS_WIN32
-    } else if(!file.isWritable()) {
+    if(!isFileValid(filePath, true)) {
         result = FileOpResult::SOURCE_NOT_WRITABLE;
-#endif
-    } else {
-        if(moveToTrashImpl(filePath))
-            result = FileOpResult::SUCCESS;
-        else
-            result = FileOpResult::OTHER_ERROR;
+        return;
     }
-    return;
+    
+    if(moveToTrashImpl(filePath))
+        result = FileOpResult::SUCCESS;
+    else
+        result = FileOpResult::OTHER_ERROR;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)

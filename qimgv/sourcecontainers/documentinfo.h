@@ -10,6 +10,7 @@
 #include <QImageReader>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include "utils/stuff.h"
 #include "settings.h"
 
@@ -52,7 +53,7 @@ private:
     bool detectAnimatedWebP();
     bool detectAnimatedJxl();
     bool detectAnimatedAvif();
-    QMap<QString, QString> exifTags;
+    std::shared_ptr<QMap<QString, QString>> exifTags;
     QMimeType mMimeType;
     
     // 新增：QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)

@@ -7,6 +7,7 @@ DocumentInfo::DocumentInfo(QString path)
       exifLoaded(false)
 {
     fileInfo.setFile(path);
+    exifTags = std::make_shared<QMap<QString, QString>>();
     if(!fileInfo.isFile()) {
         qDebug() << "FileInfo: cannot open: " << path;
         return;
@@ -65,7 +66,7 @@ void DocumentInfo::refresh() {
     // 清除缓存的 EXIF 信息，确保下次调用 getExifTags() 时重新加载
     // 这修复了编辑并保存图片后，中文标题等元数据显示为乱码的问题
     exifLoaded = false;
-    exifTags.clear();
+    exifTags->clear();
 }
 
 int DocumentInfo::exifOrientation() const {
@@ -282,7 +283,7 @@ void DocumentInfo::loadExifTags() {
     if(exifLoaded)
         return;
     exifLoaded = true;
-    exifTags.clear();
+    exifTags->clear();
     
     QString path = filePath();
     // 必须指定格式，避免在 Windows 上读取元数据时编码错误
@@ -352,16 +353,16 @@ void DocumentInfo::loadExifTags() {
         }
         
         // 避免重复添加相同的信息
-        if (!exifTags.contains(displayKey)) {
-            exifTags.insert(displayKey, formattedValue);
+        if (!exifTags->contains(displayKey)) {
+            exifTags->insert(displayKey, formattedValue);
         }
     }
     
     // 如果没有找到任何元数据，尝试读取图片尺寸作为基本信息
-    if (exifTags.isEmpty()) {
+    if (exifTags->isEmpty()) {
         QSize size = reader.size();
         if (size.isValid()) {
-            exifTags.insert(QObject::tr("Dimensions"), 
+            exifTags->insert(QObject::tr("Dimensions"), 
                           QString("%1 x %2").arg(size.width()).arg(size.height()));
         }
     }
@@ -370,5 +371,5 @@ void DocumentInfo::loadExifTags() {
 QMap<QString, QString> DocumentInfo::getExifTags() {
     if(!exifLoaded)
         loadExifTags();
-    return exifTags;
+    return *exifTags;
 }

@@ -5,15 +5,15 @@
 
 class FSEntry {
 public:
-    FSEntry();
-    FSEntry( const QString &filePath);
-    FSEntry( QString _path, QString _name, std::uintmax_t _size, std::filesystem::file_time_type _modifyTime, bool _isDirectory);
-    FSEntry( QString _path, QString _name, std::uintmax_t _size, bool _isDirectory);
-    FSEntry( QString _path, QString _name, bool _isDirectory);
-    bool operator==(const QString &anotherPath) const;
+    FSEntry() noexcept;
+    FSEntry(const QString &filePath);
+    FSEntry(const QString &_path, const QString &_name, std::uintmax_t _size, std::filesystem::file_time_type _modifyTime, bool _isDirectory) noexcept;
+    FSEntry(const QString &_path, const QString &_name, std::uintmax_t _size, bool _isDirectory) noexcept;
+    FSEntry(const QString &_path, const QString &_name, bool _isDirectory) noexcept;
+    bool operator==(const QString &anotherPath) const noexcept;
 
     QString path, name;
-    std::uintmax_t size;
+    std::uintmax_t size = 0;
     std::filesystem::file_time_type modifyTime;
-    bool isDirectory;
+    bool isDirectory = false;
 };

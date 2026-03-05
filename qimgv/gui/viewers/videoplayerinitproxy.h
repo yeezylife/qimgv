@@ -13,6 +13,7 @@
 #include <QDebug>
 
 class VideoPlayerInitProxy : public VideoPlayer {
+    Q_DISABLE_COPY(VideoPlayerInitProxy)
 public:
     VideoPlayerInitProxy(QWidget *parent = nullptr);
     ~VideoPlayerInitProxy();
@@ -55,6 +56,10 @@ private:
 
     QString libFile;
     QStringList libDirs;
+
+    // 私有辅助函数
+    inline void checkPlayerInitialized(const char* funcName) const;
+    inline bool isPlayerInitialized() const;
 
 private slots:
     void onSettingsChanged();

@@ -6,6 +6,17 @@
     #define QIMGV_PLAYER_PLUGIN ""
 #endif
 
+// 私有辅助函数减少重复的空指针检查
+inline void VideoPlayerInitProxy::checkPlayerInitialized(const char* funcName) const {
+    if (!player) {
+        qDebug() << "Player not initialized, skipping " << funcName;
+    }
+}
+
+inline bool VideoPlayerInitProxy::isPlayerInitialized() const {
+    return player != nullptr;
+}
+
 VideoPlayerInitProxy::VideoPlayerInitProxy(QWidget *parent)
     : VideoPlayer(parent),
       player(nullptr)
@@ -50,11 +61,11 @@ inline bool VideoPlayerInitProxy::initPlayer() {
         return true;
 
     QFileInfo pluginFile;
-    for(auto dir : libDirs) {
+    for(const auto& dir : libDirs) {
         pluginFile.setFile(dir + "/" + libFile);
         if(pluginFile.isFile() && pluginFile.isReadable()) {
             playerLib.setFileName(pluginFile.absoluteFilePath());
-            break;
+            break; // 找到后立即退出循环，避免不必要的遍历
         }
     }
     if(playerLib.fileName().isEmpty()) {
@@ -100,94 +111,79 @@ bool VideoPlayerInitProxy::showVideo(QString file) {
 }
 
 void VideoPlayerInitProxy::seek(int pos) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->seek(pos);
 }
 
 void VideoPlayerInitProxy::seekRelative(int pos) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->seekRelative(pos);
 }
 
 void VideoPlayerInitProxy::pauseResume() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->pauseResume();
 }
 
 void VideoPlayerInitProxy::frameStep() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->frameStep();
 }
 
 void VideoPlayerInitProxy::frameStepBack() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->frameStepBack();
 }
 
 void VideoPlayerInitProxy::stop() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->stop();
 }
 
 void VideoPlayerInitProxy::setPaused(bool mode) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->setPaused(mode);
 }
 
 void VideoPlayerInitProxy::setMuted(bool mode) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->setMuted(mode);
 }
 
 bool VideoPlayerInitProxy::muted() {
-    if(!player)
-        return true;
+    if (!isPlayerInitialized()) return true;
     return player->muted();
 }
 
 void VideoPlayerInitProxy::volumeUp() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->volumeUp();
     settings->setVolume(player->volume());
 }
 
 void VideoPlayerInitProxy::volumeDown() {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->volumeDown();
     settings->setVolume(player->volume());
 }
 
 void VideoPlayerInitProxy::setVolume(int vol) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->setVolume(vol);
 }
 
 int VideoPlayerInitProxy::volume() {
-    if(!player)
-        return 0;
+    if (!isPlayerInitialized()) return 0;
     return player->volume();
 }
 
 void VideoPlayerInitProxy::setVideoUnscaled(bool mode) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->setVideoUnscaled(mode);
 }
 
 void VideoPlayerInitProxy::setLoopPlayback(bool mode) {
-    if(!player)
-        return;
+    if (!isPlayerInitialized()) return;
     player->setLoopPlayback(mode);
 }
 
@@ -200,9 +196,12 @@ void VideoPlayerInitProxy::show() {
         errorLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
         errorLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
         //errorLabel->setAlignment(Qt::AlignVCenter);
-        QString errString = "Could not load " + libFile + " from:";
-        for(auto path : libDirs)
-            errString.append("\n" + path + "/");
+        
+        // 使用QStringBuilder优化字符串拼接
+        QString errString = QString("Could not load %1 from:").arg(libFile);
+        for(const auto& path : libDirs) {
+            errString += QString("\n%1/").arg(path);
+        }
         errorLabel->setText(errString);
         layout.addWidget(errorLabel);
     }

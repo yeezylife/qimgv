@@ -1,6 +1,26 @@
 #include "croppanel.h"
 #include "ui_croppanel.h"
 
+// RAII helper for blocking signals
+class SignalBlocker {
+public:
+    SignalBlocker(QObject* obj) : m_obj(obj), m_blocked(false) {
+        if (m_obj) {
+            m_blocked = m_obj->blockSignals(true);
+        }
+    }
+    
+    ~SignalBlocker() {
+        if (m_obj) {
+            m_obj->blockSignals(m_blocked);
+        }
+    }
+    
+private:
+    QObject* m_obj;
+    bool m_blocked;
+};
+
 CropPanel::CropPanel(CropOverlay *_overlay, QWidget *parent) :
     SidePanelWidget(parent),
     ui(new Ui::CropPanel),
@@ -193,20 +213,15 @@ void CropPanel::setFocusCropSaveBtn() {
 
 // update input box values
 void CropPanel::onSelectionOutsideChange(QRect rect) {
-    ui->width->blockSignals(true);
-    ui->height->blockSignals(true);
-    ui->posX->blockSignals(true);
-    ui->posY->blockSignals(true);
+    SignalBlocker widthBlocker(ui->width);
+    SignalBlocker heightBlocker(ui->height);
+    SignalBlocker posXBlocker(ui->posX);
+    SignalBlocker posYBlocker(ui->posY);
 
     ui->width->setValue(rect.width());
     ui->height->setValue(rect.height());
     ui->posX->setValue(rect.left());
     ui->posY->setValue(rect.top());
-
-    ui->width->blockSignals(false);
-    ui->height->blockSignals(false);
-    ui->posX->blockSignals(false);
-    ui->posY->blockSignals(false);
 }
 
 void CropPanel::paintEvent(QPaintEvent *) {

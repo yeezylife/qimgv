@@ -25,7 +25,7 @@ class CropPanel : public SidePanelWidget
 public:
     explicit CropPanel(CropOverlay *_overlay, QWidget *parent = nullptr);
     ~CropPanel();
-    void setImageRealSize(QSize);
+    void setImageRealSize(QSize size);
 
 public slots:
     void onSelectionOutsideChange(QRect rect);

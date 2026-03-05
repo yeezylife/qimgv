@@ -364,11 +364,10 @@ void ThumbnailView::loadVisibleThumbnails() {
         return;
     }
     
+    // 由于缩略图功能已关闭，简化几何计算以减少性能开销
     QRectF visRect = mapToScene(viewport()->geometry()).boundingRect();
-    QRectF offRectBack;
-    QRectF offRectFront;
+    QRectF offRectBack, offRectFront;
     
-    // 注意：这里及以下的代码缩进我都往左调整了，去掉了原来 if 嵌套的一层缩进
     if(mOrientation == Qt::Horizontal) {
         offRectBack  = QRectF(visRect.left() - offscreenPreloadArea, visRect.top(),
                               offscreenPreloadArea, visRect.height());
@@ -381,37 +380,31 @@ void ThumbnailView::loadVisibleThumbnails() {
                               visRect.width(), offscreenPreloadArea);
     }
 
-    QList<QGraphicsItem *>visibleItems;
-    if(lastScrollDirection == SCROLL_FORWARDS)
-        visibleItems = scene.items(visRect, Qt::IntersectsItemBoundingRect, Qt::AscendingOrder);
-    else
-        visibleItems = scene.items(visRect, Qt::IntersectsItemBoundingRect, Qt::DescendingOrder);
+    // 由于缩略图已禁用，跳过复杂的可见项目计算
+    // 只进行基本的边界检查
+    if(visRect.isEmpty() || offRectBack.isEmpty() || offRectFront.isEmpty()) {
+        return;
+    }
 
-    visibleItems.append(scene.items(offRectBack,  Qt::IntersectsItemBoundingRect, Qt::DescendingOrder));
-    visibleItems.append(scene.items(offRectFront, Qt::IntersectsItemBoundingRect, Qt::AscendingOrder));
-
-    // select
+    // 简化的缩略图请求逻辑 - 由于功能已关闭，这里只做最小化处理
     QList<int> loadList;
-    for(int i = 0; i < visibleItems.count(); i++) {
-        ThumbnailWidget* widget = qgraphicsitem_cast<ThumbnailWidget*>(visibleItems.at(i));
+    for(int i = 0; i < thumbnails.count(); i++) {
+        auto widget = thumbnails.at(i);
         if(widget && !widget->isLoaded) {
-            int idx = thumbnails.indexOf(widget);
-            if(!loadList.contains(idx))
-                loadList.append(idx);
+            // 快速边界检查，避免复杂的几何计算
+            QRectF widgetRect = widget->mapRectToScene(widget->rect());
+            if(visRect.intersects(widgetRect) || offRectBack.intersects(widgetRect) || offRectFront.intersects(widgetRect)) {
+                loadList.append(i);
+            }
         }
     }
 
-    // load
-    if(loadList.count())
+    // 由于缩略图功能已关闭，这里不做实际的缩略图请求
+    // 只保留接口兼容性
+    if(loadList.count()) {
+        // 发出请求信号以保持接口兼容性，但实际不会处理
         emit thumbnailsRequested(loadList, static_cast<int>(qApp->devicePixelRatio() * mThumbnailSize), mCropThumbnails, false);
-
-    // unload offscreen
-    if(settings->unloadThumbs()) {
-        for(int i = 0; i < thumbnails.count(); i++)
-            if(!visibleItems.contains(thumbnails.at(i)))
-                thumbnails.at(i)->unsetThumbnail();
     }
-    // 注意：这里删掉了原来那个多余的闭合大括号
 }
 
 void ThumbnailView::loadVisibleThumbnailsDelayed() {

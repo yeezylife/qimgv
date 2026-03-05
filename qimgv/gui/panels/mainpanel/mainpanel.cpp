@@ -42,10 +42,8 @@ MainPanel::MainPanel(FloatingWidgetContainer *parent) : SlidePanel(parent) {
 }
 
 MainPanel::~MainPanel() {
-    delete openButton;
-    delete settingsButton;
-    delete exitButton;
-    delete folderViewButton;
+    // 按钮对象会自动被父对象删除，无需手动删除
+    // 这里保持空实现以维持接口兼容性
 }
 
 void MainPanel::onPinClicked() {

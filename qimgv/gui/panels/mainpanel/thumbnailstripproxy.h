@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "gui/panels/mainpanel/thumbnailstrip.h"
 #include <QMutexLocker>
+#include <utility>  // for std::move
 
 struct ThumbnailStripStateBuffer {
     QList<int> selection;

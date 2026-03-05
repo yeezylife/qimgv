@@ -40,8 +40,14 @@ void ThumbnailStripProxy::populate(int count) {
     QMutexLocker ml(&m);
     stateBuf.itemCount = count;
     if(thumbnailStrip) {
+        // 使用移动语义避免不必要的拷贝
+        auto selectionCopy = std::move(stateBuf.selection);
         ml.unlock();
         thumbnailStrip->populate(stateBuf.itemCount);
+        // 恢复选择状态
+        if(!selectionCopy.isEmpty()) {
+            thumbnailStrip->select(selectionCopy);
+        }
     } else {
         stateBuf.selection.clear();
     }

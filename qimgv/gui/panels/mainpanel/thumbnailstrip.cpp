@@ -71,19 +71,20 @@ void ThumbnailStrip::updateThumbnailPositions() {
 void ThumbnailStrip::updateThumbnailPositions(int start, int end) {
     if(start > end || !checkRange(start) || !checkRange(end))
         return;
-    // assume all thumbnails are the same size
-    ThumbnailWidget *tmp;
+    
+    // 缓存缩略图尺寸以避免重复计算
+    const ThumbnailWidget *firstWidget = thumbnails.at(start);
+    const QRectF firstRect = firstWidget->boundingRect();
+    
     if(orientation() == Qt::Horizontal) {
-        int thumbWidth = static_cast<int>(thumbnails.at(start)->boundingRect().width());
+        const int thumbWidth = static_cast<int>(firstRect.width());
         for(int i = start; i <= end; i++) {
-            tmp = thumbnails.at(i);
-            tmp->setPos(i * thumbWidth, 0);
+            thumbnails.at(i)->setPos(i * thumbWidth, 0);
         }
     } else {
-        int thumbHeight = static_cast<int>(thumbnails.at(start)->boundingRect().height());
+        const int thumbHeight = static_cast<int>(firstRect.height());
         for(int i = start; i <= end; i++) {
-            tmp = thumbnails.at(i);
-            tmp->setPos(0, i * thumbHeight);
+            thumbnails.at(i)->setPos(0, i * thumbHeight);
         }
     }
 }

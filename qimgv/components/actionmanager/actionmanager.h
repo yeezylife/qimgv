@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QObject>
 #include <QKeyEvent>
@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QDebug>
 #include <QStringList>
+#include <memory>
 #include "utils/actions.h"
 #include "shortcutbuilder.h"
 #include "components/scriptmanager/scriptmanager.h"
@@ -23,35 +24,44 @@ class ActionManager : public QObject {
 public:
     static ActionManager* getInstance();
     ~ActionManager();
-    bool processEvent(QInputEvent*);
+    
+    bool processEvent(QInputEvent* event);
     void addShortcut(const QString &keys, const QString &action);
     void resetDefaults();
-    void resetDefaults(QString action);
-    QString actionForShortcut(const QString &keys);
-    const QString shortcutForAction(QString action);
-    const QList<QString> shortcutsForAction(QString action);
-    QStringList actionList();
-    const QMap<QString,QString>& allShortcuts();
-    void removeShortcut(const QString &keys);
-    void removeAllShortcuts();
-    void removeAllShortcuts(QString actionName);
-    QString keyForNativeScancode(quint32 scanCode);
+    void resetDefaults(const QString &action);
     void adjustFromVersion(QVersionNumber lastVer);
     void saveShortcuts();
+    
+    QString actionForShortcut(const QString &keys) const;
+    const QString shortcutForAction(const QString &action) const;
+    const QList<QString> shortcutsForAction(const QString &action) const;
+    QStringList actionList() const;
+    const QMap<QString, QString>& allShortcuts() const;
+    
+    void removeShortcut(const QString &keys);
+    void removeAllShortcuts();
+    void removeAllShortcuts(const QString &actionName);
+    
+    QString keyForNativeScancode(quint32 scanCode) const;
+
 public slots:
     bool invokeAction(const QString &actionName);
+
 private:
     explicit ActionManager(QObject *parent = nullptr);
-    QMap<QString, QString> defaults, shortcuts; // <shortcut, action>
-
-    static void initDefaults();
-    static void initActions();
-    static void initShortcuts();
-    QString modifierKeys(QEvent *event);
-    bool invokeActionForShortcut(const QString &action);
-    void validateShortcuts();
+    ActionManager(const ActionManager&) = delete;
+    ActionManager& operator=(const ActionManager&) = delete;
+    
+    void initDefaults();
+    void initShortcuts();
     void readShortcuts();
-    ActionType validateAction(const QString &actionName);
+    void validateShortcuts();
+    
+    bool invokeActionForShortcut(const QString &shortcut);
+    ActionType validateAction(const QString &actionName) const;
+    
+    QMap<QString, QString> defaults;
+    QMap<QString, QString> shortcuts;
 
 signals:
     void open();

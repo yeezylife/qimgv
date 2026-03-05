@@ -44,9 +44,9 @@ public slots:
     virtual void select(QList<int> indices) override;
     virtual void select(int index) override;
     virtual QList<int> selection() override;
-    virtual int lastSelected() override;
-    virtual void clearSelection() override;
-    virtual void deselect(int index) override;
+    virtual int lastSelected();
+    virtual void clearSelection();
+    virtual void deselect(int index);
 
 private:
     FlowLayout *flowLayout;

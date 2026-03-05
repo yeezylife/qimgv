@@ -13,7 +13,7 @@ InfoBar::~InfoBar() {
     delete ui;
 }
 
-void InfoBar::setInfo(QString position, QString fileName, QString info) {
+void InfoBar::setInfo(const QString& position, const QString& fileName, const QString& info) {
     ui->index->setText(position);
     ui->path->setText(fileName);
     ui->info->setText(info);

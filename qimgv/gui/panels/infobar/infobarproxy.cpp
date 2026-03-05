@@ -2,9 +2,9 @@
 
 InfoBarProxy::InfoBarProxy(QWidget *parent) : QWidget(parent), infoBar(nullptr) {
     setAccessibleName("InfoBarProxy");
-    this->setMinimumHeight(23);
-    this->setMaximumHeight(23);
-    layout.setContentsMargins(0,0,0,0);
+    setMinimumHeight(23);
+    setMaximumHeight(23);
+    layout.setContentsMargins(0, 0, 0, 0);
     setLayout(&layout);
 }
 
@@ -13,13 +13,11 @@ InfoBarProxy::~InfoBarProxy() {
         infoBar->deleteLater();
 }
 
-void InfoBarProxy::setInfo(QString position, QString fileName, QString info) {
+void InfoBarProxy::setInfo(const QString& position, const QString& fileName, const QString& info) {
     if(infoBar) {
         infoBar->setInfo(position, fileName, info);
     } else {
-        stateBuf.position = position;
-        stateBuf.fileName = fileName;
-        stateBuf.info = info;
+        stateBuf = {position, fileName, info};
     }
 }
 

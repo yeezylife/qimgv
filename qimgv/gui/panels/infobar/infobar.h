@@ -2,8 +2,7 @@
 
 #include <QWidget>
 #include <QWheelEvent>
-#include <QDebug>
-
+#include <QPaintEvent>
 #include <QPainter>
 #include <QStyleOption>
 
@@ -20,10 +19,10 @@ public:
     ~InfoBar();
 
 public slots:
-    void setInfo(QString position, QString fileName, QString info);
+    void setInfo(const QString& position, const QString& fileName, const QString& info);
 protected:
-    void paintEvent(QPaintEvent *event);
-    void wheelEvent(QWheelEvent *event);
+    void paintEvent(QPaintEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 private:
     Ui::InfoBar *ui;
 };

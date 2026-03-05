@@ -17,13 +17,13 @@ public:
 
     void init();
 public slots:
-    void setInfo(QString position, QString fileName, QString info);
+    void setInfo(const QString& position, const QString& fileName, const QString& info);
 
 protected:
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     InfoBarStateBuffer stateBuf;
-    InfoBar *infoBar;
+    InfoBar *infoBar = nullptr;
     QVBoxLayout layout;
 };

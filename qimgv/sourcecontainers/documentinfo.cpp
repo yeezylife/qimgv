@@ -231,8 +231,8 @@ void DocumentInfo::loadExifOrientation() {
         return;
 
     QString path = filePath();
-    // 直接在栈上创建 QImageReader，如果 mFormat 非空则指定格式，否则自动检测
-    QImageReader reader(path, mFormat.toUtf8());
+    // 直接在栈上创建 QImageReader，使用 QStringView 避免临时字符串创建
+    QImageReader reader(path, mFormat.toUtf8().constData());
 
     if(reader.canRead()) {
         QImageIOHandler::Transformations transformation = reader.transformation();

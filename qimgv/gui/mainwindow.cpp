@@ -534,25 +534,41 @@ QString MW::getSaveFileName(QString filePath) {
     docWidget->hideFloatingPanel();
     QStringList filters;
     // generate filter for writable images
-    // todo: some may need to be blacklisted
-    auto writerFormats = QImageWriter::supportedImageFormats();
-    if(writerFormats.contains("jpg"))  filters.append("JPEG (*.jpg *.jpeg *jpe *jfif)");
-    if(writerFormats.contains("png"))  filters.append("PNG (*.png)");
-    if(writerFormats.contains("webp")) filters.append("WebP (*.webp)");
+    // 使用现代 C++ 范围 for 循环和 QStringView 优化性能
+    const auto writerFormats = QImageWriter::supportedImageFormats();
+    
+    // 使用 lambda 函数简化重复代码
+    auto addFilter = [&](const QByteArray& format, const QString& description) {
+        if(writerFormats.contains(format)) {
+            filters.append(description);
+        }
+    };
+    
+    addFilter("jpg",  "JPEG (*.jpg *.jpeg *jpe *jfif)");
+    addFilter("png",  "PNG (*.png)");
+    addFilter("webp", "WebP (*.webp)");
     // may not work..
-    if(writerFormats.contains("jp2"))  filters.append("JPEG 2000 (*.jp2 *.j2k *.jpf *.jpx *.jpm *.jpgx)");
-    if(writerFormats.contains("jxl"))  filters.append("JPEG-XL (*.jxl)");
-    if(writerFormats.contains("avif")) filters.append("AVIF (*.avif *.avifs)");
-    if(writerFormats.contains("tif"))  filters.append("TIFF (*.tif *.tiff)");
-    if(writerFormats.contains("bmp"))  filters.append("BMP (*.bmp)");
+    addFilter("jp2",  "JPEG 2000 (*.jp2 *.j2k *.jpf *.jpx *.jpm *.jpgx)");
+    addFilter("jxl",  "JPEG-XL (*.jxl)");
+    addFilter("avif", "AVIF (*.avif *.avifs)");
+    addFilter("tif",  "TIFF (*.tif *.tiff)");
+    addFilter("bmp",  "BMP (*.bmp)");
 #ifdef _WIN32
-    if(writerFormats.contains("ico"))  filters.append("Icon Files (*.ico)");
+    addFilter("ico",  "Icon Files (*.ico)");
 #endif
-    if(writerFormats.contains("ppm"))  filters.append("PPM (*.ppm)");
-    if(writerFormats.contains("xbm"))  filters.append("XBM (*.xbm)");
-    if(writerFormats.contains("xpm"))  filters.append("XPM (*.xpm)");
-    if(writerFormats.contains("dds"))  filters.append("DDS (*.dds)");
-    if(writerFormats.contains("wbmp")) filters.append("WBMP (*.wbmp)");
+    addFilter("ppm",  "PPM (*.ppm)");
+    addFilter("xbm",  "XBM (*.xbm)");
+    addFilter("xpm",  "XPM (*.xpm)");
+    addFilter("dds",  "DDS (*.dds)");
+    addFilter("wbmp", "WBMP (*.wbmp)");
+    
+    // 使用现代 C++ 特性添加其他格式
+    for (const auto& format : writerFormats) {
+        if (filters.join(" ").contains(QString::fromUtf8(format))) {
+            continue; // 已经添加过
+        }
+        filters.append(QString::fromUtf8(format.toUpper()) + " (*." + QString::fromUtf8(format) + ")");
+    }
     // add everything else from imagewriter
     for(auto fmt : writerFormats) {
         if(filters.filter(fmt).isEmpty())

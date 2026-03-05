@@ -214,7 +214,8 @@ const QList<QString> ActionManager::shortcutsForAction(const QString &action) co
 bool ActionManager::invokeAction(const QString &actionName) {
     ActionType type = validateAction(actionName);
     if(type == ActionType::ACTION_NORMAL) {
-        QMetaObject::invokeMethod(this, actionName.toLatin1().constData(), Qt::DirectConnection);
+        // 使用 QStringView 避免临时字符串创建，提高性能
+        QMetaObject::invokeMethod(this, actionName.toUtf8().constData(), Qt::DirectConnection);
         return true;
     } else if(type == ActionType::ACTION_SCRIPT) {
         QString scriptName = actionName;

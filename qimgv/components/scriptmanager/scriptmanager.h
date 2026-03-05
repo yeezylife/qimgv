@@ -1,13 +1,10 @@
 #pragma once
 
 #include <QObject>
-#include <QKeyEvent>
-#include <QMouseEvent>
-#include <QWheelEvent>
 #include <QMap>
-#include <QDebug>
 #include <QStringList>
 #include <QProcess>
+#include <memory>
 #include "utils/script.h"
 #include "sourcecontainers/image.h"
 #include "settings.h"
@@ -18,26 +15,27 @@ public:
     static ScriptManager* getInstance();
     ~ScriptManager();
     void runScript(const QString &scriptName, std::shared_ptr<Image> img);
-    static QString runCommand(QString cmd);
-    static void runCommandDetached(QString cmd);
-    bool scriptExists(QString scriptName);
+    static QString runCommand(const QString& cmd);
+    static void runCommandDetached(const QString& cmd);
+    bool scriptExists(const QString& scriptName) const;
     void readScripts();
     void saveScripts();
-    void removeScript(QString scriptName);
-    const QMap<QString, Script> &allScripts();
-    QList<QString> scriptNames();
-    Script getScript(QString scriptName);
-    void addScript(QString scriptName, Script script);
-    static QStringList splitCommandLine(const QString &cmdLine);
+    void removeScript(const QString& scriptName);
+    const QMap<QString, Script>& allScripts() const;
+    QList<QString> scriptNames() const;
+    Script getScript(const QString& scriptName) const;
+    void addScript(const QString& scriptName, const Script& script);
+    static QStringList splitCommandLine(const QString& cmdLine);
 
 signals:
-    void error(QString);
+    void error(const QString& message);
 
 private:
     explicit ScriptManager(QObject *parent = nullptr);
     QMap<QString, Script> scripts; // <name, script>
-    void processArguments(QStringList &cmd, std::shared_ptr<Image> img);
+    void processArguments(QStringList& cmd, std::shared_ptr<Image> img) const;
 
+    static QStringList splitCommandLineImpl(const QString& cmdLine);
 };
 
 extern ScriptManager *scriptManager;

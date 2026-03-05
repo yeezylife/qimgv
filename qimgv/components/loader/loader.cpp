@@ -1,8 +1,11 @@
 #include "loader.h"
+#include <QThread>
 
 Loader::Loader() {
     pool = new QThreadPool(this);
-    pool->setMaxThreadCount(2);
+    // 根据系统CPU核心数动态调整线程数，最少2个，最多4个
+    int maxThreads = qBound(2, QThread::idealThreadCount(), 4);
+    pool->setMaxThreadCount(maxThreads);
 }
 
 void Loader::clearTasks() {

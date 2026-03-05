@@ -2,16 +2,20 @@
 
 #include <QObject>
 #include <QRunnable>
+#include <QString>
+#include <memory>
 #include "utils/imagefactory.h"
 
 class LoaderRunnable: public QObject, public QRunnable
 {
     Q_OBJECT
 public:
-    LoaderRunnable(QString _path);
-    void run();
+    explicit LoaderRunnable(const QString& _path);
+    void run() override;
+    
 private:
     QString path;
+    
 signals:
     void finished(std::shared_ptr<Image>, QString);
     void failed(QString);

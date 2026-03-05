@@ -13,30 +13,30 @@ jobs:
     steps:
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: CLANG64
           update: true
           install: >-
             git
             p7zip
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-ntldd
-            mingw-w64-ucrt-x86_64-pkgconf
-            mingw-w64-ucrt-x86_64-kwindowsystem
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-svg
-            mingw-w64-ucrt-x86_64-qt6-imageformats
-            mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-kimageformats
-            mingw-w64-ucrt-x86_64-libjxl
-            mingw-w64-ucrt-x86_64-libraw
-            mingw-w64-ucrt-x86_64-exiv2
-            mingw-w64-ucrt-x86_64-opencv
-            mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-lcms2
-            mingw-w64-ucrt-x86_64-libavif
-            mingw-w64-ucrt-x86_64-libheif
+            mingw-w64-clang-x86_64-gcc
+            mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja
+            mingw-w64-clang-x86_64-ntldd
+            mingw-w64-clang-x86_64-pkgconf
+            mingw-w64-clang-x86_64-kwindowsystem
+            mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-qt6-svg
+            mingw-w64-clang-x86_64-qt6-imageformats
+            mingw-w64-clang-x86_64-qt6-tools
+            mingw-w64-clang-x86_64-kimageformats
+            mingw-w64-clang-x86_64-libjxl
+            mingw-w64-clang-x86_64-libraw
+            mingw-w64-clang-x86_64-exiv2
+            mingw-w64-clang-x86_64-opencv
+            mingw-w64-clang-x86_64-mpv
+            mingw-w64-clang-x86_64-lcms2
+            mingw-w64-clang-x86_64-libavif
+            mingw-w64-clang-x86_64-libheif
             python3
 
       - uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
-            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_PREFIX_PATH=/clang64 \
             -DQT_NO_DEBUG_OUTPUT=ON \
             -DCMAKE_CXX_FLAGS="-DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -Wall -Wextra -Werror -Wno-unused-parameter" \
             -DCMAKE_C_FLAGS="-DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -Wall -Werror"
@@ -93,9 +93,9 @@ jobs:
 
           echo "--- Collecting Qt Plugins from MSYS2 ---"
           PLUGIN_SOURCES=(
-            "/ucrt64/lib/qt6/plugins"
-            "/ucrt64/share/qt6/plugins"
-            "/ucrt64/lib/kf6/plugins"
+            "/clang64/lib/qt6/plugins"
+            "/clang64/share/qt6/plugins"
+            "/clang64/lib/kf6/plugins"
           )
 
           for src in "${PLUGIN_SOURCES[@]}"; do
@@ -122,11 +122,11 @@ jobs:
           
           def get_ntldd_deps(file_path):
               try:
-                  # 获取所有依赖项，重点抓取包含 ucrt64 的路径
+                  # 获取所有依赖项，重点抓取包含 clang64 的路径
                   out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
                   deps = []
                   for line in out.splitlines():
-                      if "=>" in line and "ucrt64" in line.lower():
+                      if "=>" in line and "clang64" in line.lower():
                           # 提取 => 之后的路径部分
                           parts = line.split("=>")
                           if len(parts) > 1:
@@ -191,12 +191,6 @@ jobs:
         with:
           files: ${{ needs.build.outputs.build_file_name }}
           prerelease: true
-          tag_name: latest-dev-qt6-slim
+          tag_name: latest-dev-qt6
           name: ${{ needs.build.outputs.build_name }}
           body: |
-            ### Slim Portable Build (Auto-generated)
-            - **Internal Plugins**: Included `player_mpv.dll` for video support.
-            - **Translations**: Added full multi-language support.
-            - **Qt6/KF6 Plugins**: SVG icons, JXL/AVIF image formats, and icon engines.
-            - **Recursive Resolver**: All system DLLs (OpenCV, MPV, Qt, etc.) are bundled into the root.
-            - **Optimization**: Compiled with `-march=x86-64-v3` (AVX2, BMI, etc.) for better performance on modern CPUs.

@@ -1,6 +1,5 @@
 name: debug
 on: [workflow_dispatch]
-
 jobs:
   build:
     runs-on: windows-latest
@@ -13,43 +12,40 @@ jobs:
     steps:
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: CLANG64
           update: true
           install: >-
             git
             p7zip
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-ntldd
-            mingw-w64-ucrt-x86_64-pkgconf
-            mingw-w64-ucrt-x86_64-kwindowsystem
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-svg
-            mingw-w64-ucrt-x86_64-qt6-imageformats
-            mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-kimageformats
-            mingw-w64-ucrt-x86_64-libjxl
-            mingw-w64-ucrt-x86_64-libraw
-            mingw-w64-ucrt-x86_64-exiv2
-            mingw-w64-ucrt-x86_64-opencv
-            mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-lcms2
-            mingw-w64-ucrt-x86_64-libavif
-            mingw-w64-ucrt-x86_64-libheif
+            mingw-w64-clang-x86_64-gcc
+            mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja
+            mingw-w64-clang-x86_64-ntldd
+            mingw-w64-clang-x86_64-pkgconf
+            mingw-w64-clang-x86_64-kwindowsystem
+            mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-qt6-svg
+            mingw-w64-clang-x86_64-qt6-imageformats
+            mingw-w64-clang-x86_64-qt6-tools
+            mingw-w64-clang-x86_64-kimageformats
+            mingw-w64-clang-x86_64-libjxl
+            mingw-w64-clang-x86_64-libraw
+            mingw-w64-clang-x86_64-exiv2
+            mingw-w64-clang-x86_64-opencv
+            mingw-w64-clang-x86_64-mpv
+            mingw-w64-clang-x86_64-lcms2
+            mingw-w64-clang-x86_64-libavif
+            mingw-w64-clang-x86_64-libheif
             python3
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Set Variables
         id: vars
         run: |
           BNAME="qimgv-x64-debug"
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
-
       # 🔧 修改后的调试构建步骤
       - name: Build qimgv (Debug + Symbols)
         run: |
@@ -58,44 +54,39 @@ jobs:
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
-            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DCMAKE_PREFIX_PATH=/clang64 \
             -DCMAKE_C_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Werror" \
             -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Wextra -Werror -Wno-unused-parameter"
           cmake --build build --config Debug
-
       - name: Prepare Debug Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-          
+         
           # 创建目录布局
           mkdir -p "$TARGET/imageformats"
           mkdir -p "$TARGET/platforms"
           mkdir -p "$TARGET/styles"
           mkdir -p "$TARGET/iconengines"
           mkdir -p "$TARGET/plugins"
-
           echo "--- Copying Debug Executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-          
+         
           # 拷贝视频插件
           if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
             cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
             echo "Copied player_mpv.dll"
           fi
-
           # 拷贝翻译文件
           if [ -d "build/qimgv/translations" ]; then
             cp -r build/qimgv/translations "$TARGET/"
             echo "Copied translations"
           fi
-
           echo "--- Collecting Qt Plugins ---"
           PLUGIN_SOURCES=(
-            "/ucrt64/lib/qt6/plugins"
-            "/ucrt64/share/qt6/plugins"
-            "/ucrt64/lib/kf6/plugins"
+            "/clang64/lib/qt6/plugins"
+            "/clang64/share/qt6/plugins"
+            "/clang64/lib/kf6/plugins"
           )
-
           for src in "${PLUGIN_SOURCES[@]}"; do
             if [ -d "$src" ]; then
               echo "Checking $src..."
@@ -105,23 +96,20 @@ jobs:
               [ -d "$src/iconengines" ] && cp -n "$src/iconengines"/*.dll "$TARGET/iconengines/" 2>/dev/null || true
             fi
           done
-
           echo "--- Creating qt.conf ---"
           echo -e "[Paths]\nPrefix = .\nPlugins = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
-
           echo "--- Dependency Resolution ---"
           python3 - <<EOF
           import os, subprocess, shutil
           from pathlib import Path
-
           target_dir = os.path.abspath("$TARGET")
-          
+         
           def get_ntldd_deps(file_path):
               try:
                   out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
                   deps = []
                   for line in out.splitlines():
-                      if "=>" in line and "ucrt64" in line.lower():
+                      if "=>" in line and "clang64" in line.lower():
                           parts = line.split("=>")
                           if len(parts) > 1:
                               path = parts[1].split("(")[0].strip()
@@ -130,47 +118,42 @@ jobs:
                   return deps
               except:
                   return []
-
           scanned_files = set()
           while True:
               found_new = False
               current_files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
-              
+             
               for f in current_files:
                   f_path = str(f.absolute())
                   if f_path in scanned_files: continue
-                  
+                 
                   deps = get_ntldd_deps(f_path)
                   for d in deps:
                       d_name = os.path.basename(d)
-                      dest = os.path.join(target_dir, d_name) 
-                      
+                      dest = os.path.join(target_dir, d_name)
+                     
                       if not os.path.exists(dest):
-                          print(f"  [+] Found dependency: {d_name} (needed by {f.name})")
+                          print(f" [+] Found dependency: {d_name} (needed by {f.name})")
                           shutil.copy2(d, dest)
                           found_new = True
                   scanned_files.add(f_path)
-              
+             
               if not found_new: break
-          
+         
           print("Dependency resolution complete.")
           EOF
-
           echo "--- Debug Package Contents ---"
           echo "Key files:"
           ls -la "$TARGET/qimgv.exe"
           ls -la "$TARGET/debug/" || echo "No debug dir"
           du -sh "$TARGET"
-
       - name: Compress Debug Package
         run: |
           7z a -mx=9 "${{ steps.vars.outputs.build_file_name }}" "./${{ steps.vars.outputs.build_name }}"
-
       - uses: actions/upload-artifact@v4
         with:
-          name: qimgv-debug-binary
+          name: qimgv-debug-binary-clang
           path: ${{ steps.vars.outputs.build_file_name }}
-
   upload-release:
     runs-on: ubuntu-latest
     needs: build
@@ -178,12 +161,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: qimgv-debug-binary
+          name: qimgv-debug-binary-clang
       - name: Upload Debug Build
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ needs.build.outputs.build_file_name }}
           prerelease: true
-          tag_name: debug-qt6-slim
+          tag_name: debug-qt6-slim-clang
           name: ${{ needs.build.outputs.build_name }}
           body: |

@@ -1,17 +1,22 @@
 #include "shortcutbuilder.h"
 
 QString ShortcutBuilder::fromEvent(QInputEvent *event) {
-    QKeyEvent *keyEvent = dynamic_cast<QKeyEvent *>(event);
-    QWheelEvent *wheelEvent = dynamic_cast<QWheelEvent *>(event);
-    QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent *>(event);
-    if(keyEvent) {
-        return processKeyEvent(keyEvent);
-    } else if(wheelEvent) {
-        return processWheelEvent(wheelEvent);
-    } else if(mouseEvent) {
-        return processMouseEvent(mouseEvent);
+    if(!event)
+        return "";
+    
+    switch(event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+            return processKeyEvent(static_cast<QKeyEvent *>(event));
+        case QEvent::Wheel:
+            return processWheelEvent(static_cast<QWheelEvent *>(event));
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick:
+            return processMouseEvent(static_cast<QMouseEvent *>(event));
+        default:
+            return "";
     }
-    return "";
 }
 //------------------------------------------------------------------------------
 QString ShortcutBuilder::processWheelEvent(QWheelEvent *event) {
@@ -72,8 +77,12 @@ QString ShortcutBuilder::processKeyEvent(QKeyEvent *event) {
 }
 //------------------------------------------------------------------------------
 QString ShortcutBuilder::modifierKeys(QInputEvent *event){
+    if(!event)
+        return QString();
+        
     QString mods;
-    QMapIterator<QString, Qt::KeyboardModifier> i(inputMap->modifiers());
+    const auto& modifiers = inputMap->modifiers();
+    QMapIterator<QString, Qt::KeyboardModifier> i(modifiers);
     while(i.hasNext()) {
         i.next();
         if(event->modifiers().testFlag(i.value()))

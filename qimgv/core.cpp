@@ -57,7 +57,7 @@ void Core::showGui() {
 
 // create MainWindow and all widgets
 void Core::initGui() {
-    mw = new MW();
+    mw = std::make_unique<MW>().release();
     mw->hide();
 }
 
@@ -72,7 +72,7 @@ void Core::attachModel(DirectoryModel *_model) {
 }
 
 void Core::initComponents() {
-    attachModel(new DirectoryModel());
+    attachModel(std::make_unique<DirectoryModel>().release());
 }
 
 void Core::connectComponents() {
@@ -207,7 +207,7 @@ void Core::initActions() {
 
 void Core::loadTranslation() {
     if(!translator)
-        translator = new QTranslator;
+        translator = std::make_unique<QTranslator>().release();
     QString trPathFallback = QCoreApplication::applicationDirPath() + "/translations";
 #ifdef TRANSLATIONS_PATH
     QString trPath = QString(TRANSLATIONS_PATH);
@@ -518,9 +518,9 @@ void Core::openFromClipboard() {
         QFileInfo fi(destPath);
         QString ext = fi.suffix();
         int quality = 95;
-        if(ext.compare("png", Qt::CaseInsensitive) == 0)
+        if(QStringView(ext).compare(u"png", Qt::CaseInsensitive) == 0)
             quality = 30;
-        else if(ext.compare("jpg", Qt::CaseInsensitive) == 0 || ext.compare("jpeg", Qt::CaseInsensitive) == 0)
+        else if(QStringView(ext).compare(u"jpg", Qt::CaseInsensitive) == 0 || QStringView(ext).compare(u"jpeg", Qt::CaseInsensitive) == 0)
             quality = settings->JPEGSaveQuality();
 
         bool backupExists = false, success = false, originalExists = false;
@@ -588,21 +588,21 @@ void Core::onDraggedOut(QList<QString> paths) {
     if(paths.count() == 1 && model->containsFile(paths.first())) {
         mimeData = getMimeDataForImage(model->getImage(paths.last()), TARGET_DROP);
     } else { // multi-selection, or single directory. drag urls
-        mimeData = new QMimeData();
+        mimeData = std::make_unique<QMimeData>().release();
         QList<QUrl> urlList;
         for(auto path : paths)
             urlList << QUrl::fromLocalFile(path);
         mimeData->setUrls(urlList);
     }
     //auto thumb = Thumbnailer::getThumbnail(paths.last(), 100);
-    mDrag = new QDrag(this);
+    mDrag = std::make_unique<QDrag>(this).release();
     mDrag->setMimeData(mimeData);
     //mDrag->setPixmap(*thumb->pixmap().get());
     mDrag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
 }
 
 QMimeData *Core::getMimeDataForImage(std::shared_ptr<Image> img, MimeDataTarget target) {
-    QMimeData* mimeData = new QMimeData();
+    auto mimeData = std::make_unique<QMimeData>().release();
     if(!img)
         return mimeData;
     QString path = img->filePath();

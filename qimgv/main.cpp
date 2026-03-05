@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 #else
     QApplication a(argc, argv);
     // use some style workarounds
-    a.setStyle(new ProxyStyle);
+    a.setStyle(std::make_unique<ProxyStyle>().release());
 #endif
 
     QCoreApplication::setOrganizationName("qimgv");
@@ -137,8 +137,8 @@ int main(int argc, char *argv[]) {
     parser.process(a);
 
     if(parser.isSet("build-options")) {
-        CmdOptionsRunner r;
-        QTimer::singleShot(0, &r, &CmdOptionsRunner::showBuildOptions);
+        auto r = std::make_unique<CmdOptionsRunner>();
+        QTimer::singleShot(0, r.get(), &CmdOptionsRunner::showBuildOptions);
         return a.exec();
     } else if(parser.isSet("gen-thumbs")) {
         int size = settings->folderViewIconSize();

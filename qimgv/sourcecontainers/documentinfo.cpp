@@ -114,7 +114,7 @@ void DocumentInfo::detectFormat() {
     } else {
         // just try to open via suffix if all of the above fails
         mFormat = suffix;
-        if(mFormat.compare("jfif", Qt::CaseInsensitive) == 0)
+        if(QStringView(mFormat).compare(u"jfif", Qt::CaseInsensitive) == 0)
             mFormat = "jpg";
         if(settings->videoPlayback() && settings->videoFormats().values().contains(suffix))
             mDocumentType = DocumentType::VIDEO;

@@ -7,6 +7,7 @@
 #include "gui/flowlayout.h"
 #include "utils/stuff.h"
 #include "components/actionmanager/actionmanager.h"
+#include <QBitArray>
 
 class FolderGridView : public ThumbnailView {
     Q_OBJECT
@@ -39,12 +40,25 @@ public slots:
     virtual void focusOnSelection() override;
     virtual void setDragHover(int index) override;
 
+    // 重写选择相关方法以使用QBitArray优化
+    virtual void select(QList<int> indices) override;
+    virtual void select(int index) override;
+    virtual QList<int> selection() override;
+    virtual int lastSelected() override;
+    virtual void clearSelection() override;
+    virtual void deselect(int index) override;
+
 private:
     FlowLayout *flowLayout;
     QGraphicsWidget holderWidget;
     int shiftedCol;
     void scrollToCurrent();
     int lastDragTarget = -1;
+    
+    // 高效选择状态管理
+    QBitArray selectionBits;
+    int lastSelectedIndex = -1;
+    void updateSelectionVisuals();
 
 private slots:
     void onitemSelected();

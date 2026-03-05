@@ -110,16 +110,10 @@ void FolderGridView::focusOnSelection() {
 }
 
 void FolderGridView::selectAll() {
-    QList<int> list;
-    for(int i = 0; i < thumbnails.count(); i++)
-        list << i;
-    // preserve last selected index by putting it at the end of a new selection
-    // this is simpler but it changes selection order a bit
-    if(lastSelected() != -1) {
-        // in this case list is sorted so no need to indexOf()
-        list.move(lastSelected(), list.count() - 1);
-    }
-    select(list);
+    // 使用QBitArray高效实现全选
+    selectionBits.fill(true, thumbnails.count());
+    lastSelectedIndex = thumbnails.count() - 1;
+    updateSelectionVisuals();
 }
 
 void FolderGridView::selectAbove() {
@@ -389,10 +383,19 @@ void FolderGridView::zoomOut() {
 
 void FolderGridView::setThumbnailSize(int newSize) {
     newSize = clamp(newSize, THUMBNAIL_SIZE_MIN, THUMBNAIL_SIZE_MAX);
+    if (newSize == mThumbnailSize) {
+        return; // 避免重复设置，提高性能
+    }
+    
     mThumbnailSize = newSize;
+    
+    // 使用信号阻塞减少不必要的更新，提高批量操作性能
+    blockSignals(true);
     for(int i = 0; i < thumbnails.count(); i++) {
         thumbnails.at(i)->setThumbnailSize(newSize);
     }
+    blockSignals(false);
+    
     updateLayout();
     fitSceneToContents();
     if(lastSelected() != -1)
@@ -415,5 +418,76 @@ void FolderGridView::resizeEvent(QResizeEvent *event) {
         fitSceneToContents();
         //focusOn(selectedIndex());
         loadVisibleThumbnailsDelayed();
+    }
+}
+
+void FolderGridView::updateSelectionVisuals() {
+    // 更新缩略图的选中状态显示
+    for(int i = 0; i < thumbnails.count(); i++) {
+        thumbnails.at(i)->setHighlighted(selectionBits.testBit(i));
+    }
+    updateScrollbarIndicator();
+}
+
+QList<int> FolderGridView::selection() {
+    // 将QBitArray转换为QList<int>，保持与原来相同的行为
+    QList<int> result;
+    for (int i = 0; i < selectionBits.size(); ++i) {
+        if (selectionBits.testBit(i)) {
+            result.append(i);
+        }
+    }
+    return result;
+}
+
+int FolderGridView::lastSelected() {
+    // 返回最后选择的索引，与selection().last()行为一致
+    if (selectionBits.count(true) == 0) {
+        return -1;
+    }
+    // 找到最后设置的位（与selection().last()行为一致）
+    for (int i = selectionBits.size() - 1; i >= 0; --i) {
+        if (selectionBits.testBit(i)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void FolderGridView::select(QList<int> indices) {
+    // 使用QBitArray高效实现选择
+    selectionBits.fill(false, thumbnails.count());
+    for (int index : indices) {
+        if (checkRange(index)) {
+            selectionBits.setBit(index);
+        }
+    }
+    lastSelectedIndex = indices.isEmpty() ? -1 : indices.last();
+    updateSelectionVisuals();
+}
+
+void FolderGridView::select(int index) {
+    // 单个选择的优化实现
+    if (!checkRange(index)) {
+        return;
+    }
+    selectionBits.fill(false, thumbnails.count());
+    selectionBits.setBit(index);
+    lastSelectedIndex = index;
+    updateSelectionVisuals();
+}
+
+void FolderGridView::clearSelection() {
+    // 清除选择的高效实现
+    selectionBits.fill(false);
+    lastSelectedIndex = -1;
+    updateSelectionVisuals();
+}
+
+void FolderGridView::deselect(int index) {
+    // 取消选择的高效实现
+    if (checkRange(index)) {
+        selectionBits.setBit(index, false);
+        updateSelectionVisuals();
     }
 }

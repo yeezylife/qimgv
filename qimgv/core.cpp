@@ -1046,9 +1046,19 @@ bool Core::saveFile(const QString &filePath, const QString &newPath) {
     if(!model->saveFile(filePath, newPath))
         return false;
     mw->hideSaveOverlay();
+    discardEdits();
+    
+    // 当原地保存时（filePath == newPath），需要重新加载图像以更新缓存和元数据
+    // 特别是EXIF数据中的中文标题等信息需要在此时重新读取
+    if(filePath == newPath) {
+        model->reload(newPath);
+        if(!model->isEmpty() && model->containsFile(newPath)) {
+            guiSetImage(model->getImage(newPath));
+            updateInfoString();
+        }
+    }
     // switch to the new file
-    if(model->containsFile(newPath) && state.currentFilePath != newPath) {
-        discardEdits();
+    else if(model->containsFile(newPath) && state.currentFilePath != newPath) {
         if(mw->currentViewMode() == MODE_DOCUMENT)
             loadPath(newPath);
     }

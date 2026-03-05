@@ -61,27 +61,28 @@ jobs:
       - name: Prepare Debug Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
-         
-          # 创建目录布局
-          mkdir -p "$TARGET/imageformats"
-          mkdir -p "$TARGET/platforms"
-          mkdir -p "$TARGET/styles"
-          mkdir -p "$TARGET/iconengines"
-          mkdir -p "$TARGET/plugins"
+          
+          # 创建目录结构（windeployqt 会填充大部分，但先准备好）
+          mkdir -p "$TARGET"
+          
           echo "--- Copying Debug Executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
-         
-          # 拷贝视频插件
-          if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
-            cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
-            echo "Copied player_mpv.dll"
-          fi
-          # 拷贝翻译文件
-          if [ -d "build/qimgv/translations" ]; then
-            cp -r build/qimgv/translations "$TARGET/"
-            echo "Copied translations"
-          fi
-          echo "--- Collecting Qt Plugins ---"
+          
+          echo "--- Running windeployqt for complete Qt + runtime deployment ---"
+          /clang64/bin/windeployqt.exe \
+            --plugindir "$TARGET" \
+            --no-translations \
+            --no-system-d3d-compiler \
+            --no-opengl-sw \
+            --compiler-runtime \
+            --dir "$TARGET" \
+            "$TARGET/qimgv.exe"
+          
+          # windeployqt 会自动创建 platforms/、imageformats/ 等并填充 qwindows.dll + Qt DLL + MinGW runtime
+          # 手动创建补充目录（以防某些插件路径未覆盖）
+          mkdir -p "$TARGET/platforms" "$TARGET/imageformats" "$TARGET/styles" "$TARGET/iconengines" "$TARGET/plugins"
+          
+          echo "--- Supplementing Qt Plugins (if needed) ---"
           PLUGIN_SOURCES=(
             "/clang64/lib/qt6/plugins"
             "/clang64/share/qt6/plugins"
@@ -90,15 +91,29 @@ jobs:
           for src in "${PLUGIN_SOURCES[@]}"; do
             if [ -d "$src" ]; then
               echo "Checking $src..."
-              [ -d "$src/platforms" ] && cp -n "$src/platforms/qwindows.dll" "$TARGET/platforms/" 2>/dev/null || true
-              [ -d "$src/imageformats" ] && cp -n "$src/imageformats"/*.dll "$TARGET/imageformats/" 2>/dev/null || true
-              [ -d "$src/styles" ] && cp -n "$src/styles"/*.dll "$TARGET/styles/" 2>/dev/null || true
-              [ -d "$src/iconengines" ] && cp -n "$src/iconengines"/*.dll "$TARGET/iconengines/" 2>/dev/null || true
+              [ -d "$src/platforms" ]     && cp -n "$src/platforms/qwindows.dll"     "$TARGET/platforms/"     2>/dev/null || true
+              [ -d "$src/imageformats" ]  && cp -n "$src/imageformats"/*.dll         "$TARGET/imageformats/"  2>/dev/null || true
+              [ -d "$src/styles" ]        && cp -n "$src/styles"/*.dll               "$TARGET/styles/"        2>/dev/null || true
+              [ -d "$src/iconengines" ]   && cp -n "$src/iconengines"/*.dll          "$TARGET/iconengines/"   2>/dev/null || true
             fi
           done
+          
+          # 拷贝视频插件（mpv 后端）
+          if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
+            cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
+            echo "Copied player_mpv.dll"
+          fi
+          
+          # 拷贝翻译文件（windeployqt 默认不带，这里手动）
+          if [ -d "build/qimgv/translations" ]; then
+            cp -r build/qimgv/translations "$TARGET/"
+            echo "Copied translations"
+          fi
+          
           echo "--- Creating qt.conf ---"
           echo -e "[Paths]\nPrefix = .\nPlugins = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
-          echo "--- Dependency Resolution ---"
+          
+          echo "--- Dependency Resolution (补充 windeployqt 未覆盖的依赖，如 libmpv/cairo 等) ---"
           python3 - <<EOF
           import os, subprocess, shutil
           from pathlib import Path
@@ -142,10 +157,13 @@ jobs:
          
           print("Dependency resolution complete.")
           EOF
+          
           echo "--- Debug Package Contents ---"
           echo "Key files:"
           ls -la "$TARGET/qimgv.exe"
-          ls -la "$TARGET/debug/" || echo "No debug dir"
+          ls -la "$TARGET/platforms/" || echo "No platforms dir"
+          ls -la "$TARGET/plugins/" || echo "No plugins dir"
+          ls -la "$TARGET" | grep -E "libgcc|libstdc|libgfortran|libcairo|player_mpv|qwindows" || echo "Check for runtimes"
           du -sh "$TARGET"
       - name: Compress Debug Package
         run: |

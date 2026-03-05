@@ -65,55 +65,64 @@ jobs:
             -DCMAKE_C_FLAGS="-DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -Wall -Werror"
           cmake --build build --config Release
 
-      - name: Prepare Slim Package
+      - name: Prepare Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"
           
-          # 1. 创建完整的目录布局
-          mkdir -p "$TARGET/imageformats"
-          mkdir -p "$TARGET/platforms"
-          mkdir -p "$TARGET/styles"
-          mkdir -p "$TARGET/iconengines"
-          mkdir -p "$TARGET/plugins"
-
-          echo "--- Copying Core Executable & Local Build Artifacts ---"
+          # 创建目录结构（windeployqt 会自动填充大部分，但我们先准备好）
+          mkdir -p "$TARGET"
+          
+          echo "--- Copying Core Executable ---"
           cp build/qimgv/qimgv.exe "$TARGET/"
           
-          # 拷贝你编译出的视频插件 (核心缺项)
-          if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
-            cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
-            echo "Successfully copied player_mpv.dll"
-          fi
-
-          # 拷贝编译生成的翻译文件 (核心缺项)
-          if [ -d "build/qimgv/translations" ]; then
-            cp -r build/qimgv/translations "$TARGET/"
-            echo "Successfully copied translations"
-          fi
-
-          echo "--- Collecting Qt Plugins from MSYS2 ---"
+          echo "--- Running windeployqt for complete Qt deployment ---"
+          /clang64/bin/windeployqt.exe \
+            --plugindir "$TARGET" \
+            --no-translations \
+            --no-system-d3d-compiler \
+            --no-opengl-sw \
+            --compiler-runtime \
+            --dir "$TARGET" \
+            "$TARGET/qimgv.exe"
+          
+          # windeployqt 会自动创建 platforms/、imageformats/ 等目录并填充 qwindows.dll 等
+          # 但我们仍然手动检查并补充可能遗漏的 Qt 插件（保险起见）
+          mkdir -p "$TARGET/platforms" "$TARGET/imageformats" "$TARGET/styles" "$TARGET/iconengines" "$TARGET/plugins"
+          
+          # 补充 Qt 插件（如果 windeployqt 没全覆盖某些自定义路径）
           PLUGIN_SOURCES=(
             "/clang64/lib/qt6/plugins"
             "/clang64/share/qt6/plugins"
             "/clang64/lib/kf6/plugins"
           )
-
           for src in "${PLUGIN_SOURCES[@]}"; do
             if [ -d "$src" ]; then
-              echo "Checking $src..."
-              [ -d "$src/platforms" ] && cp -n "$src/platforms/qwindows.dll" "$TARGET/platforms/" 2>/dev/null || true
-              [ -d "$src/imageformats" ] && cp -n "$src/imageformats"/*.dll "$TARGET/imageformats/" 2>/dev/null || true
-              [ -d "$src/styles" ] && cp -n "$src/styles"/*.dll "$TARGET/styles/" 2>/dev/null || true
-              [ -d "$src/iconengines" ] && cp -n "$src/iconengines"/*.dll "$TARGET/iconengines/" 2>/dev/null || true
+              echo "补充检查 $src..."
+              [ -d "$src/platforms" ]     && cp -n "$src/platforms/qwindows.dll"     "$TARGET/platforms/"     2>/dev/null || true
+              [ -d "$src/imageformats" ]  && cp -n "$src/imageformats"/*.dll         "$TARGET/imageformats/"  2>/dev/null || true
+              [ -d "$src/styles" ]        && cp -n "$src/styles"/*.dll               "$TARGET/styles/"        2>/dev/null || true
+              [ -d "$src/iconengines" ]   && cp -n "$src/iconengines"/*.dll          "$TARGET/iconengines/"   2>/dev/null || true
             fi
           done
-
+          
+          # 拷贝我们自己编译的视频插件（mpv 后端）
+          if [ -f "build/plugins/player_mpv/player_mpv.dll" ]; then
+            cp build/plugins/player_mpv/player_mpv.dll "$TARGET/plugins/"
+            echo "Successfully copied player_mpv.dll"
+          fi
+          
+          # 拷贝翻译文件（windeployqt 默认不带翻译，这里手动加）
+          if [ -d "build/qimgv/translations" ]; then
+            cp -r build/qimgv/translations "$TARGET/"
+            echo "Successfully copied translations"
+          fi
+          
+          # 创建 qt.conf（让 Qt 知道插件在当前目录）
           echo "--- Creating qt.conf ---"
-          # 指定 Prefix 为当前目录，Qt 将会正确加载同级的 plugins 和 imageformats
           echo -e "[Paths]\nPrefix = .\nPlugins = .\nLibraryExecutables = ." > "$TARGET/qt.conf"
-
-          echo "--- Starting Enhanced Dependency Resolver ---"
-          # 改进后的 Python 脚本：递归扫描所有子目录并统一提取依赖至根目录
+          
+          # 增强依赖解析（windeployqt 已经处理了很多，但我们仍保留以捕获非 Qt 依赖，如 libmpv-2.dll 等）
+          echo "--- Starting Enhanced Dependency Resolver (补充非 Qt 依赖) ---"
           python3 - <<EOF
           import os, subprocess, shutil
           from pathlib import Path
@@ -122,12 +131,10 @@ jobs:
           
           def get_ntldd_deps(file_path):
               try:
-                  # 获取所有依赖项，重点抓取包含 clang64 的路径
                   out = subprocess.check_output(["ntldd", "-R", file_path], stderr=subprocess.DEVNULL).decode('utf-8', 'ignore')
                   deps = []
                   for line in out.splitlines():
                       if "=>" in line and "clang64" in line.lower():
-                          # 提取 => 之后的路径部分
                           parts = line.split("=>")
                           if len(parts) > 1:
                               path = parts[1].split("(")[0].strip()
@@ -140,7 +147,6 @@ jobs:
           scanned_files = set()
           while True:
               found_new = False
-              # 使用 rglob 递归扫描整个包（包括根目录、plugins、imageformats 等所有 dll 和 exe）
               current_files = list(Path(target_dir).rglob("*.exe")) + list(Path(target_dir).rglob("*.dll"))
               
               for f in current_files:
@@ -150,8 +156,7 @@ jobs:
                   deps = get_ntldd_deps(f_path)
                   for d in deps:
                       d_name = os.path.basename(d)
-                      # 所有的依赖 DLL 必须放在 exe 同级的根目录下才能被 Windows 自动加载
-                      dest = os.path.join(target_dir, d_name) 
+                      dest = os.path.join(target_dir, d_name)
                       
                       if not os.path.exists(dest):
                           print(f"  [+] Found dependency: {d_name} (needed by {f.name})")
@@ -166,7 +171,7 @@ jobs:
 
           echo "--- Final Verification ---"
           echo "Checking key files existence:"
-          ls -R "$TARGET" | grep -E "player_mpv.dll|qwindows.dll|libmpv.*.dll|translations"
+          ls -R "$TARGET" | grep -E "player_mpv.dll|qwindows.dll|libmpv.*.dll|translations|Qt6Core.dll|libgcc_s_seh|libstdc" || echo "Some files may be missing"
           du -sh "$TARGET"
 
       - name: Compress

@@ -231,17 +231,14 @@ void DocumentInfo::loadExifOrientation() {
         return;
 
     QString path = filePath();
-    QImageReader *reader = nullptr;
-    if(!mFormat.isEmpty())
-        reader = new QImageReader(path, mFormat.toStdString().c_str());
-    else
-        reader = new QImageReader(path);
+    // 直接在栈上创建 QImageReader，如果 mFormat 非空则指定格式，否则自动检测
+    QImageReader reader(path, mFormat.toUtf8());
 
-    if(reader->canRead()) {
-        QImageIOHandler::Transformations transformation = reader->transformation();
+    if(reader.canRead()) {
+        QImageIOHandler::Transformations transformation = reader.transformation();
         mOrientation = transformationToExifOrientation(transformation);
     }
-    delete reader;
+    // reader 离开作用域自动析构，无需手动 delete
 }
 
 // 新增：格式化元数据值

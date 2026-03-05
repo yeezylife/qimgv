@@ -38,9 +38,6 @@ void CmdOptionsRunner::showBuildOptions() {
 #ifdef USE_MPV
     features << "USE_MPV";
 #endif
-#ifdef USE_EXIV2
-    features << "USE_EXIV2";
-#endif
 #ifdef USE_KDE_BLUR
     features << "USE_KDE_BLUR";
 #endif

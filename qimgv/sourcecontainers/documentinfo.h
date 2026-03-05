@@ -12,15 +12,6 @@
 #include "utils/stuff.h"
 #include "settings.h"
 
-#ifdef USE_EXIV2
-
-#include <exiv2/exiv2.hpp>
-#include <iostream>
-#include <iomanip>
-#include <cassert>
-
-#endif
-
 #include <QImageReader>
 
 enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };

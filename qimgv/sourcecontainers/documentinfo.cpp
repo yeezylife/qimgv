@@ -185,114 +185,57 @@ bool DocumentInfo::detectAnimatedAvif() {
 }
 
 void DocumentInfo::loadExifTags() {
-    if(exifLoaded)
-        return;
+    if(exifLoaded) return;
     exifLoaded = true;
     exifTags.clear();
-#ifdef USE_EXIV2
-    try {
-        std::unique_ptr<Exiv2::Image> image;
 
-        // 更健壮的 UTF-8 路径转换
-        QString filePath = fileInfo.filePath();                // 原始路径（UTF-16）
-        QByteArray utf8Bytes = filePath.toUtf8();              // 显式持有 UTF-8 数据
-        std::string utf8Path(utf8Bytes.constData(), utf8Bytes.size()); // 构造 std::string
-        image = Exiv2::ImageFactory::open(utf8Path);
+    QImageReader reader(filePath());
+    if(!reader.canRead()) return;
 
-        assert(image.get() != 0);
-        image->readMetadata();
-        Exiv2::ExifData &exifData = image->exifData();
-        if(exifData.empty())
-            return;
-
-        Exiv2::ExifKey make("Exif.Image.Make");
-        Exiv2::ExifKey model("Exif.Image.Model");
-        Exiv2::ExifKey dateTime("Exif.Image.DateTime");
-        Exiv2::ExifKey exposureTime("Exif.Photo.ExposureTime");
-        Exiv2::ExifKey fnumber("Exif.Photo.FNumber");
-        Exiv2::ExifKey isoSpeedRatings("Exif.Photo.ISOSpeedRatings");
-        Exiv2::ExifKey flash("Exif.Photo.Flash");
-        Exiv2::ExifKey focalLength("Exif.Photo.FocalLength");
-        Exiv2::ExifKey userComment("Exif.Photo.UserComment");
-
-        Exiv2::ExifData::const_iterator it;
-
-        it = exifData.findKey(make);
-        if(it != exifData.end() /* && it->count() */)
-            exifTags.insert(QObject::tr("Make"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(model);
-        if(it != exifData.end())
-            exifTags.insert(QObject::tr("Model"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(dateTime);
-        if(it != exifData.end())
-            exifTags.insert(QObject::tr("Date/Time"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(exposureTime);
-        if(it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            if(r.first < r.second) {
-                qreal exp = round(static_cast<qreal>(r.second) / r.first);
-                exifTags.insert(QObject::tr("ExposureTime"), "1/" + QString::number(exp) + QObject::tr(" sec"));
-            } else {
-                qreal exp = round(static_cast<qreal>(r.first) / r.second);
-                exifTags.insert(QObject::tr("ExposureTime"), QString::number(exp) + QObject::tr(" sec"));
-            }
-        }
-
-        it = exifData.findKey(fnumber);
-        if(it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            qreal fn = static_cast<qreal>(r.first) / r.second;
-            exifTags.insert(QObject::tr("F Number"), "f/" + QString::number(fn, 'g', 3));
-        }
-
-        it = exifData.findKey(isoSpeedRatings);
-        if(it != exifData.end())
-            exifTags.insert(QObject::tr("ISO Speed ratings"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(flash);
-        if(it != exifData.end())
-            exifTags.insert(QObject::tr("Flash"), QString::fromStdString(it->value().toString()));
-
-        it = exifData.findKey(focalLength);
-        if(it != exifData.end()) {
-            Exiv2::Rational r = it->toRational();
-            qreal fn = static_cast<qreal>(r.first) / r.second;
-            exifTags.insert(QObject::tr("Focal Length"), QString::number(fn, 'g', 3) + QObject::tr(" mm"));
-        }
-
-        it = exifData.findKey(userComment);
-        if(it != exifData.end()) {
-            // crop out 'charset=ascii' etc"
-            auto comment = QString::fromStdString(it->value().toString());
-            if(comment.startsWith("charset="))
-                comment.remove(0, comment.indexOf(" ") + 1);
-            exifTags.insert(QObject::tr("UserComment"), comment);
+    // 使用字符串键名直接访问 EXIF 元数据
+    QStringList keys = { "Make", "Model", "DateTime", "ExposureTime", "FNumber", "ISOSpeedRatings", "Flash", "FocalLength", "UserComment" };
+    
+    for(const QString &key : keys) {
+        QVariant val = reader.metaData(key);
+        if(!val.isNull()) {
+            exifTags.insert(key, val.toString());
         }
     }
-
-// this should work with both 0.28 and <0.28
-#if not EXIV2_TEST_VERSION(0, 28, 0)
-#ifdef __WIN32
-    catch (Exiv2::BasicError<wchar_t>& e) {
-        qDebug() << "Caught Exiv2::BasicError exception:\n" << e.what() << "\n";
-        return;
+    
+    // 特殊处理曝光时间格式
+    if(exifTags.contains("ExposureTime")) {
+        QString expStr = exifTags.value("ExposureTime");
+        qreal exp = expStr.toDouble();
+        if(exp > 0 && exp < 1.0) {
+            qreal expValue = round(1.0 / exp);
+            exifTags.insert("ExposureTime", "1/" + QString::number(expValue) + " sec");
+        } else {
+            exifTags.insert("ExposureTime", QString::number(exp) + " sec");
+        }
     }
-#else
-    catch (Exiv2::BasicError<char>& e) {
-        qDebug() << "Caught Exiv2::BasicError exception:\n" << e.what() << "\n";
-        return;
+    
+    // 特殊处理 FNumber 格式
+    if(exifTags.contains("FNumber")) {
+        QString fStr = exifTags.value("FNumber");
+        qreal fn = fStr.toDouble();
+        exifTags.insert("FNumber", "f/" + QString::number(fn, 'g', 3));
     }
-#endif
-#endif
-
-    catch (Exiv2::Error& e) {
-        qDebug() << "Caught Exiv2 exception:\n" << e.what() << "\n";
-        return;
+    
+    // 特殊处理 FocalLength 格式
+    if(exifTags.contains("FocalLength")) {
+        QString flStr = exifTags.value("FocalLength");
+        qreal fl = flStr.toDouble();
+        exifTags.insert("FocalLength", QString::number(fl, 'g', 3) + " mm");
     }
-#endif
+    
+    // 特殊处理 UserComment，移除 charset 信息
+    if(exifTags.contains("UserComment")) {
+        QString comment = exifTags.value("UserComment");
+        if(comment.startsWith("charset=")) {
+            comment.remove(0, comment.indexOf(" ") + 1);
+            exifTags.insert("UserComment", comment);
+        }
+    }
 }
 
 QMap<QString, QString> DocumentInfo::getExifTags() {
@@ -305,14 +248,24 @@ void DocumentInfo::loadExifOrientation() {
     if(mDocumentType == DocumentType::VIDEO || mDocumentType == DocumentType::NONE)
         return;
 
-    QString path = filePath();
-    QImageReader *reader = nullptr;
+    // 直接在栈上构造，无需 new/delete
+    QImageReader reader(filePath()); 
     if(!mFormat.isEmpty())
-        reader = new QImageReader(path, mFormat.toStdString().c_str());
-    else
-        reader = new QImageReader(path);
+        reader.setFormat(mFormat.toUtf8());
 
-    if(reader->canRead())
-        mOrientation = static_cast<int>(reader->transformation());
-    delete reader;
+    if(reader.canRead()) {
+        // 获取 Qt 风格的变换枚举并转换为标准 EXIF Orientation (1-8)
+        auto transform = reader.transformation();
+        switch(transform) {
+            case QImageIOHandler::TransformationNone: mOrientation = 1; break;
+            case QImageIOHandler::TransformationRotate90: mOrientation = 6; break;
+            case QImageIOHandler::TransformationRotate180: mOrientation = 3; break;
+            case QImageIOHandler::TransformationRotate270: mOrientation = 8; break;
+            case QImageIOHandler::TransformationFlipHorizontal: mOrientation = 2; break;
+            case QImageIOHandler::TransformationFlipVertical: mOrientation = 4; break;
+            case QImageIOHandler::TransformationFlipAboutDiagonal: mOrientation = 5; break;
+            case QImageIOHandler::TransformationMirror: mOrientation = 7; break;
+            default: mOrientation = 1; break;
+        }
+    }
 }

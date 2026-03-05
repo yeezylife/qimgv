@@ -22,7 +22,7 @@ public:
     void saveScripts();
     void removeScript(const QString& scriptName);
     const QMap<QString, Script>& allScripts() const;
-    QList<QString> scriptNames() const;
+    const QList<QString> scriptNames() const;
     Script getScript(const QString& scriptName) const;
     void addScript(const QString& scriptName, const Script& script);
     static QStringList splitCommandLine(const QString& cmdLine);
@@ -34,8 +34,6 @@ private:
     explicit ScriptManager(QObject *parent = nullptr);
     QMap<QString, Script> scripts; // <name, script>
     void processArguments(QStringList& cmd, std::shared_ptr<Image> img) const;
-
-    static QStringList splitCommandLineImpl(const QString& cmdLine);
 };
 
 extern ScriptManager *scriptManager;

@@ -8,11 +8,7 @@ ScriptManager::ScriptManager(QObject *parent)
 }
 
 ScriptManager::~ScriptManager() {
-    if (scriptManager) {
-        scriptManager->saveScripts();
-        delete scriptManager;
-        scriptManager = nullptr;
-    }
+    saveScripts();
 }
 
 ScriptManager *ScriptManager::getInstance() {
@@ -59,14 +55,14 @@ void ScriptManager::runScript(const QString &scriptName, std::shared_ptr<Image> 
 
 QString ScriptManager::runCommand(const QString& cmd) {
     QProcess exec;
-    QStringList cmdSplit = splitCommandLineImpl(cmd);
+    QStringList cmdSplit = splitCommandLine(cmd);
     exec.start(cmdSplit.takeAt(0), cmdSplit);
     exec.waitForFinished(2000);
     return exec.readAllStandardOutput();
 }
 
 void ScriptManager::runCommandDetached(const QString& cmd) {
-    QStringList cmdSplit = splitCommandLineImpl(cmd);
+    QStringList cmdSplit = splitCommandLine(cmd);
     QProcess::startDetached(cmdSplit.takeAt(0), cmdSplit);
 }
 
@@ -85,10 +81,6 @@ void ScriptManager::processArguments(QStringList &cmd, std::shared_ptr<Image> im
 
 // thanks stackoverflow
 QStringList ScriptManager::splitCommandLine(const QString &cmdLine) {
-    return splitCommandLineImpl(cmdLine);
-}
-
-QStringList ScriptManager::splitCommandLineImpl(const QString &cmdLine) {
     QStringList list;
     QString arg;
     bool escape = false;
@@ -156,11 +148,11 @@ void ScriptManager::removeScript(const QString& scriptName) {
 }
 
 const QMap<QString, Script>& ScriptManager::allScripts() const {
-    return scriptManager->scripts;
+    return scripts;
 }
 
-QList<QString> ScriptManager::scriptNames() const {
-    return scriptManager->scripts.keys();
+const QList<QString> ScriptManager::scriptNames() const {
+    return scripts.keys();
 }
 
 Script ScriptManager::getScript(const QString& scriptName) const {

@@ -1,4 +1,5 @@
 // performs lazy initialization
+
 #pragma once
 
 #include <memory>
@@ -15,8 +16,7 @@ class VideoPlayerInitProxy : public VideoPlayer {
 public:
     VideoPlayerInitProxy(QWidget *parent = nullptr);
     ~VideoPlayerInitProxy();
-
-    bool showVideo(const QString &file);
+    bool showVideo(QString file);
     void seek(int pos);
     void seekRelative(int pos);
     void pauseResume();
@@ -32,8 +32,9 @@ public:
     int volume();
     void setVideoUnscaled(bool mode);
     void setLoopPlayback(bool mode);
-    const std::shared_ptr<VideoPlayer>& getPlayer();
+    std::shared_ptr<VideoPlayer> getPlayer();
     bool isInitialized();
+
     void installEventFilter(QObject *filterObj);
     void removeEventFilter(QObject *filterObj);
 
@@ -48,10 +49,10 @@ private:
     QLibrary playerLib;
     std::shared_ptr<VideoPlayer> player;
     bool initPlayer();
-    QStringList buildSearchPaths();
     QVBoxLayout layout;
     QLabel *errorLabel = nullptr;
     QObject *eventFilterObj = nullptr;
+
     QString libFile;
     QStringList libDirs;
 
@@ -60,4 +61,5 @@ private slots:
 
 signals:
     void playbackFinished();
+
 };

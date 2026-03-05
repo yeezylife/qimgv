@@ -7,12 +7,11 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QImageReader>
 #include <cmath>
 #include <cstring>
 #include "utils/stuff.h"
 #include "settings.h"
-
-#include <QImageReader>
 
 enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };
 
@@ -55,4 +54,10 @@ private:
     bool detectAnimatedAvif();
     QMap<QString, QString> exifTags;
     QMimeType mMimeType;
+    
+    // 新增：QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)
+    int transformationToExifOrientation(QImageIOHandler::Transformations transformation) const;
+    
+    // 新增：格式化元数据值
+    QString formatMetadataValue(const QString &key, const QVariant &value) const;
 };

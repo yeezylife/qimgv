@@ -184,56 +184,182 @@ bool DocumentInfo::detectAnimatedAvif() {
     return result;
 }
 
+// 新增：QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)
+int DocumentInfo::transformationToExifOrientation(QImageIOHandler::Transformations transformation) const {
+    // EXIF Orientation 标准值：
+    // 1 = 正常
+    // 2 = 水平翻转
+    // 3 = 旋转180度
+    // 4 = 垂直翻转
+    // 5 = 水平翻转 + 逆时针旋转90度
+    // 6 = 顺时针旋转90度
+    // 7 = 水平翻转 + 顺时针旋转90度
+    // 8 = 逆时针旋转90度
+    
+    if (transformation == QImageIOHandler::TransformationNone) {
+        return 1; // 正常
+    }
+    
+    bool mirror = transformation & QImageIOHandler::TransformationMirror;
+    bool flip = transformation & QImageIOHandler::TransformationFlip;
+    bool rotate90 = transformation & QImageIOHandler::TransformationRotate90;
+    bool rotate180 = transformation & QImageIOHandler::TransformationRotate180;
+    bool rotate270 = transformation & QImageIOHandler::TransformationRotate270;
+    
+    // 根据组合判断 EXIF orientation
+    if (rotate180 && !mirror && !flip) {
+        return 3; // 旋转180度
+    } else if (rotate90 && !mirror && !flip) {
+        return 6; // 顺时针旋转90度
+    } else if (rotate270 && !mirror && !flip) {
+        return 8; // 逆时针旋转90度（顺时针270度）
+    } else if (mirror && !rotate90 && !rotate180 && !rotate270) {
+        return 2; // 水平翻转
+    } else if (flip && !rotate90 && !rotate180 && !rotate270) {
+        return 4; // 垂直翻转
+    } else if (mirror && rotate270) {
+        return 5; // 水平翻转 + 逆时针旋转90度
+    } else if (mirror && rotate90) {
+        return 7; // 水平翻转 + 顺时针旋转90度
+    }
+    
+    return 1; // 默认正常
+}
+
+void DocumentInfo::loadExifOrientation() {
+    if(mDocumentType == DocumentType::VIDEO || mDocumentType == DocumentType::NONE)
+        return;
+
+    QString path = filePath();
+    QImageReader *reader = nullptr;
+    if(!mFormat.isEmpty())
+        reader = new QImageReader(path, mFormat.toStdString().c_str());
+    else
+        reader = new QImageReader(path);
+
+    if(reader->canRead()) {
+        QImageIOHandler::Transformations transformation = reader->transformation();
+        mOrientation = transformationToExifOrientation(transformation);
+    }
+    delete reader;
+}
+
+// 新增：格式化元数据值
+QString DocumentInfo::formatMetadataValue(const QString &key, const QVariant &value) const {
+    // 处理特殊的元数据键
+    if (key == "ExposureTime") {
+        bool ok;
+        double expTime = value.toDouble(&ok);
+        if (ok && expTime > 0) {
+            if (expTime < 1.0) {
+                int denominator = qRound(1.0 / expTime);
+                return QString("1/%1 %2").arg(denominator).arg(QObject::tr("sec"));
+            } else {
+                return QString("%1 %2").arg(expTime, 0, 'f', 2).arg(QObject::tr("sec"));
+            }
+        }
+    } else if (key == "FNumber" || key == "ApertureValue") {
+        bool ok;
+        double fnum = value.toDouble(&ok);
+        if (ok && fnum > 0) {
+            return QString("f/%1").arg(fnum, 0, 'g', 3);
+        }
+    } else if (key == "FocalLength") {
+        bool ok;
+        double focal = value.toDouble(&ok);
+        if (ok && focal > 0) {
+            return QString("%1 %2").arg(focal, 0, 'g', 3).arg(QObject::tr("mm"));
+        }
+    } else if (key == "ISOSpeedRatings" || key == "PhotographicSensitivity") {
+        return value.toString();
+    }
+    
+    return value.toString();
+}
+
 void DocumentInfo::loadExifTags() {
-    if(exifLoaded) return;
+    if(exifLoaded)
+        return;
     exifLoaded = true;
     exifTags.clear();
-
-    QImageReader reader(filePath());
-    if(!reader.canRead()) return;
-
-    // 使用字符串键名直接访问 EXIF 元数据
-    QStringList keys = { "Make", "Model", "DateTime", "ExposureTime", "FNumber", "ISOSpeedRatings", "Flash", "FocalLength", "UserComment" };
     
-    for(const QString &key : keys) {
-        QVariant val = reader.metaData(key);
-        if(!val.isNull()) {
-            exifTags.insert(key, val.toString());
+    QString path = filePath();
+    QImageReader reader(path);
+    
+    if (!reader.canRead()) {
+        qDebug() << "Cannot read image metadata from:" << path;
+        return;
+    }
+    
+    // QImageReader 支持的元数据键名映射
+    // 参考：https://doc.qt.io/qt-6/qimagereader.html#textKeys
+    
+    QStringList textKeys = reader.textKeys();
+    
+    // 标准 EXIF 键名映射表
+    QMap<QString, QString> keyMapping = {
+        // 基本信息
+        {"Make", QObject::tr("Make")},
+        {"Model", QObject::tr("Model")},
+        {"DateTime", QObject::tr("Date/Time")},
+        {"DateTimeOriginal", QObject::tr("Date/Time")},
+        {"DateTimeDigitized", QObject::tr("Date/Time")},
+        
+        // 曝光信息
+        {"ExposureTime", QObject::tr("ExposureTime")},
+        {"FNumber", QObject::tr("F Number")},
+        {"ApertureValue", QObject::tr("F Number")},
+        {"ISOSpeedRatings", QObject::tr("ISO Speed ratings")},
+        {"PhotographicSensitivity", QObject::tr("ISO Speed ratings")},
+        {"Flash", QObject::tr("Flash")},
+        {"FocalLength", QObject::tr("Focal Length")},
+        
+        // 其他
+        {"UserComment", QObject::tr("UserComment")},
+        {"ImageDescription", QObject::tr("UserComment")},
+        {"Software", "Software"},
+        {"Artist", "Artist"},
+        {"Copyright", "Copyright"},
+        
+        // PNG 特定
+        {"Description", QObject::tr("UserComment")},
+        {"Comment", QObject::tr("UserComment")},
+        {"Author", "Artist"},
+    };
+    
+    // 遍历所有可用的文本键
+    for (const QString &key : textKeys) {
+        QString value = reader.text(key);
+        
+        if (value.isEmpty())
+            continue;
+        
+        // 查找映射的显示名称
+        QString displayKey = keyMapping.value(key, key);
+        
+        // 格式化特殊值
+        QString formattedValue = formatMetadataValue(key, value);
+        
+        // 处理 UserComment 的特殊情况（去除 charset 前缀）
+        if (key == "UserComment" && formattedValue.startsWith("charset=")) {
+            int spaceIndex = formattedValue.indexOf(" ");
+            if (spaceIndex > 0) {
+                formattedValue = formattedValue.mid(spaceIndex + 1);
+            }
+        }
+        
+        // 避免重复添加相同的信息
+        if (!exifTags.contains(displayKey)) {
+            exifTags.insert(displayKey, formattedValue);
         }
     }
     
-    // 特殊处理曝光时间格式
-    if(exifTags.contains("ExposureTime")) {
-        QString expStr = exifTags.value("ExposureTime");
-        qreal exp = expStr.toDouble();
-        if(exp > 0 && exp < 1.0) {
-            qreal expValue = round(1.0 / exp);
-            exifTags.insert("ExposureTime", "1/" + QString::number(expValue) + " sec");
-        } else {
-            exifTags.insert("ExposureTime", QString::number(exp) + " sec");
-        }
-    }
-    
-    // 特殊处理 FNumber 格式
-    if(exifTags.contains("FNumber")) {
-        QString fStr = exifTags.value("FNumber");
-        qreal fn = fStr.toDouble();
-        exifTags.insert("FNumber", "f/" + QString::number(fn, 'g', 3));
-    }
-    
-    // 特殊处理 FocalLength 格式
-    if(exifTags.contains("FocalLength")) {
-        QString flStr = exifTags.value("FocalLength");
-        qreal fl = flStr.toDouble();
-        exifTags.insert("FocalLength", QString::number(fl, 'g', 3) + " mm");
-    }
-    
-    // 特殊处理 UserComment，移除 charset 信息
-    if(exifTags.contains("UserComment")) {
-        QString comment = exifTags.value("UserComment");
-        if(comment.startsWith("charset=")) {
-            comment.remove(0, comment.indexOf(" ") + 1);
-            exifTags.insert("UserComment", comment);
+    // 如果没有找到任何元数据，尝试读取图片尺寸作为基本信息
+    if (exifTags.isEmpty()) {
+        QSize size = reader.size();
+        if (size.isValid()) {
+            exifTags.insert(QObject::tr("Dimensions"), 
+                          QString("%1 x %2").arg(size.width()).arg(size.height()));
         }
     }
 }
@@ -242,30 +368,4 @@ QMap<QString, QString> DocumentInfo::getExifTags() {
     if(!exifLoaded)
         loadExifTags();
     return exifTags;
-}
-
-void DocumentInfo::loadExifOrientation() {
-    if(mDocumentType == DocumentType::VIDEO || mDocumentType == DocumentType::NONE)
-        return;
-
-    // 直接在栈上构造，无需 new/delete
-    QImageReader reader(filePath()); 
-    if(!mFormat.isEmpty())
-        reader.setFormat(mFormat.toUtf8());
-
-    if(reader.canRead()) {
-        // 获取 Qt 风格的变换枚举并转换为标准 EXIF Orientation (1-8)
-        auto transform = reader.transformation();
-        switch(transform) {
-            case QImageIOHandler::TransformationNone: mOrientation = 1; break;
-            case QImageIOHandler::TransformationRotate90: mOrientation = 6; break;
-            case QImageIOHandler::TransformationRotate180: mOrientation = 3; break;
-            case QImageIOHandler::TransformationRotate270: mOrientation = 8; break;
-            case QImageIOHandler::TransformationFlipHorizontal: mOrientation = 2; break;
-            case QImageIOHandler::TransformationFlipVertical: mOrientation = 4; break;
-            case QImageIOHandler::TransformationFlipAboutDiagonal: mOrientation = 5; break;
-            case QImageIOHandler::TransformationMirror: mOrientation = 7; break;
-            default: mOrientation = 1; break;
-        }
-    }
 }

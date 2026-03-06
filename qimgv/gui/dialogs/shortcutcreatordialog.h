@@ -30,6 +30,8 @@ private slots:
     void onShortcutEdited();
 
 private:
+    void initializeDialog();
+    
     Ui::ShortcutCreatorDialog *ui;
     QList<QString> actionList, scriptList;
 };

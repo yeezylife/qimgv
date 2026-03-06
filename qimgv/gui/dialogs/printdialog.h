@@ -27,14 +27,17 @@ public:
 private slots:
     void print();
     void exportPdf();
-    QRectF getImagePrintRect(QPrinter *printer);
     void updatePreview();
     void setLandscape(bool mode);
     void onPrinterSelected(QString name);
-    QString pdfPathDialog();
 
 private:
+    void initializePrinters();
+    void setupConnections();
     void saveSettings();
+    QRectF getImagePrintRect(QPrinter *printer);
+    QString pdfPathDialog();
+    
     Ui::PrintDialog *ui;
     std::shared_ptr<const QImage> img = nullptr;
     QPrinter pdfPrinter, *printer = nullptr;

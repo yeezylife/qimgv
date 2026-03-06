@@ -4,13 +4,17 @@
 FileReplaceDialog::FileReplaceDialog(QWidget *parent) : QDialog(parent), ui(new Ui::FileReplaceDialog) {
     ui->setupUi(this);
     multi = false;
-    connect(ui->yesButton, &QPushButton::clicked, this, &FileReplaceDialog::onYesClicked);
-    connect(ui->noButton, &QPushButton::clicked, this, &FileReplaceDialog::onNoClicked);
-    connect(ui->cancelButton, &QPushButton::clicked, this, &FileReplaceDialog::onCancelClicked);
+    initializeDialog();
 }
 
 FileReplaceDialog::~FileReplaceDialog() {
     delete ui;
+}
+//------------------------------------------------------------------------------
+void FileReplaceDialog::initializeDialog() {
+    connect(ui->yesButton, &QPushButton::clicked, this, &FileReplaceDialog::onYesClicked);
+    connect(ui->noButton, &QPushButton::clicked, this, &FileReplaceDialog::onNoClicked);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &FileReplaceDialog::onCancelClicked);
 }
 
 void FileReplaceDialog::setSource(QString src) {

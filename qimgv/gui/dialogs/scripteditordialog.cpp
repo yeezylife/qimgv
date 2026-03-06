@@ -7,10 +7,7 @@ ScriptEditorDialog::ScriptEditorDialog(QWidget *parent) :
     editMode(false)
 {
     ui->setupUi(this);
-    this->setWindowTitle(tr("New application/script"));
-    ui->keywordsLabel->setText(tr("Keywords:") + " %file%");
-    connect(ui->nameLineEdit, &QLineEdit::textChanged, this, &ScriptEditorDialog::onNameChanged);
-    this->onNameChanged(ui->nameLineEdit->text());
+    initializeDialog();
 }
 
 ScriptEditorDialog::ScriptEditorDialog(QString name, Script script, QWidget *parent)
@@ -19,6 +16,21 @@ ScriptEditorDialog::ScriptEditorDialog(QString name, Script script, QWidget *par
       editMode(true)
 {
     ui->setupUi(this);
+    initializeEditMode(name, script);
+}
+
+ScriptEditorDialog::~ScriptEditorDialog() {
+    delete ui;
+}
+//------------------------------------------------------------------------------
+void ScriptEditorDialog::initializeDialog() {
+    this->setWindowTitle(tr("New application/script"));
+    ui->keywordsLabel->setText(tr("Keywords:") + " %file%");
+    connect(ui->nameLineEdit, &QLineEdit::textChanged, this, &ScriptEditorDialog::onNameChanged);
+    this->onNameChanged(ui->nameLineEdit->text());
+}
+//------------------------------------------------------------------------------
+void ScriptEditorDialog::initializeEditMode(QString name, Script script) {
     this->setWindowTitle(tr("Edit"));
     this->onNameChanged(ui->nameLineEdit->text());
     editTarget = name;
@@ -27,10 +39,6 @@ ScriptEditorDialog::ScriptEditorDialog(QString name, Script script, QWidget *par
     ui->pathLineEdit->setText(script.command);
     ui->blockingCheckBox->setChecked(script.blocking);
     this->onNameChanged(ui->nameLineEdit->text());
-}
-
-ScriptEditorDialog::~ScriptEditorDialog() {
-    delete ui;
 }
 
 QString ScriptEditorDialog::scriptName() {

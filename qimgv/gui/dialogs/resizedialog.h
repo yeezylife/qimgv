@@ -34,6 +34,9 @@ protected:
 private:
     Ui::ResizeDialog *ui;
     QSize originalSize, targetSize, desktopSize;
+    
+    void initializeDialog();
+    void setupConnections();
     void updateToTargetValues();
     void resetResCheckBox();   // 重置分辨率下拉框
 
@@ -47,7 +50,6 @@ private slots:
     void reset();
     void fitDesktop();
     void fillDesktop();
-    // 移除了 onAspectRatioCheckbox 槽
     void onPercentageRadioButton();
     void onAbsoluteSizeRadioButton();
 signals:

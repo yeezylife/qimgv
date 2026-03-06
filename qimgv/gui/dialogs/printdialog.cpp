@@ -6,37 +6,23 @@ PrintDialog::PrintDialog(QWidget *parent)
 {
     ui->setupUi(this);
     ui->previewLabel->setContentsMargins(0,0,0,0);
+    
+    // 初始化PDF打印机
     pdfPrinter.setOutputFormat(QPrinter::PdfFormat);
     pdfPrinter.setPageSize(QPageSize(QPageSize::A4));
     pdfPrinter.setOutputFileName(" ");
-    QStringList printerList = QPrinterInfo::availablePrinterNames();
-    if(printerList.isEmpty()) {
-        ui->printerListComboBox->hide();
-        ui->printButton->setEnabled(false);
-        ui->exportPdfButton->setFocus();
-    } else {
-        ui->printerListPlaceholder->hide();
-        ui->printerListComboBox->addItems(printerList);
-        ui->printerListComboBox->setCurrentText(QPrinterInfo::defaultPrinterName());
-        if(printerList.contains(settings->lastPrinter()))
-            onPrinterSelected(settings->lastPrinter());
-        else
-            onPrinterSelected(QPrinterInfo::defaultPrinterName());
-        printPdfDefault = settings->printPdfDefault();
-    }
+    
+    initializePrinters();
+    setupConnections();
+    
+    // 加载设置
     ui->color->setChecked(settings->printColor());
     setLandscape(settings->printLandscape());
     ui->fitToPageCheckBox->setChecked(settings->printFitToPage());
+    printPdfDefault = settings->printPdfDefault();
+    
     if(printPdfDefault)
         ui->exportPdfButton->setFocus();
-    // ui signals
-    connect(ui->cancelButton, &QPushButton::clicked, this, &QWidget::close);
-    connect(ui->printButton, &QPushButton::clicked, this, &PrintDialog::print);
-    connect(ui->exportPdfButton, &QPushButton::clicked, this, &PrintDialog::exportPdf);
-    connect(ui->printerListComboBox, &QComboBox::currentTextChanged, this, &PrintDialog::onPrinterSelected);
-    connect(ui->landscape, &QRadioButton::toggled, this, &PrintDialog::setLandscape);
-    connect(ui->fitToPageCheckBox, &QCheckBox::toggled, this, &PrintDialog::updatePreview);
-    connect(ui->color, &QRadioButton::toggled, this, &PrintDialog::updatePreview);
 }
 
 void PrintDialog::saveSettings() {
@@ -53,6 +39,34 @@ PrintDialog::~PrintDialog() {
     if(printer)
         delete printer;
     delete ui;
+}
+//------------------------------------------------------------------------------
+void PrintDialog::initializePrinters() {
+    QStringList printerList = QPrinterInfo::availablePrinterNames();
+    if(printerList.isEmpty()) {
+        ui->printerListComboBox->hide();
+        ui->printButton->setEnabled(false);
+        ui->exportPdfButton->setFocus();
+    } else {
+        ui->printerListPlaceholder->hide();
+        ui->printerListComboBox->addItems(printerList);
+        ui->printerListComboBox->setCurrentText(QPrinterInfo::defaultPrinterName());
+        if(printerList.contains(settings->lastPrinter()))
+            onPrinterSelected(settings->lastPrinter());
+        else
+            onPrinterSelected(QPrinterInfo::defaultPrinterName());
+    }
+}
+//------------------------------------------------------------------------------
+void PrintDialog::setupConnections() {
+    // ui signals
+    connect(ui->cancelButton, &QPushButton::clicked, this, &QWidget::close);
+    connect(ui->printButton, &QPushButton::clicked, this, &PrintDialog::print);
+    connect(ui->exportPdfButton, &QPushButton::clicked, this, &PrintDialog::exportPdf);
+    connect(ui->printerListComboBox, &QComboBox::currentTextChanged, this, &PrintDialog::onPrinterSelected);
+    connect(ui->landscape, &QRadioButton::toggled, this, &PrintDialog::setLandscape);
+    connect(ui->fitToPageCheckBox, &QCheckBox::toggled, this, &PrintDialog::updatePreview);
+    connect(ui->color, &QRadioButton::toggled, this, &PrintDialog::updatePreview);
 }
 
 void PrintDialog::setImage(std::shared_ptr<const QImage> _img) {

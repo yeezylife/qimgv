@@ -35,6 +35,12 @@ public slots:
     int exec();
 
 private:
+    void initializeLanguageMap();
+    void setupColorSchemeConnections();
+    void setupRadioGroups();
+    void setupSidebar();
+    void adjustSizeToContents();
+    
     void readColorScheme();
     void setColorScheme(ColorScheme colors);
     void saveColorScheme();
@@ -46,10 +52,8 @@ private:
     void saveShortcuts();
     void addShortcutToTable(const QString &action, const QString &shortcut);
     void addScriptToList(const QString &name);
-
-    void setupSidebar();
     void removeShortcutAt(int row);
-    void adjustSizeToContents();
+
     QMap<QString, QString> langs; // <"en_US", "English">
     QButtonGroup fitModeGrp, folderEndGrp, zoomIndGrp;
 
@@ -77,7 +81,6 @@ private slots:
     void resetToDesktopTheme();    
     void onAutoResizeLimitSliderChanged(int value);
     void onMouseScrollingSpeedSliderChanged(int value);
-
     void resetZoomLevels();
 signals:
     void settingsChanged();

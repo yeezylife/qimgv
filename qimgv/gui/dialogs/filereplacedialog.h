@@ -5,11 +5,7 @@ struct DialogResult {
     bool yes = false;
     bool all = false;
     bool cancel = false;
-    /*DIALOG_YES,
-    DIALOG_YESTOALL,
-    DIALOG_NO,
-    DIALOG_NOTOALL,
-    DIALOG_CANCEL*/
+    
     bool operator==(bool const &cmp) const {
         return yes == cmp;
     }
@@ -37,17 +33,20 @@ public:
     ~FileReplaceDialog();
 
     void setMode(FileReplaceMode mode);
-    void setMulti(bool);
+    void setMulti(bool multi);
     DialogResult getResult();
 
     void setSource(QString src);
     void setDestination(QString dst);
+    
 private slots:
     void onYesClicked();
     void onNoClicked();
     void onCancelClicked();
 
 private:
+    void initializeDialog();
+    
     Ui::FileReplaceDialog *ui;
     bool multi;
     DialogResult result;

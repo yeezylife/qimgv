@@ -28,6 +28,9 @@ private slots:
 
     void selectScriptPath();
 private:
+    void initializeDialog();
+    void initializeEditMode(QString name, Script script);
+    
     Ui::ScriptEditorDialog *ui;
     bool editMode;
     QString editTarget;

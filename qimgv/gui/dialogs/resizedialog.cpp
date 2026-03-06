@@ -7,11 +7,22 @@ ResizeDialog::ResizeDialog(QSize originalSize,  QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowModality(Qt::ApplicationModal);
-    ui->percent->setFocus();
-
+    
     this->originalSize = originalSize;
     targetSize = originalSize;
+    desktopSize = qApp->primaryScreen()->size();
+    
+    initializeDialog();
+    setupConnections();
+}
 
+ResizeDialog::~ResizeDialog() {
+    delete ui;
+}
+//------------------------------------------------------------------------------
+void ResizeDialog::initializeDialog() {
+    ui->percent->setFocus();
+    
     ui->width->setValue(originalSize.width());
     ui->height->setValue(originalSize.height());
 
@@ -19,24 +30,20 @@ ResizeDialog::ResizeDialog(QSize originalSize,  QWidget *parent) :
                              QString::number(originalSize.width()) +
                              " x " +
                              QString::number(originalSize.height()));
-
-    desktopSize = qApp->primaryScreen()->size();
+}
+//------------------------------------------------------------------------------
+void ResizeDialog::setupConnections() {
     connect(ui->byPercentage,   &QRadioButton::toggled, this, &ResizeDialog::onPercentageRadioButton);
     connect(ui->byAbsoluteSize, &QRadioButton::toggled, this, &ResizeDialog::onAbsoluteSizeRadioButton);
     connect(ui->percent, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::percentChanged);
     connect(ui->width,  qOverload<int>(&QSpinBox::valueChanged), this, &ResizeDialog::widthChanged);
     connect(ui->height, qOverload<int>(&QSpinBox::valueChanged), this, &ResizeDialog::heightChanged);
-    // 移除了 keepAspectRatio 的连接
     connect(ui->resComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &ResizeDialog::setCommonResolution);
     connect(ui->fitDesktopButton, &QPushButton::pressed, this, &ResizeDialog::fitDesktop);
     connect(ui->fillDesktopButton, &QPushButton::pressed, this, &ResizeDialog::fillDesktop);
     connect(ui->resetButton, &QPushButton::pressed, this, &ResizeDialog::reset);
     connect(ui->cancelButton, &QPushButton::pressed, this, &ResizeDialog::reject);
     connect(ui->okButton, &QPushButton::pressed, this, &ResizeDialog::sizeSelect);
-}
-
-ResizeDialog::~ResizeDialog() {
-    delete ui;
 }
 
 void ResizeDialog::sizeSelect() {

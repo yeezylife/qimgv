@@ -8,6 +8,12 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle(tr("Preferences — ") + qApp->applicationName());
 
+    initializeLanguageMap();
+    setupColorSchemeConnections();
+    setupRadioGroups();
+    setupSidebar();
+    
+    // UI 初始化
     ui->shortcutsTableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);   
     ui->aboutAppTextBrowser->viewport()->setAutoFillBackground(false);
     ui->versionLabel->setText("" + QApplication::applicationVersion());
@@ -15,6 +21,69 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui->appIconLabel->setPixmap(QIcon(":/res/icons/common/logo/app/22.png").pixmap(22,22));
     ui->qtIconLabel->setPixmap(QIcon(":/res/icons/common/logo/3rdparty/qt22.png").pixmap(22,16));
 
+    // 颜色选择器描述
+    ui->colorSelectorAccent->setDescription(tr("Accent color"));
+    ui->colorSelectorBackground->setDescription(tr("Windowed mode background"));
+    ui->colorSelectorFullscreen->setDescription(tr("Fullscreen mode background"));
+    ui->colorSelectorFolderview->setDescription(tr("FolderView background"));
+    ui->colorSelectorFolderviewPanel->setDescription(tr("FolderView top panel"));
+    ui->colorSelectorText->setDescription(tr("Text color"));
+    ui->colorSelectorWidget->setDescription(tr("Widget background"));
+    ui->colorSelectorWidgetBorder->setDescription(tr("Widget border"));
+    ui->colorSelectorOverlay->setDescription(tr("Overlay background"));
+    ui->colorSelectorOverlayText->setDescription(tr("Overlay text"));
+    ui->colorSelectorScrollbar->setDescription(tr("Scrollbars"));
+
+#ifndef USE_KDE_BLUR
+    ui->blurBackgroundCheckBox->setEnabled(false);
+#endif
+
+#ifndef USE_MPV
+    ui->videoPlaybackGroup->setEnabled(false);
+#endif
+
+#ifdef USE_OPENCV
+    ui->scalingQualityComboBox->addItem("Bilinear+sharpen (OpenCV)");
+    ui->scalingQualityComboBox->addItem("Bicubic (OpenCV)");
+    ui->scalingQualityComboBox->addItem("Bicubic+sharpen (OpenCV)");
+#endif
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    ui->memoryLimitSpinBox->setEnabled(false);
+    ui->memoryLimitLabel->setEnabled(false);
+#endif
+
+    if(!settings->supportedFormats().contains("jxl"))
+        ui->animatedJxlCheckBox->hide();
+
+    connect(this, &SettingsDialog::settingsChanged, settings, &Settings::sendChangeNotification);
+    readSettings();
+
+    adjustSizeToContents();
+}
+//------------------------------------------------------------------------------
+SettingsDialog::~SettingsDialog() {
+    delete ui;
+}
+//------------------------------------------------------------------------------
+void SettingsDialog::initializeLanguageMap() {
+    // readable language names
+    langs.insert("de_DE", "Deutsch");
+    langs.insert("en_US", "English");
+    langs.insert("es_ES", "Español");
+    langs.insert("fr_FR", "Français");
+    langs.insert("ja_JP", "日本語");
+    langs.insert("tr_TR", "Türkçe");
+    langs.insert("uk_UA", "Українська");
+    langs.insert("zh_CN", "简体中文");
+    // fill langs combobox, sorted by locale
+    ui->langComboBox->addItems(langs.values());
+    // insert system language entry manually at the beginning
+    langs.insert("system", "System language");
+    ui->langComboBox->insertItem(0, "System language");
+}
+//------------------------------------------------------------------------------
+void SettingsDialog::setupColorSchemeConnections() {
     // fake combobox that acts as a menu button
     // less code than using pushbutton with menu
     // will be replaced with something custom later
@@ -50,46 +119,9 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
         setColorScheme(ThemeStore::colorScheme(COLORS_CUSTOMIZED));
         settings->setColorTid(COLORS_CUSTOMIZED);
     });
-
-    ui->colorSelectorAccent->setDescription(tr("Accent color"));
-    ui->colorSelectorBackground->setDescription(tr("Windowed mode background"));
-    ui->colorSelectorFullscreen->setDescription(tr("Fullscreen mode background"));
-    ui->colorSelectorFolderview->setDescription(tr("FolderView background"));
-    ui->colorSelectorFolderviewPanel->setDescription(tr("FolderView top panel"));
-    ui->colorSelectorText->setDescription(tr("Text color"));
-    ui->colorSelectorWidget->setDescription(tr("Widget background"));
-    ui->colorSelectorWidgetBorder->setDescription(tr("Widget border"));
-    ui->colorSelectorOverlay->setDescription(tr("Overlay background"));
-    ui->colorSelectorOverlayText->setDescription(tr("Overlay text"));
-    ui->colorSelectorScrollbar->setDescription(tr("Scrollbars"));
-
-#ifndef USE_KDE_BLUR
-    ui->blurBackgroundCheckBox->setEnabled(false);
-#endif
-
-#ifndef USE_MPV
-    ui->videoPlaybackGroup->setEnabled(false);
-    //ui->novideoInfoLabel->setHidden(false);
-#else
-    //ui->novideoInfoLabel->setHidden(true);
-#endif
-
-#ifdef USE_OPENCV
-    ui->scalingQualityComboBox->addItem("Bilinear+sharpen (OpenCV)");
-    ui->scalingQualityComboBox->addItem("Bicubic (OpenCV)");
-    ui->scalingQualityComboBox->addItem("Bicubic+sharpen (OpenCV)");
-#endif
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ui->memoryLimitSpinBox->setEnabled(false);
-    ui->memoryLimitLabel->setEnabled(false);
-#endif
-
-    if(!settings->supportedFormats().contains("jxl"))
-        ui->animatedJxlCheckBox->hide();
-
-    setupSidebar();
-
+}
+//------------------------------------------------------------------------------
+void SettingsDialog::setupRadioGroups() {
     // setup radioBtn groups
     fitModeGrp.addButton(ui->fitModeWindow);
     fitModeGrp.addButton(ui->fitModeWidth);
@@ -101,30 +133,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     zoomIndGrp.addButton(ui->zoomIndicatorAuto);
     zoomIndGrp.addButton(ui->zoomIndicatorOff);
     zoomIndGrp.addButton(ui->zoomIndicatorOn);
-
-    // readable language names
-    langs.insert("de_DE", "Deutsch");
-    langs.insert("en_US", "English");
-    langs.insert("es_ES", "Español");
-    langs.insert("fr_FR", "Français");
-    langs.insert("ja_JP", "日本語");
-    langs.insert("tr_TR", "Türkçe");
-    langs.insert("uk_UA", "Українська");
-    langs.insert("zh_CN", "简体中文");
-    // fill langs combobox, sorted by locale
-    ui->langComboBox->addItems(langs.values());
-    // insert system language entry manually at the beginning
-    langs.insert("system", "System language");
-    ui->langComboBox->insertItem(0, "System language");
-
-    connect(this, &SettingsDialog::settingsChanged, settings, &Settings::sendChangeNotification);
-    readSettings();
-
-    adjustSizeToContents();
-}
-//------------------------------------------------------------------------------
-SettingsDialog::~SettingsDialog() {
-    delete ui;
 }
 //------------------------------------------------------------------------------
 // an attempt to force minimum width to fit contents

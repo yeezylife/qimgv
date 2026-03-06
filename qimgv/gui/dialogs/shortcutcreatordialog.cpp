@@ -6,6 +6,14 @@ ShortcutCreatorDialog::ShortcutCreatorDialog(QWidget *parent) :
     ui(new Ui::ShortcutCreatorDialog)
 {
     ui->setupUi(this);
+    initializeDialog();
+}
+
+ShortcutCreatorDialog::~ShortcutCreatorDialog() {
+    delete ui;
+}
+//------------------------------------------------------------------------------
+void ShortcutCreatorDialog::initializeDialog() {
     setWindowTitle("Add shortcut");
     actionList = appActions->getList();
     scriptList = scriptManager->scriptNames();
@@ -15,10 +23,6 @@ ShortcutCreatorDialog::ShortcutCreatorDialog(QWidget *parent) :
 
     ui->scriptsComboBox->addItems(scriptList);
     ui->scriptsComboBox->setCurrentIndex(0);
-}
-
-ShortcutCreatorDialog::~ShortcutCreatorDialog() {
-    delete ui;
 }
 
 QString ShortcutCreatorDialog::selectedAction() {

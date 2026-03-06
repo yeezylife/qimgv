@@ -5,6 +5,7 @@
 #include <QPen>
 #include <QDebug>
 #include <QPaintEvent>
+#include <memory>
 
 class MapOverlay : public QWidget
 {
@@ -71,5 +72,5 @@ protected:
 private:
     bool visibilityEnabled, imageDoesNotFit;
     class MapOverlayPrivate;
-    MapOverlayPrivate* d;
+    std::unique_ptr<MapOverlayPrivate> d;
 };

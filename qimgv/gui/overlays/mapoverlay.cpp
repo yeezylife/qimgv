@@ -1,6 +1,7 @@
 #include "mapoverlay.h"
 #include <QPropertyAnimation>
 #include "settings.h"
+#include <memory>
 
 class MapOverlay::MapOverlayPrivate : public QObject {
 public:
@@ -19,7 +20,8 @@ public:
     float innerOffset;
     int margin;
 
-    QPropertyAnimation *opacityAnimation, *transitionAnimation;
+    std::unique_ptr<QPropertyAnimation> opacityAnimation;
+    std::unique_ptr<QPropertyAnimation> transitionAnimation;
     MapOverlay::Location location;
 };
 
@@ -29,10 +31,7 @@ MapOverlay::MapOverlayPrivate::MapOverlayPrivate(MapOverlay *qq)
     location = MapOverlay::RightBottom;
 }
 
-MapOverlay::MapOverlayPrivate::~MapOverlayPrivate() {
-    delete opacityAnimation;
-    delete transitionAnimation;
-}
+MapOverlay::MapOverlayPrivate::~MapOverlayPrivate() = default;
 
 void MapOverlay::MapOverlayPrivate::moveInnerWidget(float x, float y) {
     if(x + innerRect.width() > outerRect.right())
@@ -75,22 +74,20 @@ void MapOverlay::MapOverlayPrivate::moveMainImage(float xPos, float yPos) {
 
 MapOverlay::MapOverlay(QWidget *parent) : QWidget(parent),
     visibilityEnabled(true),
-    d(new MapOverlayPrivate(this)) {
+    d(std::make_unique<MapOverlayPrivate>(this)) {
     this->setMouseTracking(true);
-    d->opacityAnimation = new QPropertyAnimation(this, "opacity");
+    d->opacityAnimation = std::make_unique<QPropertyAnimation>(this, "opacity");
     d->opacityAnimation->setEasingCurve(QEasingCurve::OutSine);
     d->opacityAnimation->setDuration(150);
 
-    d->transitionAnimation = new QPropertyAnimation(this, "y");
+    d->transitionAnimation = std::make_unique<QPropertyAnimation>(this, "y");
     d->transitionAnimation->setDuration(200);
     d->transitionAnimation->setEasingCurve(QEasingCurve::OutExpo);
 
     this->setVisible(true);
 }
 
-MapOverlay::~MapOverlay() {
-    delete d;
-}
+MapOverlay::~MapOverlay() = default;
 
 QSizeF MapOverlay::inner() const {
     return d->innerRect.size();

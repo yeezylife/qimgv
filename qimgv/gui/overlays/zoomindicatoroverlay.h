@@ -18,7 +18,7 @@ protected:
     virtual void recalculateGeometry();
 
 private:
-    QFontMetrics *fm;
+    QFontMetrics fm;
     QHBoxLayout layout;
     QLabel label;
     QTimer visibilityTimer;

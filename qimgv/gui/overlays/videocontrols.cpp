@@ -44,21 +44,28 @@ void VideoControls::setMode(PlaybackMode _mode) {
     ui->muteButton->setVisible( (mode == PLAYBACK_VIDEO) );
 }
 
-void VideoControls::setPlaybackDuration(int duration) {
-    QString durationStr;
+// helper used by duration/position setters
+static QString formatSeconds(int value, PlaybackMode mode, bool forPosition=false) {
     if(mode == PLAYBACK_VIDEO) {
-        int _time = duration;
+        int _time = value;
         int hours = _time / 3600;
         _time -= hours * 3600;
         int minutes = _time / 60;
         int seconds = _time - minutes * 60;
-        durationStr = QString("%1").arg(minutes, 2, 10, QChar('0')) + ":" +
-                      QString("%1").arg(seconds, 2, 10, QChar('0'));
+        QString s = QString("%1").arg(minutes, 2, 10, QChar('0')) + ":" +
+                    QString("%1").arg(seconds, 2, 10, QChar('0'));
         if(hours)
-            durationStr.prepend(QString("%1").arg(hours, 2, 10, QChar('0')) + ":");
-    } else {
-        durationStr = QString::number(duration);
+            s.prepend(QString("%1").arg(hours, 2, 10, QChar('0')) + ":");
+        return s;
     }
+    // for non-video playback the position is 1‑based while duration is raw
+    if(forPosition)
+        return QString::number(value + 1);
+    return QString::number(value);
+}
+
+void VideoControls::setPlaybackDuration(int duration) {
+    QString durationStr = formatSeconds(duration, mode, false);
     ui->seekBar->setRange(0, duration - 1);
     ui->durationLabel->setText(durationStr);
     ui->positionLabel->setText(durationStr);
@@ -69,20 +76,7 @@ void VideoControls::setPlaybackDuration(int duration) {
 void VideoControls::setPlaybackPosition(int position) {
     if(position == lastPosition)
         return;
-    QString positionStr;
-    if(mode == PLAYBACK_VIDEO) {
-        int _time = position;
-        int hours = _time / 3600;
-        _time -= hours * 3600;
-        int minutes = _time / 60;
-        int seconds = _time - minutes * 60;
-        positionStr = QString("%1").arg(minutes, 2, 10, QChar('0')) + ":" +
-                      QString("%1").arg(seconds, 2, 10, QChar('0'));
-        if(hours)
-            positionStr.prepend(QString("%1").arg(hours, 2, 10, QChar('0')) + ":");
-    } else {
-        positionStr = QString::number(position + 1);
-    }
+    QString positionStr = formatSeconds(position, mode, true);
     ui->positionLabel->setText(positionStr);
     ui->seekBar->blockSignals(true);
     ui->seekBar->setValue(position);

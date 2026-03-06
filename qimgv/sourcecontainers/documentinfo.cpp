@@ -63,10 +63,6 @@ QDateTime DocumentInfo::lastModified() const {
 // Image from scratch, so don`t bother handling it here
 void DocumentInfo::refresh() {
     fileInfo.refresh();
-    // 清除缓存的 EXIF 信息，确保下次调用 getExifTags() 时重新加载
-    // 这修复了编辑并保存图片后，中文标题等元数据显示为乱码的问题
-    exifLoaded = false;
-    exifTags->clear();
 }
 
 int DocumentInfo::exifOrientation() const {

@@ -62,10 +62,16 @@ void TreeViewCustom::updateScrollbarStyle() {
         handle = settings->colorScheme().scrollbar.name();
     else
         handle = settings->colorScheme().folderview_hc.name();
+    
     overlayScrollbar.setGeometry(width() - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, height());
-    overlayScrollbar.setStyleSheet( "QScrollBar { background-color: transparent; } QScrollBar::handle:vertical { background-color: "+ handle +" } QScrollBar::handle:vertical:hover { background-color: " + hover + " }" );
-
-    overlayScrollbar.setVisible( (this->verticalScrollBar()->maximum()) );
+    overlayScrollbar.setVisible(verticalScrollBar()->maximum() > 0);
+    
+    // 使用更简洁的样式表构建
+    QString styleSheet = QString("QScrollBar { background-color: transparent; } "
+                                "QScrollBar::handle:vertical { background-color: %1 } "
+                                "QScrollBar::handle:vertical:hover { background-color: %2 }")
+                        .arg(handle).arg(hover);
+    overlayScrollbar.setStyleSheet(styleSheet);
 }
 
 void TreeViewCustom::keyPressEvent(QKeyEvent* event) {

@@ -304,10 +304,8 @@ void FolderView::setDirectoryPath(QString path) {
     if(keepExpand)
         ui->dirTreeView->expand(targetIndex);
 
-    // ok, i'm done with this shit. none of the "solutions" work
-    // just do scrollTo after a delay and hope that model is loaded by then
-    // larger than ~150ms becomes too noticeable
-    QTimer::singleShot(150, this, &FolderView::fsTreeScrollToCurrent);
+    // 使用更短的延迟时间，提高响应性
+    QTimer::singleShot(100, this, &FolderView::fsTreeScrollToCurrent);
 }
 
 void FolderView::fsTreeScrollToCurrent() {
@@ -368,20 +366,16 @@ void FolderView::paintEvent(QPaintEvent *) {
 
 void FolderView::resizeEvent(QResizeEvent *event) {
     Q_UNUSED(event)
-    if(width() < 600)
-        ui->placesPanel->setVisible(false);
-    else if (ui->togglePlacesPanelButton->isChecked())
-        ui->placesPanel->setVisible(true);
+    bool showPlacesPanel = width() >= 600 && ui->togglePlacesPanelButton->isChecked();
+    ui->placesPanel->setVisible(showPlacesPanel);
 
-    if(width() < 510) {
-        ui->zoomSlider->setVisible(false);
-        ui->zoomSliderSpacer->changeSize(0, 20, QSizePolicy::Fixed, QSizePolicy::Fixed);
-        ui->pathbarSpacer->changeSize(0, 20, QSizePolicy::Fixed, QSizePolicy::Fixed);
-        ui->topBar->layout()->invalidate();
-    } else {
-        ui->zoomSlider->setVisible(true);
-        ui->zoomSliderSpacer->changeSize(3, 20, QSizePolicy::Fixed, QSizePolicy::Fixed);
-        ui->pathbarSpacer->changeSize(12, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-        ui->topBar->layout()->invalidate();
-    }
+    bool showZoomControls = width() >= 510;
+    ui->zoomSlider->setVisible(showZoomControls);
+    
+    int spacerSize = showZoomControls ? 3 : 0;
+    int pathbarSpacerSize = showZoomControls ? 12 : 0;
+    
+    ui->zoomSliderSpacer->changeSize(spacerSize, 20, QSizePolicy::Fixed, QSizePolicy::Fixed);
+    ui->pathbarSpacer->changeSize(pathbarSpacerSize, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    ui->topBar->layout()->invalidate();
 }

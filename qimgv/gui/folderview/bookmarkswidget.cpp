@@ -32,8 +32,14 @@ void BookmarksWidget::addBookmark(QString dirPath) {
     QUrl url(dirPath);
     BookmarksItem *item = new BookmarksItem(url.fileName(), dirPath);
     layout.addWidget(item);
-    connect(item, &BookmarksItem::clicked, this, &BookmarksWidget::bookmarkClicked);
-    connect(item, &BookmarksItem::removeClicked, this, &BookmarksWidget::removeBookmark);
+    
+    // 使用 lambda 表达式简化信号连接
+    connect(item, &BookmarksItem::clicked, this, [this, dirPath]() {
+        emit bookmarkClicked(dirPath);
+    });
+    connect(item, &BookmarksItem::removeClicked, this, [this, dirPath]() {
+        removeBookmark(dirPath);
+    });
     connect(item, &BookmarksItem::droppedIn, this, &BookmarksWidget::droppedIn);
     saveBookmarks();
 }

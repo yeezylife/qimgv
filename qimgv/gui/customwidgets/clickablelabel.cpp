@@ -7,11 +7,11 @@ ClickableLabel::ClickableLabel(QWidget *parent) : QLabel(parent) {
 }
 
 ClickableLabel::ClickableLabel(const QString &text) {
-    this->setText(text);
+    setText(text);
 }
 
 ClickableLabel::ClickableLabel(const QString &text, QWidget *parent) : QLabel(parent) {
-    this->setText(text);
+    setText(text);
 }
 
 void ClickableLabel::mousePressEvent(QMouseEvent *event) {

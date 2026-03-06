@@ -31,7 +31,7 @@ protected:
     // this does nothing, reimplement to use
     virtual void recalculateGeometry();
     void paintEvent(QPaintEvent *event);
-    void setContainerSize(QSize container);
+    void setContainerSize(QSize newContainer);
 
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);

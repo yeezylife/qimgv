@@ -1543,7 +1543,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QWidget" name="widget_31" native="true">
+                     <widget class="QWidget" name="widget_lineSeparator1" native="true">
                       <property name="accessibleName">
                        <string notr="true">SLine</string>
                       </property>
@@ -4068,7 +4068,7 @@
                </layout>
               </item>
               <item>
-               <widget class="QWidget" name="widget_31" native="true">
+               <widget class="QWidget" name="widget_lineSeparator2" native="true">
                 <property name="accessibleName">
                  <string notr="true">SLine</string>
                 </property>

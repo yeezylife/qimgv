@@ -285,7 +285,7 @@ void MapOverlay::leaveEvent(QEvent *event) {
     this->update();
 }
 
-void MapOverlay::enterEvent(QEvent *event) {
+void MapOverlay::enterEvent(QEnterEvent *event) {
     Q_UNUSED(event)
     this->enableVisibility(isVisible());
     this->animateVisible(visibilityEnabled && imageDoesNotFit);

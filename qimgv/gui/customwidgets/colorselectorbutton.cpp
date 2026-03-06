@@ -10,7 +10,7 @@ void ColorSelectorButton::setColor(QColor &newColor) {
 }
 
 void ColorSelectorButton::setDescription(QString text) {
-    this->mDescription = text;
+    mDescription = text;
 }
 
 QColor ColorSelectorButton::color() {
@@ -30,7 +30,7 @@ void ColorSelectorButton::paintEvent(QPaintEvent *e) {
 
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    if(!this->isEnabled())
+    if(!isEnabled())
         p.setOpacity(0.5f);
     p.setPen(QColor(40,40,40));
     p.drawRect(QRectF(0.5f, 0.5f, width() - 1.0f, height() - 1.0f));

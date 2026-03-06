@@ -4,7 +4,7 @@ IconWidget::IconWidget(QWidget *parent)
     : QWidget(parent),
       pixmap(nullptr)
 {
-    dpr = this->devicePixelRatioF();
+    dpr = devicePixelRatioF();
     color = settings->colorScheme().icons;
     connect(settings, &Settings::settingsChanged, this, &IconWidget::onSettingsChanged);
 }
@@ -94,7 +94,7 @@ void IconWidget::applyColor() {
 void IconWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
     QPainter p(this);
-    if(!this->isEnabled())
+    if(!isEnabled())
         p.setOpacity(0.5f);
     QStyleOption opt;
     opt.initFrom(this);

@@ -27,7 +27,7 @@ void IconButton::setChecked(bool mode) {
 void IconButton::mousePressEvent(QMouseEvent *event) {
     Q_UNUSED(event)
     if(mCheckable) {
-        setChecked(!this->property("checked").toBool());
+        setChecked(!property("checked").toBool());
         emit toggled(mChecked);
     } else {
         mPressed = true;

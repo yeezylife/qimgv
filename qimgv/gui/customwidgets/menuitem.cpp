@@ -7,7 +7,7 @@ MenuItem::MenuItem(QWidget *parent)
     mLayout.setSpacing(2);
 
     setAccessibleName("MenuItem");
-    this->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     mTextLabel.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     mShortcutLabel.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     mIconWidget.setMinimumSize(26, 26); // 5px padding from stylesheet
@@ -33,7 +33,7 @@ MenuItem::~MenuItem() {
 }
 
 void MenuItem::setText(QString text) {
-    this->mTextLabel.setText(text);
+    mTextLabel.setText(text);
 }
 
 QString MenuItem::text() {
@@ -41,8 +41,8 @@ QString MenuItem::text() {
 }
 
 void MenuItem::setShortcutText(QString text) {
-    this->mShortcutLabel.setText(text);
-    this->adjustSize();
+    mShortcutLabel.setText(text);
+    adjustSize();
 }
 
 QString MenuItem::shortcut() {

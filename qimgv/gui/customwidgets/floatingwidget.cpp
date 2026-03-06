@@ -1,7 +1,11 @@
 #include "floatingwidget.h"
 
-FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent) : QWidget(parent) {
-    this->setAccessibleName("OverlayWidget");
+FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent)
+    : QWidget(parent)
+    , container()
+    , mAcceptKeyboardFocus(false)
+{
+    setAccessibleName("OverlayWidget");
     connect(parent, &FloatingWidgetContainer::resized, this, &FloatingWidget::onContainerResized);
     hide();
 }
@@ -52,6 +56,6 @@ void FloatingWidget::wheelEvent(QWheelEvent *event) {
 
 void FloatingWidget::hide() {
     QWidget::hide();
-    if(this->hasFocus() || isAncestorOf(qApp->focusWidget()))
+    if(hasFocus() || isAncestorOf(qApp->focusWidget()))
         parentWidget()->setFocus();
 }

@@ -27,7 +27,6 @@ jobs:
             mingw-w64-clang-x86_64-kimageformats
             mingw-w64-clang-x86_64-libjxl
             mingw-w64-clang-x86_64-libraw
-            mingw-w64-clang-x86_64-exiv2
             mingw-w64-clang-x86_64-opencv
             mingw-w64-clang-x86_64-mpv
             mingw-w64-clang-x86_64-lcms2

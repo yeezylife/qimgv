@@ -21,11 +21,10 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # USER OPTIONS
 # Usage: cmake -DVIDEO_SUPPORT=ON [...]
-option(EXIV2 "For reading/writing exif tags" ON)
 option(VIDEO_SUPPORT "Enable video support" ON)
 option(OPENCV_SUPPORT "Enable HQ scaling via OpenCV" ON)
 option(KDE_SUPPORT "Support blur when using KDE" OFF)
-option(USE_QT5 "Build with Qt5 if available" ON)
+option(USE_QT5 "Build with Qt5 if available" OFF)
 
 if(UNIX AND NOT APPLE)
     set(QT_EXTERN_PATH "" CACHE STRING "Tell compile external QT path, example: (/opt/Qt/6.2.0/gcc_64)")
@@ -57,11 +56,6 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Svg PrintSupport OpenGLWidgets)
 else()
     find_package(Qt${QT_VERSION_MAJOR} 5.12 REQUIRED COMPONENTS Core Widgets Svg PrintSupport)
-endif()
-
-if(EXIV2)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(Exiv2 REQUIRED IMPORTED_TARGET exiv2)
 endif()
 
 if(KDE_SUPPORT)

@@ -77,9 +77,6 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
 endif()
 
 # OPTION DEFINITIONS, LINKING
-if(EXIV2)
-    target_link_libraries(qimgv PRIVATE PkgConfig::Exiv2)
-endif()
 if(KDE_SUPPORT)
     target_link_libraries(qimgv PRIVATE KF6::WindowSystem)
     target_compile_definitions(qimgv PRIVATE USE_KDE_BLUR)

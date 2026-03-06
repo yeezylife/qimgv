@@ -39,11 +39,11 @@ public:
 
 public slots:
     void crop(QRect newRect);
-    bool save();
-    bool save(QString destPath);
+    bool save() override;
+    bool save(QString destPath) override;
 
 private:
-    void load();
+    void load() override;
     void loadGeneric();
     void loadICO();
     static QString generateHash(QStringView str) noexcept;

@@ -24,14 +24,14 @@ public:
 
     int frameCount();
 public slots:
-    bool save();
-    bool save(QString destPath);
+    bool save() override;
+    bool save(QString destPath) override;
 
 signals:
     void frameChanged(QPixmap*);
 
 private:
-    void load();
+    void load() override;
     QSize mSize;
     int mFrameCount;
     std::shared_ptr<QMovie> movie;

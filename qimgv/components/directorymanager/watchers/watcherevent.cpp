@@ -16,7 +16,7 @@ WatcherEvent::WatcherEvent(const QString& name, uint cookie, int timerId, Type t
 {
 }
 
-WatcherEvent::~WatcherEvent() = default;
+WatcherEvent::~WatcherEvent() noexcept = default;
 
 QString WatcherEvent::name() const noexcept {
     return mName;

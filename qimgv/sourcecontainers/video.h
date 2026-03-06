@@ -18,12 +18,12 @@ public:
     QSize size() const override;
 
 public slots:
-    bool save();
-    bool save(QString destPath);
+    bool save() override;
+    bool save(QString destPath) override;
 
 
 private:
-    void load();
+    void load() override;
 
     uint srcWidth = 0;
     uint srcHeight = 0;

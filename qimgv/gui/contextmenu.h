@@ -2,7 +2,6 @@
 
 #include <QScreen>
 #include <QStyleOption>
-#include <QTimer>
 #include <QPainter>
 #include "components/actionmanager/actionmanager.h"
 #include "components/scriptmanager/scriptmanager.h"
@@ -24,9 +23,12 @@ public slots:
 
 private:
     Ui::ContextMenu *ui;
-    QTimer mTimer;
 
     void fillOpenWithMenu();
+
+    // helpers used by the constructor to keep it terse
+    void initActions();
+    void initScriptPage();
 
 signals:
     void showScriptSettings();

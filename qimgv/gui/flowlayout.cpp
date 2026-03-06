@@ -51,7 +51,6 @@
 #include "flowlayout.h"
 
 #include <qmath.h>
-
 #include <QWidget>
 
 FlowLayout::FlowLayout()
@@ -163,9 +162,6 @@ void FlowLayout::setGeometry(const QRectF &geom)
 
 // this assumes every item is of the same size
 GridInfo FlowLayout::doLayout(const QRectF &geom, bool applyNewGeometry) const {
-    QElapsedTimer t;
-    t.start();
-
     qreal leftMargin, topMargin, rightMargin, bottomMargin;
     getContentsMargins(&leftMargin, &topMargin, &rightMargin, &bottomMargin);
 
@@ -178,59 +174,52 @@ GridInfo FlowLayout::doLayout(const QRectF &geom, bool applyNewGeometry) const {
     QSizeF itemSize;
 
     int columns = m_items.count();
-    int rows = 0;
-    if(columns)
-        rows = 1;
+    int rows = columns ? 1 : 0;
 
-    if(m_items.count()) {
+    if (!m_items.isEmpty()) {
         // calculate offset for centering
         const qreal itemWidth = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize).width();
         int maxCols = static_cast<int>(maxRowWidth / itemWidth);
-        if(m_items.count() >= maxCols)
+        if (m_items.count() >= maxCols)
             centerOffset = static_cast<int>(fmod(maxRowWidth, itemWidth) / 2);
-        QGraphicsLayoutItem *item = m_items.at(0);
-        itemSize = item->effectiveSizeHint(Qt::PreferredSize);
+        itemSize = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize);
     }
 
     for (int i = 0; i < m_items.count(); ++i) {
-        qreal next_x;
-        next_x = x + itemSize.width();
+        qreal next_x = x + itemSize.width();
         if (next_x > maxRowWidth) {
-            if(x == 0) {
+            if (x == 0) {
                 itemSize.setWidth(maxRowWidth);
             } else {
                 x = 0;
                 next_x = itemSize.width();
-                if(rows == 1)
+                if (rows == 1)
                     columns = i;
                 rows++;
             }
             y += itemSize.height() + spacing(Qt::Vertical);
         }
-        if(applyNewGeometry)
+        if (applyNewGeometry)
             m_items.at(i)->setGeometry(QRectF(QPointF(leftMargin + x + centerOffset, topMargin + y), itemSize));
         x = next_x + spacing(Qt::Horizontal);
     }
-    //qDebug() << "elapsed: " << t.elapsed();
     return GridInfo(columns, rows, topMargin + y + itemSize.height() + bottomMargin);
 }
 
 QSizeF FlowLayout::minSize(const QSizeF &constraint) const
 {
-    QSizeF size(0, 0);
     qreal left, top, right, bottom;
     getContentsMargins(&left, &top, &right, &bottom);
+
     if (constraint.width() >= 0) {   // height for width
-        const qreal height = doLayout(QRectF(QPointF(0,0), constraint), false).height;
-        size = QSizeF(constraint.width(), height);
-    } else if (constraint.height() >= 0) {  // width for height?
-        // not supported
-    } else {
-        QGraphicsLayoutItem *item;
-        foreach (item, m_items)
-            size = size.expandedTo(item->effectiveSizeHint(Qt::MinimumSize));
-        size += QSize(left + right, top + bottom);
+        qreal height = doLayout(QRectF(QPointF(0,0), constraint), false).height;
+        return QSizeF(constraint.width(), height);
     }
+
+    QSizeF size(0, 0);
+    for (auto item : m_items)
+        size = size.expandedTo(item->effectiveSizeHint(Qt::MinimumSize));
+    size += QSize(left + right, top + bottom);
     return size;
 }
 
@@ -239,10 +228,9 @@ QSizeF FlowLayout::prefSize() const
     qreal left, right;
     getContentsMargins(&left, 0, &right, 0);
 
-    QGraphicsLayoutItem *item;
     qreal maxh = 0;
     qreal totalWidth = 0;
-    foreach (item, m_items) {
+    for (auto item : m_items) {
         if (totalWidth > 0)
             totalWidth += spacing(Qt::Horizontal);
         QSizeF pref = item->effectiveSizeHint(Qt::PreferredSize);
@@ -259,10 +247,9 @@ QSizeF FlowLayout::prefSize() const
 
 QSizeF FlowLayout::maxSize() const
 {
-    QGraphicsLayoutItem *item;
     qreal totalWidth = 0;
     qreal totalHeight = 0;
-    foreach (item, m_items) {
+    for (auto item : m_items) {
         if (totalWidth > 0)
             totalWidth += spacing(Qt::Horizontal);
         if (totalHeight > 0)

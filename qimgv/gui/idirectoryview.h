@@ -10,7 +10,7 @@ class QMimeData;
 
 class IDirectoryView {
 public:
-    virtual ~IDirectoryView() {}
+    virtual ~IDirectoryView();
 
     virtual void populate(int) = 0;
     virtual void setThumbnail(int pos, std::shared_ptr<Thumbnail> thumb) = 0;

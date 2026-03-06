@@ -24,4 +24,7 @@ private:
     std::shared_ptr<DocumentWidget> documentView;
     std::shared_ptr<FolderViewProxy> folderView;
     ViewMode mode;
+
+    /* helper used internally when switching views */
+    void switchTo(int index, ViewMode newMode);
 };

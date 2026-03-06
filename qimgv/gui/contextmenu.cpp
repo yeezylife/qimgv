@@ -9,103 +9,10 @@ ContextMenu::ContextMenu(QWidget *parent) :
     setWindowFlags(Qt::Popup);
     setAttribute(Qt::WA_TranslucentBackground, true);
     setAttribute(Qt::WA_NoMousePropagation, true);
-    this->hide();
+    hide();
 
-    // -------------------------------------------------------------------------
-    // setup actions
-    // top zoom buttons
-    ui->zoomIn->setAction("zoomIn");
-    ui->zoomIn->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-in18.png");
-    ui->zoomIn->setTriggerMode(TriggerMode::PressTrigger);
-    ui->zoomOut->setAction("zoomOut");
-    ui->zoomOut->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-out18.png");
-    ui->zoomOut->setTriggerMode(TriggerMode::PressTrigger);
-    ui->zoomOriginal->setAction("fitNormal");
-    ui->zoomOriginal->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-original18.png");
-    ui->zoomOriginal->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWidth->setAction("fitWidth");
-    ui->fitWidth->setIconPath(":/res/icons/common/buttons/contextmenu/fit-width18.png");
-    ui->fitWidth->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWindow->setAction("fitWindow");
-    ui->fitWindow->setIconPath(":/res/icons/common/buttons/contextmenu/fit-window18.png");
-    ui->fitWindow->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWindowStretch->setAction("fitWindowStretch");
-    ui->fitWindowStretch->setIconPath(":/res/icons/common/buttons/contextmenu/fit-height-stretch18.png");
-    ui->fitWindowStretch->setTriggerMode(TriggerMode::PressTrigger);
-    // -------------------------------------------------------------------------
-    // transform buttons
-    ui->rotateLeft->setAction("rotateLeft");
-    ui->rotateLeft->setIconPath(":/res/icons/common/menuitem/rotate-left16.png");
-    ui->rotateLeft->setTriggerMode(TriggerMode::PressTrigger);
-    ui->rotateRight->setAction("rotateRight");
-    ui->rotateRight->setIconPath(":/res/icons/common/menuitem/rotate-right16.png");
-    ui->rotateRight->setTriggerMode(TriggerMode::PressTrigger);
-    ui->flipH->setAction("flipH");
-    ui->flipH->setIconPath(":/res/icons/common/menuitem/flip-h16.png");
-    ui->flipH->setTriggerMode(TriggerMode::PressTrigger);
-    ui->flipV->setAction("flipV");
-    ui->flipV->setIconPath(":/res/icons/common/menuitem/flip-v16.png");
-    ui->flipV->setTriggerMode(TriggerMode::PressTrigger);
-    ui->crop->setAction("crop");
-    ui->crop->setIconPath(":/res/icons/common/menuitem/image-crop16.png");
-    ui->crop->setTriggerMode(TriggerMode::PressTrigger);
-    ui->resize->setAction("resize");
-    ui->resize->setIconPath(":/res/icons/common/menuitem/resize16.png");
-    ui->resize->setTriggerMode(TriggerMode::PressTrigger);
-    // -------------------------------------------------------------------------
-    //  entries
-    ui->print->setAction("print");
-    ui->print->setText(tr("Print"));
-    ui->print->setIconPath(":/res/icons/common/menuitem/print16.png");
-
-    ui->copy->setAction("copyFile");
-    ui->copy->setText(tr("Quick copy"));
-    ui->copy->setIconPath(":/res/icons/common/menuitem/copy16.png");
-
-    ui->move->setAction("moveFile");
-    ui->move->setText(tr("Quick move"));
-    ui->move->setIconPath(":/res/icons/common/menuitem/move16.png");
-
-    ui->trash->setAction("moveToTrash");
-    ui->trash->setText(tr("Move to trash"));
-    ui->trash->setIconPath(":/res/icons/common/menuitem/trash16.png");
-    ui->trash->setShortcutText("");
-    // -------------------------------------------------------------------------
-    ui->open->setAction("open");
-    ui->open->setText(tr("Open"));
-    ui->open->setIconPath(":/res/icons/common/menuitem/open16.png");
-    ui->open->setShortcutText("");
-
-    ui->folderView->setAction("folderView");
-    ui->folderView->setText(tr("Folder View"));
-    ui->folderView->setIconPath(":/res/icons/common/menuitem/folderview16.png");
-    ui->folderView->setShortcutText("");
-
-    ui->settings->setAction("openSettings");
-    ui->settings->setText(tr("Settings"));
-    ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");
-    // -------------------------------------------------------------------------
-    ui->openWith->setText(tr("Open with..."));
-    ui->openWith->setIconPath(":/res/icons/common/menuitem/run16.png");
-    ui->openWith->setPassthroughClicks(false);
-    connect(ui->openWith, &ContextMenuItem::pressed, this, &ContextMenu::switchToScriptsPage);
-    // -------------------------------------------------------------------------
-    ui->showLocation->setAction("showInDirectory");
-    ui->showLocation->setText(tr("Show in folder"));
-    ui->showLocation->setIconPath(":/res/icons/common/menuitem/folder16.png");
-    // -------------------------------------------------------------------------
-    // force resize to fit new menuitem width
-    this->adjustSize();
-
-    // Scripts page
-    // -------------------------------------------------------------------------
-    ui->backButton->setText(tr("Back"));
-    ui->backButton->setIconPath(":/res/icons/common/menuitem/back16.png");
-    ui->backButton->setPassthroughClicks(false);
-    ui->scriptSetupButton->setText(tr("Configure menu"));
-    ui->scriptSetupButton->setIconPath(":/res/icons/common/menuitem/settings16.png");
-    connect(ui->backButton, &ContextMenuItem::pressed, this, &ContextMenu::switchToMainPage);
-    connect(ui->scriptSetupButton, &ContextMenuItem::pressed, this, &ContextMenu::showScriptSettings);
+    initActions();
+    initScriptPage();
     fillOpenWithMenu();
 }
 
@@ -114,14 +21,14 @@ ContextMenu::~ContextMenu() {
 }
 
 void ContextMenu::fillOpenWithMenu() {
-    auto scripts = scriptManager->allScripts();
-    QMap<QString, Script>::iterator i;
-    for (i = scripts.begin(); i != scripts.end(); ++i) {
-        if(!i.value().command.isEmpty()) {
-            auto btn = new ContextMenuItem();
-            btn->setAction("s:"+i.key());
+    for (auto it = scriptManager->allScripts().constBegin();
+         it != scriptManager->allScripts().constEnd();
+         ++it) {
+        if (!it.value().command.isEmpty()) {
+            auto btn = new ContextMenuItem;
+            btn->setAction("s:" + it.key());
             btn->setIconPath(":/res/icons/common/menuitem/open16.png");
-            btn->setText(i.key());
+            btn->setText(it.key());
             ui->scriptsLayout->addWidget(btn);
         }
     }
@@ -150,6 +57,103 @@ void ContextMenu::setImageEntriesEnabled(bool mode) {
     ui->showLocation->setEnabled(mode);
 }
 
+// helper implementations
+void ContextMenu::initActions()
+{
+    // zoom group
+    ui->zoomIn->setAction("zoomIn");
+    ui->zoomIn->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-in18.png");
+    ui->zoomIn->setTriggerMode(TriggerMode::PressTrigger);
+    ui->zoomOut->setAction("zoomOut");
+    ui->zoomOut->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-out18.png");
+    ui->zoomOut->setTriggerMode(TriggerMode::PressTrigger);
+    ui->zoomOriginal->setAction("fitNormal");
+    ui->zoomOriginal->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-original18.png");
+    ui->zoomOriginal->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWidth->setAction("fitWidth");
+    ui->fitWidth->setIconPath(":/res/icons/common/buttons/contextmenu/fit-width18.png");
+    ui->fitWidth->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWindow->setAction("fitWindow");
+    ui->fitWindow->setIconPath(":/res/icons/common/buttons/contextmenu/fit-window18.png");
+    ui->fitWindow->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWindowStretch->setAction("fitWindowStretch");
+    ui->fitWindowStretch->setIconPath(":/res/icons/common/buttons/contextmenu/fit-height-stretch18.png");
+    ui->fitWindowStretch->setTriggerMode(TriggerMode::PressTrigger);
+
+    // transform group
+    ui->rotateLeft->setAction("rotateLeft");
+    ui->rotateLeft->setIconPath(":/res/icons/common/menuitem/rotate-left16.png");
+    ui->rotateLeft->setTriggerMode(TriggerMode::PressTrigger);
+    ui->rotateRight->setAction("rotateRight");
+    ui->rotateRight->setIconPath(":/res/icons/common/menuitem/rotate-right16.png");
+    ui->rotateRight->setTriggerMode(TriggerMode::PressTrigger);
+    ui->flipH->setAction("flipH");
+    ui->flipH->setIconPath(":/res/icons/common/menuitem/flip-h16.png");
+    ui->flipH->setTriggerMode(TriggerMode::PressTrigger);
+    ui->flipV->setAction("flipV");
+    ui->flipV->setIconPath(":/res/icons/common/menuitem/flip-v16.png");
+    ui->flipV->setTriggerMode(TriggerMode::PressTrigger);
+    ui->crop->setAction("crop");
+    ui->crop->setIconPath(":/res/icons/common/menuitem/image-crop16.png");
+    ui->crop->setTriggerMode(TriggerMode::PressTrigger);
+    ui->resize->setAction("resize");
+    ui->resize->setIconPath(":/res/icons/common/menuitem/resize16.png");
+    ui->resize->setTriggerMode(TriggerMode::PressTrigger);
+
+    // generic entries
+    ui->print->setAction("print");
+    ui->print->setText(tr("Print"));
+    ui->print->setIconPath(":/res/icons/common/menuitem/print16.png");
+
+    ui->copy->setAction("copyFile");
+    ui->copy->setText(tr("Quick copy"));
+    ui->copy->setIconPath(":/res/icons/common/menuitem/copy16.png");
+
+    ui->move->setAction("moveFile");
+    ui->move->setText(tr("Quick move"));
+    ui->move->setIconPath(":/res/icons/common/menuitem/move16.png");
+
+    ui->trash->setAction("moveToTrash");
+    ui->trash->setText(tr("Move to trash"));
+    ui->trash->setIconPath(":/res/icons/common/menuitem/trash16.png");
+    ui->trash->setShortcutText("");
+
+    ui->open->setAction("open");
+    ui->open->setText(tr("Open"));
+    ui->open->setIconPath(":/res/icons/common/menuitem/open16.png");
+    ui->open->setShortcutText("");
+
+    ui->folderView->setAction("folderView");
+    ui->folderView->setText(tr("Folder View"));
+    ui->folderView->setIconPath(":/res/icons/common/menuitem/folderview16.png");
+    ui->folderView->setShortcutText("");
+
+    ui->settings->setAction("openSettings");
+    ui->settings->setText(tr("Settings"));
+    ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");
+
+    ui->openWith->setText(tr("Open with..."));
+    ui->openWith->setIconPath(":/res/icons/common/menuitem/run16.png");
+    ui->openWith->setPassthroughClicks(false);
+    connect(ui->openWith, &ContextMenuItem::pressed, this, &ContextMenu::switchToScriptsPage);
+
+    ui->showLocation->setAction("showInDirectory");
+    ui->showLocation->setText(tr("Show in folder"));
+    ui->showLocation->setIconPath(":/res/icons/common/menuitem/folder16.png");
+
+    adjustSize();
+}
+
+void ContextMenu::initScriptPage()
+{
+    ui->backButton->setText(tr("Back"));
+    ui->backButton->setIconPath(":/res/icons/common/menuitem/back16.png");
+    ui->backButton->setPassthroughClicks(false);
+    ui->scriptSetupButton->setText(tr("Configure menu"));
+    ui->scriptSetupButton->setIconPath(":/res/icons/common/menuitem/settings16.png");
+    connect(ui->backButton, &ContextMenuItem::pressed, this, &ContextMenu::switchToMainPage);
+    connect(ui->scriptSetupButton, &ContextMenuItem::pressed, this, &ContextMenu::showScriptSettings);
+}
 void ContextMenu::showAt(QPoint pos) {
     switchToMainPage();
     QRect geom = geometry();

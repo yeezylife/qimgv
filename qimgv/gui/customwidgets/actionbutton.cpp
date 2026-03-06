@@ -1,8 +1,7 @@
 #include "actionbutton.h"
 
 ActionButton::ActionButton(QWidget *parent)
-    : IconButton(parent),
-      mTriggerMode(TriggerMode::ClickTrigger)
+    : IconButton(parent)
 {
     this->setFocusPolicy(Qt::NoFocus);
     this->setProperty("checked", false);
@@ -44,5 +43,4 @@ void ActionButton::mouseReleaseEvent(QMouseEvent *event) {
     IconButton::mouseReleaseEvent(event);
     if(mTriggerMode == TriggerMode::ClickTrigger && rect().contains(event->position().toPoint()) && event->button() == Qt::LeftButton)
         actionManager->invokeAction(actionName);
-
 }

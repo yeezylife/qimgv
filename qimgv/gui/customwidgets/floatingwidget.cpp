@@ -1,6 +1,6 @@
 #include "floatingwidget.h"
 
-FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent) : QWidget(parent), mAcceptKeyboardFocus(false) {
+FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent) : QWidget(parent) {
     this->setAccessibleName("OverlayWidget");
     connect(parent, &FloatingWidgetContainer::resized, this, &FloatingWidget::onContainerResized);
     hide();
@@ -29,8 +29,8 @@ void FloatingWidget::paintEvent(QPaintEvent *event) {
 
 bool FloatingWidget::acceptKeyboardFocus() const {
     return mAcceptKeyboardFocus;
-
 }
+
 void FloatingWidget::setAcceptKeyboardFocus(bool mode) {
     mAcceptKeyboardFocus = mode;
 }

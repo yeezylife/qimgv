@@ -28,7 +28,7 @@ public:
     enum { Type = UserType + 1 };
     int type() const override { return Type; }
 
-    bool isLoaded;
+    bool isLoaded = false;
     void setThumbnail(std::shared_ptr<Thumbnail> _thumbnail);
 
     void setHighlighted(bool mode);
@@ -76,12 +76,12 @@ protected:
     void updateDpr(qreal newDpr);
 
     std::shared_ptr<Thumbnail> thumbnail;
-    bool highlighted, hovered, dropHovered;
-    int mThumbnailSize, padding, marginX, marginY, labelSpacing, textHeight;
+    bool highlighted = false, hovered = false, dropHovered = false;
+    int mThumbnailSize = 100, padding = 5, marginX = 2, marginY = 2, labelSpacing = 9, textHeight = 5;
     QRectF bgRect, mBoundingRect;
     QFont font, fontInfo;
     QRect drawRectCentered, nameRect, infoRect;
     qreal dpr = 1.0;
     void updateBoundingRect();
-    ThumbnailStyle thumbStyle;
+    ThumbnailStyle thumbStyle = THUMB_SIMPLE;
 };

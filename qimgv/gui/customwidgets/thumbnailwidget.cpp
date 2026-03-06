@@ -2,18 +2,7 @@
 
 ThumbnailWidget::ThumbnailWidget(QGraphicsItem *parent) :
     QGraphicsWidget(parent),
-    isLoaded(false),
-    thumbnail(nullptr),
-    highlighted(false),
-    hovered(false),
-    dropHovered(false),
-    mThumbnailSize(100),
-    padding(5),
-    marginX(2),
-    marginY(2),
-    labelSpacing(9),
-    textHeight(5),
-    thumbStyle(THUMB_SIMPLE)
+    thumbnail(nullptr)
 {
     setAttribute(Qt::WA_OpaquePaintEvent, true);
     dpr = qApp->devicePixelRatio();

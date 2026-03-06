@@ -11,7 +11,6 @@
 #include <QStyleOption>
 #include <QPainter>
 #include <QApplication>
-#include <QDebug>
 
 #include <QWheelEvent>
 
@@ -40,7 +39,7 @@ protected:
 private:
     // size of whatever widget we are overlayed on
     QSize container;
-    bool mAcceptKeyboardFocus;
+    bool mAcceptKeyboardFocus = false;
 
 private slots:
     void onContainerResized(QSize container);

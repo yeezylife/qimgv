@@ -2,7 +2,6 @@
 
 IconWidget::IconWidget(QWidget *parent)
     : QWidget(parent),
-      hiResPixmap(false),
       pixmap(nullptr)
 {
     dpr = this->devicePixelRatioF();
@@ -11,8 +10,7 @@ IconWidget::IconWidget(QWidget *parent)
 }
 
 IconWidget::~IconWidget() {
-    if(pixmap)
-        delete pixmap;
+    delete pixmap;
 }
 
 void IconWidget::onSettingsChanged() {
@@ -31,8 +29,9 @@ void IconWidget::setIconPath(QString path) {
 
 void IconWidget::loadIcon() {
     auto path = iconPath;
-    if(pixmap)
-        delete pixmap;
+    delete pixmap;
+    pixmap = nullptr;
+    
     if(dpr >= (1.0 + 0.001)) {
         path.replace(".", "@2x.");
         hiResPixmap = true;
@@ -47,10 +46,12 @@ void IconWidget::loadIcon() {
         pixmap = new QPixmap(path);
         pixmapDrawScale = dpr;
     }
-    applyColor();
+    
     if(pixmap->isNull()) {
         delete pixmap;
         pixmap = nullptr;
+    } else {
+        applyColor();
     }
     update();
 }
@@ -71,7 +72,6 @@ void IconWidget::setIconOffset(int x, int y) {
 void IconWidget::setColorMode(IconColorMode _mode) {
     if(colorMode != _mode && _mode == ICON_COLOR_SOURCE) {
         colorMode = _mode;
-        // reload uncolored
         loadIcon();
     } else {
         colorMode = _mode;

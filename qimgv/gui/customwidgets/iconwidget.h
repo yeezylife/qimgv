@@ -3,7 +3,6 @@
 #include <QWidget>
 #include <QStyleOption>
 #include <QPainter>
-#include <QDebug>
 #include <QMouseEvent>
 #include "settings.h"
 #include "utils/imagelib.h"
@@ -37,8 +36,8 @@ private:
     QString iconPath;
     QColor color;
     IconColorMode colorMode = ICON_COLOR_THEME;
-    bool hiResPixmap;
+    bool hiResPixmap = false;
     QPoint iconOffset;
-    QPixmap *pixmap;
+    QPixmap *pixmap = nullptr;
     qreal dpr, pixmapDrawScale;
 };

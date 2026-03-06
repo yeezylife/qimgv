@@ -21,5 +21,5 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     QString actionName;
-    TriggerMode mTriggerMode;
+    TriggerMode mTriggerMode = ClickTrigger;
 };

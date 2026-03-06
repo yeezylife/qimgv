@@ -1,10 +1,7 @@
 #include "iconbutton.h"
 
 IconButton::IconButton(QWidget *parent)
-    : IconWidget(parent),
-      mCheckable(false),
-      mChecked(false),
-      mPressed(false)
+    : IconWidget(parent)
 {
 }
 

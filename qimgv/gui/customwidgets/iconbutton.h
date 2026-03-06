@@ -21,6 +21,6 @@ signals:
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
-    bool mCheckable, mChecked, mPressed;
+    bool mCheckable = false, mChecked = false, mPressed = false;
     void mouseMoveEvent(QMouseEvent *event);
 };

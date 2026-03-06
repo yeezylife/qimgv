@@ -6,7 +6,6 @@
 #include <QHBoxLayout>
 #include <QStyleOption>
 #include <QPainter>
-#include <QDebug>
 
 class EntryInfoItem : public QWidget
 {

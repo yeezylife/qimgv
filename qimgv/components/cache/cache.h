@@ -3,8 +3,9 @@
 #include <QDebug>
 #include <QHash>
 #include <QSet>
-#include <QMutex>
-#include <QMutexLocker>
+#include <QReadWriteLock>  // 改用读写锁
+#include <QReadLocker>
+#include <QWriteLocker>
 #include <memory>
 #include <list>
 #include "sourcecontainers/image.h"
@@ -37,9 +38,9 @@ private:
     std::list<QString> lruList;                          // LRU 顺序链表（前端最近使用）
     QHash<QString, std::list<QString>::iterator> lruMap; // 路径到链表迭代器的映射
     int mMaxCacheSize;
-    mutable QMutex mMutex;
+    mutable QReadWriteLock mRWLock;  // 改用读写锁
 
     // 内部辅助方法
-    void updateLRU(const QString& path);
+    void updateLRU(const QString& path);  // 需要写锁
     void evictLRUItems();   // 尝试淘汰最久未使用的未锁定项目
 };

@@ -1,11 +1,11 @@
 #include "cache.h"
 
 Cache::Cache() {
-    mMaxCacheSize = 30; // 默认缓存最多30个项目
+    mMaxCacheSize = 50; // 默认缓存最多50个项目
 }
 
 bool Cache::contains(QString path) const {
-    QMutexLocker locker(&mMutex);
+    QReadLocker locker(&mRWLock);  // 读锁
     return items.contains(path);
 }
 
@@ -14,7 +14,7 @@ bool Cache::insert(std::shared_ptr<Image> img) {
         return false;
     }
 
-    QMutexLocker locker(&mMutex);
+    QWriteLocker locker(&mRWLock);  // 写锁
     const QString &path = img->filePath();
 
     // 如果已存在，则不插入
@@ -42,7 +42,7 @@ void Cache::remove(QString path) {
     std::shared_ptr<CacheItem> itemPtr;
 
     {
-        QMutexLocker locker(&mMutex);
+        QWriteLocker locker(&mRWLock);  // 写锁
         // 先从缓存结构中移除，同时清理 LRU 信息
         if (lruMap.contains(path)) {
             lruList.erase(lruMap[path]);
@@ -51,9 +51,13 @@ void Cache::remove(QString path) {
         itemPtr = items.take(path);
     }
 
-    // 等待项目解锁（如果正在使用），然后自动释放
+    // 等待项目解锁（如果正在使用），使用超时避免死锁
     if (itemPtr) {
-        itemPtr->lock();   // 阻塞直到解锁
+        // 使用 5 秒超时，避免永久阻塞
+        if (!itemPtr->tryLock(5000)) {
+            qWarning() << "Cache::remove() - Failed to lock item within timeout:" << path;
+            // 即使超时，shared_ptr 也会在作用域结束时尝试释放
+        }
         // shared_ptr 离开作用域自动删除
     }
 }
@@ -62,7 +66,7 @@ void Cache::clear() {
     QList<std::shared_ptr<CacheItem>> itemsToClear;
 
     {
-        QMutexLocker locker(&mMutex);
+        QWriteLocker locker(&mRWLock);  // 写锁
         // 清空所有内部数据结构
         lruList.clear();
         lruMap.clear();
@@ -73,29 +77,46 @@ void Cache::clear() {
         }
     }
 
-    // 安全释放所有项目
+    // 安全释放所有项目（使用超时）
     for (auto &item : itemsToClear) {
         if (item) {
-            item->lock();   // 等待解锁
+            if (!item->tryLock(5000)) {
+                qWarning() << "Cache::clear() - Failed to lock item within timeout";
+            }
             // shared_ptr 自动释放
         }
     }
 }
 
 std::shared_ptr<Image> Cache::get(QString path) {
-    QMutexLocker locker(&mMutex);
-    auto it = items.find(path);
-    if (it != items.end()) {
-        updateLRU(path);   // 标记为最近使用
-        return it.value()->getContents();
+    std::shared_ptr<CacheItem> item;
+    
+    // 第一步：使用读锁获取 CacheItem
+    {
+        QReadLocker locker(&mRWLock);
+        auto it = items.find(path);
+        if (it != items.end()) {
+            item = it.value();  // 获取 shared_ptr 副本
+        }
     }
+    
+    // 第二步：如果找到，使用写锁更新 LRU（分离锁竞争）
+    if (item) {
+        QWriteLocker locker(&mRWLock);
+        // 再次检查项目是否仍在缓存中（可能在释放读锁后被删除）
+        if (items.contains(path)) {
+            updateLRU(path);
+        }
+        return item->getContents();
+    }
+    
     return nullptr;
 }
 
 bool Cache::reserve(QString path) {
     std::shared_ptr<CacheItem> item;
     {
-        QMutexLocker locker(&mMutex);
+        QReadLocker locker(&mRWLock);  // 读锁
         auto it = items.find(path);
         if (it == items.end()) {
             return false;
@@ -110,7 +131,7 @@ bool Cache::reserve(QString path) {
 bool Cache::release(QString path) {
     std::shared_ptr<CacheItem> item;
     {
-        QMutexLocker locker(&mMutex);
+        QReadLocker locker(&mRWLock);  // 读锁
         auto it = items.find(path);
         if (it == items.end()) {
             return false;
@@ -126,7 +147,7 @@ void Cache::trimTo(QStringList pathList) {
     QList<std::shared_ptr<CacheItem>> itemsToRemove;
 
     {
-        QMutexLocker locker(&mMutex);
+        QWriteLocker locker(&mRWLock);  // 写锁
         auto keys = items.keys();
         for (const auto &key : keys) {
             if (!keepSet.contains(key)) {
@@ -141,21 +162,23 @@ void Cache::trimTo(QStringList pathList) {
         }
     }
 
-    // 安全释放
+    // 安全释放（使用超时）
     for (auto &item : itemsToRemove) {
         if (item) {
-            item->lock();
+            if (!item->tryLock(5000)) {
+                qWarning() << "Cache::trimTo() - Failed to lock item within timeout";
+            }
         }
     }
 }
 
 const QList<QString> Cache::keys() const {
-    QMutexLocker locker(&mMutex);
+    QReadLocker locker(&mRWLock);  // 读锁
     return items.keys();
 }
 
 void Cache::setMaxCacheSize(int maxItems) {
-    QMutexLocker locker(&mMutex);
+    QWriteLocker locker(&mRWLock);  // 写锁
     mMaxCacheSize = maxItems;
     if (mMaxCacheSize > 0 && items.size() > mMaxCacheSize) {
         evictLRUItems();
@@ -163,16 +186,18 @@ void Cache::setMaxCacheSize(int maxItems) {
 }
 
 int Cache::maxCacheSize() const {
-    QMutexLocker locker(&mMutex);
+    QReadLocker locker(&mRWLock);  // 读锁
     return mMaxCacheSize;
 }
 
 int Cache::currentCacheSize() const {
-    QMutexLocker locker(&mMutex);
+    QReadLocker locker(&mRWLock);  // 读锁
     return items.size();
 }
 
 void Cache::updateLRU(const QString& path) {
+    // 调用者必须持有写锁
+    
     // 如果已存在，用 splice 移到链表前端（更高效）
     auto it = lruMap.find(path);
     if (it != lruMap.end()) {
@@ -185,20 +210,21 @@ void Cache::updateLRU(const QString& path) {
 }
 
 void Cache::evictLRUItems() {
+    // 调用者必须持有写锁
+    
     // 如果最大缓存大小 <= 0（无限制），直接返回
     if (mMaxCacheSize <= 0) {
         return;
     }
 
-    // 从链表尾部（最久未使用）向前查找未锁定的项目进行淘汰
-    auto it = lruList.end();
-    while (items.size() > mMaxCacheSize && it != lruList.begin()) {
-        --it;  // 从最后一个元素开始
-        const QString &path = *it;
+    // 修复：从链表尾部（最久未使用）逐个检查并淘汰
+    while (items.size() > mMaxCacheSize && !lruList.empty()) {
+        const QString &path = lruList.back();  // 获取最久未使用的路径
         auto itemIt = items.find(path);
+        
         if (itemIt == items.end()) {
             // 理论上不应出现，但若出现则清理脏数据
-            it = lruList.erase(it);
+            lruList.pop_back();
             lruMap.remove(path);
             continue;
         }
@@ -206,15 +232,12 @@ void Cache::evictLRUItems() {
         // 检查项目是否锁定
         if (!itemIt.value()->isLocked()) {
             // 未锁定，可以淘汰
-            // 从 LRU 结构中移除
-            it = lruList.erase(it);
+            lruList.pop_back();
             lruMap.remove(path);
-            // 从缓存中移除（shared_ptr 离开作用域自动释放）
-            items.erase(itemIt);
-            // 注意：erase 后迭代器可能失效，需要重新定位到末尾
-            it = lruList.end();
+            items.erase(itemIt);  // 从缓存中移除（shared_ptr 自动释放）
         } else {
-            // 锁定项目不能淘汰，继续向前查找
+            // 所有剩余项目都锁定，无法继续淘汰
+            break;
         }
     }
 }

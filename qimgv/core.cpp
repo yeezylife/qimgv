@@ -538,7 +538,7 @@ void Core::openFromClipboard() {
             backupExists = true;
         }
         // save file
-        success = image.save(destPath, ext.toStdString().c_str(), quality);
+        success = image.save(destPath, QString::fromStdWString(ext).toLatin1().constData(), quality);
 
         if(backupExists) {
             if(success) {

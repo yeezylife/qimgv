@@ -110,11 +110,12 @@ bool DirectoryManager::setDirectory(QString dirPath) {
     if(dirPath.isEmpty()) {
         return false;
     }
-    if(!std::filesystem::exists(toStdString(dirPath))) {
+    std::filesystem::path pathObj(dirPath.toStdWString());
+    if(!std::filesystem::exists(pathObj)) {
         qDebug() << "[DirectoryManager] Error - path does not exist.";
         return false;
     }
-    if(!std::filesystem::is_directory(toStdString(dirPath))) {
+    if(!std::filesystem::is_directory(pathObj)) {
         qDebug() << "[DirectoryManager] Error - path is not a directory.";
         return false;
     }
@@ -137,11 +138,12 @@ bool DirectoryManager::setDirectoryRecursive(QString dirPath) {
     if(dirPath.isEmpty()) {
         return false;
     }
-    if(!std::filesystem::exists(toStdString(dirPath))) {
+    std::filesystem::path pathObj(dirPath.toStdWString());
+    if(!std::filesystem::exists(pathObj)) {
         qDebug() << "[DirectoryManager] Error - path does not exist.";
         return false;
     }
-    if(!std::filesystem::is_directory(toStdString(dirPath))) {
+    if(!std::filesystem::is_directory(pathObj)) {
         qDebug() << "[DirectoryManager] Error - path is not a directory.";
         return false;
     }
@@ -284,17 +286,19 @@ bool DirectoryManager::isSupportedFile(QString path) const {
 }
 
 bool DirectoryManager::isFile(QString path) const {
-    if(!std::filesystem::exists(toStdString(path)))
+    std::filesystem::path pathObj(path.toStdWString());
+    if(!std::filesystem::exists(pathObj))
         return false;
-    if(!std::filesystem::is_regular_file(toStdString(path)))
+    if(!std::filesystem::is_regular_file(pathObj))
         return false;
     return true;
 }
 
 bool DirectoryManager::isDir(QString path) const {
-    if(!std::filesystem::exists(toStdString(path)))
+    std::filesystem::path pathObj(path.toStdWString());
+    if(!std::filesystem::exists(pathObj))
         return false;
-    if(!std::filesystem::is_directory(toStdString(path)))
+    if(!std::filesystem::is_directory(pathObj))
         return false;
     return true;
 }
@@ -389,9 +393,11 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
 
 void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &entryVec, QString directoryPath) {
     QRegularExpressionMatch match;
-    for(const auto & entry : fs::recursive_directory_iterator(toStdString(directoryPath))) {
-        QString name = QString::fromStdString(entry.path().filename().generic_string());
-        QString path = QString::fromStdString(entry.path().generic_string());
+    std::filesystem::path pathObj(directoryPath.toStdWString());
+    for(const auto & entry : fs::recursive_directory_iterator(pathObj)) {
+        // 使用宽字符接口避免日文编码问题
+        QString name = QString::fromStdWString(entry.path().filename().wstring());
+        QString path = QString::fromStdWString(entry.path().wstring());
         match = regex.match(name);
         if(!entry.is_directory() && match.hasMatch()) {
             FSEntry newEntry;
@@ -482,8 +488,10 @@ bool DirectoryManager::insertFileEntry(const QString &filePath) {
 bool DirectoryManager::forceInsertFileEntry(const QString &filePath) {
     if(!this->isFile(filePath) || containsFile(filePath))
         return false;
-    std::filesystem::directory_entry stdEntry(toStdString(filePath));
-    QString fileName = QString::fromStdString(stdEntry.path().filename().generic_string()); // isn't it beautiful
+    std::filesystem::path pathObj(filePath.toStdWString());
+    std::filesystem::directory_entry stdEntry(pathObj);
+    // 使用宽字符接口避免日文编码问题
+    QString fileName = QString::fromStdWString(stdEntry.path().filename().wstring());
     FSEntry FSEntry(filePath, fileName, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     if(!directoryPath().isEmpty()) {
@@ -536,7 +544,8 @@ void DirectoryManager::renameFileEntry(const QString &oldFilePath, const QString
     int oldIndex = indexOfFile(oldFilePath);
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
     // insert
-    std::filesystem::directory_entry stdEntry(toStdString(newFilePath));
+    std::filesystem::path pathObj(newFilePath.toStdWString());
+    std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry FSEntry(newFilePath, newFileName, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     qDebug() << "fileRen" << oldFilePath << newFilePath;
@@ -548,8 +557,10 @@ void DirectoryManager::renameFileEntry(const QString &oldFilePath, const QString
 bool DirectoryManager::insertDirEntry(const QString &dirPath) {
     if(containsDir(dirPath))
         return false;
-    std::filesystem::directory_entry stdEntry(toStdString(dirPath));
-    QString dirName = QString::fromStdString(stdEntry.path().filename().generic_string()); // isn't it beautiful
+    std::filesystem::path pathObj(dirPath.toStdWString());
+    std::filesystem::directory_entry stdEntry(pathObj);
+    // 使用宽字符接口避免日文编码问题
+    QString dirName = QString::fromStdWString(stdEntry.path().filename().wstring());
     FSEntry FSEntry;
     FSEntry.name = dirName;
     FSEntry.path = dirPath;
@@ -578,7 +589,8 @@ void DirectoryManager::renameDirEntry(const QString &oldDirPath, const QString &
     int oldIndex = indexOfDir(oldDirPath);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
     // insert
-    std::filesystem::directory_entry stdEntry(toStdString(newDirPath));
+    std::filesystem::path pathObj(newDirPath.toStdWString());
+    std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry FSEntry;
     FSEntry.name = newDirName;
     FSEntry.path = newDirPath;

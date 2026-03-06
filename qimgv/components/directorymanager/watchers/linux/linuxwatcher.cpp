@@ -197,7 +197,7 @@ void LinuxWatcher::setWatchPath(const QString& path) {
     }
 
     // Add new path to be watched by inotify
-    d->watchObject = inotify_add_watch(d->watcher, path.toStdString().data(), INOTIFY_EVENT_MASK);
+    d->watchObject = inotify_add_watch(d->watcher, path.toUtf8().constData(), INOTIFY_EVENT_MASK);
     if (d->watchObject == -1) {
         qDebug() << TAG << "Error:" << strerror(errno);
     }

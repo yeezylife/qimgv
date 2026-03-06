@@ -4,7 +4,7 @@ FSEntry::FSEntry() noexcept = default;
 
 FSEntry::FSEntry(const QString &path) {
     try {
-        std::filesystem::directory_entry stdEntry(toStdString(path));
+        std::filesystem::directory_entry stdEntry(std::filesystem::path(path.toStdWString()));
         const auto &entryPath = stdEntry.path();
         
         this->path = path;

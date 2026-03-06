@@ -13,11 +13,12 @@ public:
 
     void lock();
     void unlock();
+    bool tryLock(int timeout);  // 新增：带超时的锁定方法
 
     int lockStatus();
     bool isLocked() const;
+    
 private:
     std::shared_ptr<Image> contents;
     QSemaphore sem{1};  // 改为值成员，避免手动管理内存
 };
-

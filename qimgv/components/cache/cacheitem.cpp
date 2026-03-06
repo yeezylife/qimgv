@@ -18,6 +18,13 @@ void CacheItem::unlock() {
     sem.release(1);
 }
 
+bool CacheItem::tryLock(int timeout) {
+    // QSemaphore::tryAcquire(int n, int timeout)
+    // timeout 单位为毫秒
+    // 返回 true 表示成功获取信号量，false 表示超时
+    return sem.tryAcquire(1, timeout);
+}
+
 int CacheItem::lockStatus() {
     return sem.available();
 }

@@ -3,9 +3,8 @@
 
 Loader::Loader() {
     pool = new QThreadPool(this);
-    // 根据系统CPU核心数动态调整线程数，最少2个，最多4个
-    int maxThreads = qBound(2, QThread::idealThreadCount(), 4);
-    pool->setMaxThreadCount(maxThreads);
+    // 固定使用4个线程
+    pool->setMaxThreadCount(4);
 }
 
 void Loader::clearTasks() {

@@ -9,7 +9,7 @@ Scaler::Scaler(Cache *_cache, QObject *parent)
       cache(_cache)
 {
     pool = new QThreadPool(this);
-    pool->setMaxThreadCount(1);
+    pool->setMaxThreadCount(4);
     runnable = new ScalerRunnable();
     runnable->setAutoDelete(false);
     

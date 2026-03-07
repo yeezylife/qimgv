@@ -1,4 +1,5 @@
 #include "thumbnailer.h"
+#include "sourcecontainers/thumbnail.h"
 
 Thumbnailer::Thumbnailer() 
     : cache(std::make_unique<ThumbnailCache>()), 

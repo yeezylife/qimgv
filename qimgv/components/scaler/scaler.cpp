@@ -80,9 +80,8 @@ void Scaler::requestScaled(ScalerRequest req) {
 
 void Scaler::startRequest(const ScalerRequest& req) {
     // 关键修复：每次创建新的 Runnable，避免复用导致的参数覆盖
-    auto *runnable = new ScalerRunnable();
+    auto *runnable = new ScalerRunnable(req);
     runnable->setAutoDelete(true); // 线程池会自动 delete 它
-    runnable->setRequest(req);
 
     // 绑定回调：使用 DirectConnection 因为回调里会自己加锁，且需保证状态同步
     connect(runnable, &ScalerRunnable::started, this, &Scaler::onTaskStart, Qt::DirectConnection);

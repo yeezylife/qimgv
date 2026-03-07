@@ -5,6 +5,7 @@
 #include "components/thumbnailer/thumbnailerrunnable.h"
 #include "components/cache/thumbnailcache.h"
 #include "settings.h"
+#include "sourcecontainers/thumbnail.h"
 
 class Thumbnailer : public QObject
 {

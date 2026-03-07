@@ -10,6 +10,8 @@ class Loader : public QObject {
     Q_OBJECT
 public:
     explicit Loader();
+    ~Loader(); // 添加析构函数声明
+
     std::shared_ptr<Image> load(QString path);
     void loadAsyncPriority(QString path);
     void loadAsync(QString path);
@@ -17,9 +19,10 @@ public:
     void clearTasks();
     bool isBusy() const;
     bool isLoading(QString path);
+
 private:
     QHash<QString, LoaderRunnable*> tasks;
-    QThreadPool *pool;    
+    QThreadPool *pool;
     void clearPool();
     void doLoadAsync(QString path, int priority);
 

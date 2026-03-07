@@ -1,4 +1,5 @@
 #include "directorypresenter.h"
+#include "sourcecontainers/thumbnail.h"
 
 DirectoryPresenter::DirectoryPresenter(QObject *parent) : QObject(parent), mShowDirs(false) {
     connect(&thumbnailer, &Thumbnailer::thumbnailReady, this, &DirectoryPresenter::onThumbnailReady);

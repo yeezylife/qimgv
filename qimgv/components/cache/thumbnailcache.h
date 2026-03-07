@@ -1,13 +1,10 @@
 #pragma once
 
 #include <QObject>
-#include <QDir>
-#include <QMutex>
-#include <QImage>
 #include <QStringView>
 #include <memory>
-#include "settings.h"
-#include "sourcecontainers/thumbnail.h"
+#include <QImage>
+#include <QString>
 
 class ThumbnailCache : public QObject
 {
@@ -22,8 +19,4 @@ public:
     std::unique_ptr<QImage> readThumbnail(QStringView id);
     QString thumbnailPath(QStringView id) const;
     bool exists(QStringView id) const noexcept;
-
-private:
-    mutable QMutex mutex;
-    QString cacheDirPath;
 };

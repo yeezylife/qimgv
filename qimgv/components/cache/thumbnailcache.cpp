@@ -1,54 +1,31 @@
 #include "thumbnailcache.h"
-#include <QFile>
-#include <QFileInfo>
-#include <QSaveFile>
-#include <QImageWriter>
 
 ThumbnailCache::ThumbnailCache(QObject *parent)
     : QObject(parent)
-    , cacheDirPath(settings->thumbnailCacheDir())
 {
-    QDir dir(cacheDirPath);
-    if(!dir.exists())
-        dir.mkpath(".");
-}
-
-QString ThumbnailCache::thumbnailPath(QStringView id) const {
-    return cacheDirPath + QLatin1Char('/') + id.toString() + u".png";
-}
-
-bool ThumbnailCache::exists(QStringView id) const noexcept {
-    return QFile::exists(thumbnailPath(id));
+    // 缩略图缓存已禁用，不执行任何初始化操作
 }
 
 void ThumbnailCache::saveThumbnail(const QImage &image, QStringView id) {
-    if(image.isNull())
-        return;
-    
-    const QString filePath = thumbnailPath(id);
-    
-    // Qt 6: QSaveFile 原子写入，防止文件损坏
-    QSaveFile saveFile(filePath);
-    if(!saveFile.open(QIODevice::WriteOnly))
-        return;
-    
-    QImageWriter writer(&saveFile, "PNG");
-    writer.setCompression(15);
-    writer.write(image);
-    saveFile.commit();
+    // 缩略图保存已禁用，不执行任何操作
+    Q_UNUSED(image)
+    Q_UNUSED(id)
 }
 
 std::unique_ptr<QImage> ThumbnailCache::readThumbnail(QStringView id) {
-    const QString filePath = thumbnailPath(id);
-    
-    if(!QFile::exists(filePath))
-        return nullptr;
-    
-    const QMutexLocker locker(&mutex);
-    
-    auto image = std::make_unique<QImage>();
-    if(!image->load(filePath))
-        return nullptr;
-    
-    return image;
+    // 缩略图读取已禁用，直接返回空指针
+    Q_UNUSED(id)
+    return nullptr;
+}
+
+QString ThumbnailCache::thumbnailPath(QStringView id) const {
+    // 返回空字符串，因为不需要实际的文件路径
+    Q_UNUSED(id)
+    return QString();
+}
+
+bool ThumbnailCache::exists(QStringView id) const noexcept {
+    // 缩略图不存在，因为功能已禁用
+    Q_UNUSED(id)
+    return false;
 }

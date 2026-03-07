@@ -6,8 +6,8 @@ DirectoryModel::DirectoryModel(QObject *parent) :
 {
     scaler = new Scaler(&cache);
     
-    // 设置缓存大小限制为30个项目
-    cache.setMaxCacheSize(30);
+    // 设置缓存大小限制为50个项目
+    cache.setMaxCacheSize(50);
 
     connect(&dirManager, &DirectoryManager::fileRemoved,  this, &DirectoryModel::onFileRemoved);
     connect(&dirManager, &DirectoryManager::fileAdded,    this, &DirectoryModel::onFileAdded);

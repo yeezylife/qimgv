@@ -207,7 +207,7 @@ jobs:
           prerelease: true
           make_latest: true
           body: |
-            自动编译发布，拉取上游插件最新代码
+            自动编译发布，拉取上游插件最新代码。  Automatically compiled and published, pulling the latest version of upstream plugins.
             
             - 触发方式：${{ github.event_name == 'schedule' && '定时（每6个月）' || '手动触发' }}
             - 构建日期：${{ github.run_date }}

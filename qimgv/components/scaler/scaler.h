@@ -2,9 +2,9 @@
 
 #include <QObject>
 #include <QThreadPool>
-#include <QThread>
 #include <QMutex>
-#include <memory>
+#include <QImage>
+#include <QPixmap>
 #include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -13,11 +13,11 @@ class Scaler : public QObject {
     Q_OBJECT
 public:
     explicit Scaler(Cache *_cache, QObject *parent = nullptr);
+    ~Scaler() override; // 确保退出时线程安全
 
 signals:
-    // 修改为值传递，由接收者管理生命周期，避免裸指针悬挂
+    // 使用值传递，Qt 内部会通过隐式共享（Copy-on-Write）优化，安全且高效
     void scalingFinished(QPixmap result, ScalerRequest request);
-    // 内部信号，同样使用值传递
     void acceptScalingResult(QImage image, ScalerRequest req);
 
 public slots:
@@ -29,18 +29,17 @@ private slots:
     void slotForwardScaledResult(QImage image, ScalerRequest req);
 
 private:
+    void startRequest(const ScalerRequest& req);
+
     QThreadPool *pool;
-    ScalerRunnable *runnable;
-    
+    Cache *cache;
+
+    // 状态管理
     bool buffered;
     bool running;
     
     ScalerRequest bufferedRequest;
     ScalerRequest startedRequest;
 
-    Cache *cache;
-
-    void startRequest(ScalerRequest req);
-
-    mutable QMutex mutex; // 保护 running, buffered, requests, runnable 访问
+    mutable QMutex mutex; // 保护状态位和请求变量
 };

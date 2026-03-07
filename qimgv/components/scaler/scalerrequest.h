@@ -2,16 +2,15 @@
 #define SCALERREQUEST_H
 
 #include <QSize>
+#include <QString>
 #include <memory>
 #include "sourcecontainers/image.h"
 #include "settings.h" // 包含 ScalingFilter 枚举
 
 class ScalerRequest {
 public:
-    // 默认构造函数
-    ScalerRequest() = default;
+    ScalerRequest() : m_filter(QI_FILTER_BILINEAR) {} // 默认构造
 
-    // 主构造函数
     ScalerRequest(std::shared_ptr<Image> image, QSize size, QString path, ScalingFilter filter)
         : m_image(std::move(image))
         , m_size(size)
@@ -19,7 +18,7 @@ public:
         , m_filter(filter)
     {}
 
-    // 拷贝和移动构造函数（编译器自动生成即可）
+    // 默认拷贝/移动语义在 Qt6/C++17 下表现良好
     ScalerRequest(const ScalerRequest&) = default;
     ScalerRequest(ScalerRequest&&) = default;
     ScalerRequest& operator=(const ScalerRequest&) = default;
@@ -31,7 +30,7 @@ public:
     QString path() const { return m_path; }
     ScalingFilter filter() const { return m_filter; }
 
-    // 比较运算符（用于判断缓冲请求是否相同）
+    // 核心逻辑：判断两个请求是否在处理同一张图的同一个规格
     bool operator==(const ScalerRequest& other) const {
         return m_image == other.m_image &&
                m_size == other.m_size &&
@@ -48,5 +47,8 @@ private:
     QString m_path;
     ScalingFilter m_filter;
 };
+
+// 注册到 Qt 类型系统，以便在信号槽中跨线程传递（如果需要）
+Q_DECLARE_METATYPE(ScalerRequest)
 
 #endif // SCALERREQUEST_H

@@ -3,7 +3,6 @@
 ImageViewerV2::ImageViewerV2(QWidget *parent) 
     : QGraphicsView(parent)
     , pixmap(nullptr)
-    , pixmapScaled(nullptr)
     , movie(nullptr)
     , scene(nullptr)
     , checkboard(nullptr)
@@ -369,7 +368,7 @@ void ImageViewerV2::showImage(std::unique_ptr<QPixmap> _pixmap) {
 void ImageViewerV2::reset() {
     stopPosAnimation();
     pixmapItemScaled.setPixmap(QPixmap());
-    pixmapScaled.reset(nullptr);
+    pixmapScaled = QPixmap();
     pixmapItem.setPixmap(QPixmap());
     pixmapItem.setScale(1.0f);
     pixmapItem.setOffset(10000, 10000);
@@ -384,13 +383,13 @@ void ImageViewerV2::closeImage() {
     reset();
 }
 
-void ImageViewerV2::setScaledPixmap(std::unique_ptr<QPixmap> newFrame) {
-    if(!movie && newFrame->size() != scaledSizeR() * dpr)
+void ImageViewerV2::setScaledPixmap(QPixmap newFrame) {
+    if(!movie && newFrame.size() != scaledSizeR() * dpr)
         return;
     
-    pixmapScaled = std::move(newFrame);
-    pixmapScaled->setDevicePixelRatio(dpr);
-    pixmapItemScaled.setPixmap(*pixmapScaled);
+    pixmapScaled = newFrame;
+    pixmapScaled.setDevicePixelRatio(dpr);
+    pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();
     pixmapItemScaled.show();
 }
@@ -728,7 +727,7 @@ void ImageViewerV2::swapToOriginalPixmap() {
     
     pixmapItemScaled.hide();
     pixmapItemScaled.setPixmap(QPixmap());
-    pixmapScaled.reset(nullptr);
+    pixmapScaled = QPixmap();
     pixmapItem.show();
 }
 

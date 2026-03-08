@@ -43,7 +43,7 @@ public:
     virtual QSize sourceSize() const;
     virtual void showImage(std::unique_ptr<QPixmap> _pixmap);
     virtual void showAnimation(std::shared_ptr<QMovie> _animation);
-    virtual void setScaledPixmap(std::unique_ptr<QPixmap> newFrame);
+    virtual void setScaledPixmap(QPixmap newFrame);
     virtual bool isDisplaying() const;
     virtual bool imageFits() const;
     virtual ScalingFilter scalingFilter() const;
@@ -127,7 +127,7 @@ private:
     // Scene and display components
     QGraphicsScene *scene;
     std::shared_ptr<QPixmap> pixmap;
-    std::unique_ptr<QPixmap> pixmapScaled;
+    QPixmap pixmapScaled;
     std::shared_ptr<QMovie> movie;
     QGraphicsPixmapItem pixmapItem, pixmapItemScaled;
     QPixmap *checkboard;

@@ -16,7 +16,7 @@
     <li><strong>高性能渲染</strong>：利用 Qt6 的硬件加速和优化算法</li>
     <li><strong>现代化架构</strong>：基于 C++17 特性的模块化设计</li>
     <li><strong>智能内存管理</strong>：使用智能指针和 RAII 原则</li>
-    <li><strong>用户友好界面</strong>：直观的文件夹视图和图片查看模式</li>
+    <li><strong>编译优化</strong>：采用Clang最新版编译x64-V3版本，开启AVX2支持，性能更佳</li>
   </ul>
 
   <h2>🚀 技术亮点</h2>
@@ -156,7 +156,7 @@
     <li><strong>High-Performance Rendering</strong>: Leverages Qt6 hardware acceleration and optimized algorithms.</li>
     <li><strong>Modern Architecture</strong>: Modular design based on C++17 features.</li>
     <li><strong>Intelligent Memory Management</strong>: Utilizes smart pointers and RAII principles.</li>
-    <li><strong>User-Friendly Interface</strong>: Intuitive folder view and image viewing modes.</li>
+    <li><strong>Compilation Optimization</strong>: Compiled with the latest Clang using x64-V3 architecture, adding AVX2 support for better performance.</li>
   </ul>
 
   <h2>🚀 Technical Highlights</h2>

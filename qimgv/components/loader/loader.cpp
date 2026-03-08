@@ -4,7 +4,7 @@
 
 Loader::Loader() {
     pool = new QThreadPool(this);
-    // 固定使用4个线程
+    // 固定使用2个线程
     pool->setMaxThreadCount(2);
 }
 

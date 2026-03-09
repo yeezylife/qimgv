@@ -140,7 +140,7 @@
   </ol>
 
   <hr />
-  <p align="center">📧 如有问题或建议，欢迎联系项目维护者</p>
+  <p align="center">📧 个人修改项目，不接受功能请求，有bug可以提。</p>
 <div id="en" class="lang-block">
   <h1 align="center">qimgv – Modern High-Performance Image Browsing Tool</h1>
 
@@ -280,5 +280,5 @@
   </ol>
 
   <hr />
-  <p align="center">📧 For questions or suggestions, please contact the maintainers.</p
+  <p align="center">📧 For my personal use only. Feature requests are not accepted. You can report bugs though.</p
 </div>

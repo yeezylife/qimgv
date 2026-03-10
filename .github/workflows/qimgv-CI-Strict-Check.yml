@@ -68,6 +68,24 @@ jobs:
               -Wmisleading-indentation \
               -Wlogical-op-parentheses \
               -Wno-unused-parameter \
+              -Wdocumentation \
+              -Wimplicit-fallthrough \
+              -Wunused-macros \
+              -Wdisabled-optimization \
+              -Wpadded \
+              -Wweak-vtables \
+              -Wexit-time-destructors \
+              -Wglobal-constructors \
+              -Wswitch \
+              -Wfloat-conversion \
+              -Wshorten-64-to-32 \
+              -Wnull-dereference \
+              -Wself-assign \
+              -Wself-assign-field \
+              -Wtautological-compare \
+              -Wunused-private-field \
+              -Wunused-lambda-capture \
+              -Wrange-loop-analysis \
             " \
             -DCMAKE_C_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
@@ -90,5 +108,17 @@ jobs:
               -Wformat=2 \
               -Wmisleading-indentation \
               -Wlogical-op-parentheses \
+              -Wdocumentation \
+              -Wimplicit-fallthrough \
+              -Wunused-macros \
+              -Wdisabled-optimization \
+              -Wpadded \
+              -Wswitch \
+              -Wfloat-conversion \
+              -Wshorten-64-to-32 \
+              -Wnull-dereference \
+              -Wself-assign \
+              -Wself-assign-field \
+              -Wtautological-compare \
             "
           cmake --build build --config Debug

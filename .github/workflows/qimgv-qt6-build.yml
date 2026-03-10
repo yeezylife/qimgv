@@ -210,9 +210,7 @@ jobs:
             自动编译发布，拉取上游插件最新代码。  Automatically compiled and published, pulling the latest version of upstream plugins.
             
             - 触发方式：${{ github.event_name == 'schedule' && '定时（每6个月）' || '手动触发' }}
-            - 构建日期：${{ github.run_date }}
             - 提交：${{ github.sha }}
-            - 工作流运行：#${{ github.run_number }}
             - GitHub Actions 日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
             > 此版本使用 -march=x86-64-v3 优化，仅兼容较新的 CPU（Haswell 及以后）。

@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 static void wakeup(void *ctx) {
-    QMetaObject::invokeMethod((MpvWidget*)ctx, "on_mpv_events", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(static_cast<MpvWidget*>(ctx), "on_mpv_events", Qt::QueuedConnection);
 }
 
 static void *get_proc_address(void *ctx, const char *name) {
@@ -154,7 +154,7 @@ void MpvWidget::maybeUpdate() {
 }
 
 void MpvWidget::on_update(void *ctx) {
-    QMetaObject::invokeMethod((MpvWidget*)ctx, "maybeUpdate");
+    QMetaObject::invokeMethod(static_cast<MpvWidget*>(ctx), "maybeUpdate");
 }
 
 void MpvWidget::setMuted(bool mode) {

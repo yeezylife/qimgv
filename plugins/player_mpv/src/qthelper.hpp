@@ -40,7 +40,7 @@ public:
     }
 
     // Return the raw handle; for use with the libmpv C API.
-    operator mpv_handle*() const { return sptr ? (*sptr).mpv : 0; }
+    operator mpv_handle*() const { return sptr ? (*sptr).mpv : nullptr; }
 };
 
 static inline QVariant node_to_variant(const mpv_node *node)
@@ -92,24 +92,24 @@ private:
         dst->u.list = list;
         if (!list)
             goto err;
-        list->values = new mpv_node[num]();
+        list->values = new mpv_node[static_cast<size_t>(num)]();
         if (!list->values)
             goto err;
         if (is_map) {
-            list->keys = new char*[num]();
+            list->keys = new char*[static_cast<size_t>(num)]();
             if (!list->keys)
                 goto err;
         }
         return list;
     err:
         free_node(dst);
-        return NULL;
+        return nullptr;
     }
     char *dup_qstring(const QString &s) {
         QByteArray b = s.toUtf8();
-        char *r = new char[b.size() + 1];
+        char *r = new char[static_cast<size_t>(b.size()) + 1];
         if (r)
-            std::memcpy(r, b.data(), b.size() + 1);
+            std::memcpy(r, b.data(), static_cast<size_t>(b.size()) + 1);
         return r;
     }
     bool test_type(const QVariant &v, QMetaType::Type t) {
@@ -136,18 +136,18 @@ private:
             dst->u.double_ = src.toDouble();
         } else if (src.canConvert<QVariantList>()) {
             QVariantList qlist = src.toList();
-            mpv_node_list *list = create_list(dst, false, qlist.size());
+            mpv_node_list *list = create_list(dst, false, static_cast<int>(qlist.size()));
             if (!list)
                 goto fail;
-            list->num = qlist.size();
+            list->num = static_cast<int>(qlist.size());
             for (int n = 0; n < qlist.size(); n++)
                 set(&list->values[n], qlist[n]);
         } else if (src.canConvert<QVariantMap>()) {
             QVariantMap qmap = src.toMap();
-            mpv_node_list *list = create_list(dst, true, qmap.size());
+            mpv_node_list *list = create_list(dst, true, static_cast<int>(qmap.size()));
             if (!list)
                 goto fail;
-            list->num = qmap.size();
+            list->num = static_cast<int>(qmap.size());
             for (int n = 0; n < qmap.size(); n++) {
                 list->keys[n] = dup_qstring(qmap.keys()[n]);
                 if (!list->keys[n]) {

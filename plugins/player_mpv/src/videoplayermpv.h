@@ -15,29 +15,29 @@ class VideoPlayerMpv : public VideoPlayer {
     Q_OBJECT
 public:
     explicit VideoPlayerMpv(QWidget *parent = nullptr);
-    bool showVideo(QString file);
-    void setVideoUnscaled(bool mode);
-    int volume();
+    bool showVideo(QString file) override;
+    void setVideoUnscaled(bool mode) override;
+    int volume() override;
 
 public slots:
-    void seek(int pos);
-    void seekRelative(int pos);
-    void pauseResume();
-    void frameStep();
-    void frameStepBack();
-    void stop();
-    void setPaused(bool mode);
-    void setMuted(bool);
-    bool muted();
-    void volumeUp();
-    void volumeDown();
-    void setVolume(int);
-    void show();
-    void hide();
-    void setLoopPlayback(bool mode);
+    void seek(int pos) override;
+    void seekRelative(int pos) override;
+    void pauseResume() override;
+    void frameStep() override;
+    void frameStepBack() override;
+    void stop() override;
+    void setPaused(bool mode) override;
+    void setMuted(bool) override;
+    bool muted() override;
+    void volumeUp() override;
+    void volumeDown() override;
+    void setVolume(int) override;
+    void show() override;
+    void hide() override;
+    void setLoopPlayback(bool mode) override;
 
 protected:
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

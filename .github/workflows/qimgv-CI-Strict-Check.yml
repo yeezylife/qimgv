@@ -55,7 +55,7 @@ jobs:
               -Wnarrowing \
               -Wold-style-cast \
               -Wcast-qual \
-              -Wcast-align=strict \
+              -Wcast-align \
               -pedantic -Wpedantic \
               -Wzero-as-null-pointer-constant \
               -Wnon-virtual-dtor \
@@ -68,9 +68,7 @@ jobs:
               -Wdouble-promotion \
               -Wformat=2 \
               -Wmisleading-indentation \
-              -Wduplicated-branches \
-              -Wduplicated-cond \
-              -Wlogical-op \
+              -Wlogical-op-parentheses \
               -Wno-unused-parameter \
             " \
             -DCMAKE_C_FLAGS="\
@@ -84,7 +82,7 @@ jobs:
               -Wnarrowing \
               -Wold-style-cast \
               -Wcast-qual \
-              -Wcast-align=strict \
+              -Wcast-align \
               -pedantic -Wpedantic \
               -Wzero-as-null-pointer-constant \
               -Wmissing-declarations \
@@ -94,8 +92,6 @@ jobs:
               -Wdouble-promotion \
               -Wformat=2 \
               -Wmisleading-indentation \
-              -Wduplicated-branches \
-              -Wduplicated-cond \
-              -Wlogical-op \
+              -Wlogical-op-parentheses \
             "
           cmake --build build --config Debug

@@ -43,10 +43,8 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
-            -DQT_NO_DEBUG_OUTPUT=ON \
             -DCMAKE_CXX_FLAGS="\
-              -DQT_NO_DEBUG_OUTPUT \
-              -O1 -g3 -fno-omit-frame-pointer \
+              -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \
               -Wall -Wextra -Werror \
               -Wconversion \
@@ -72,8 +70,7 @@ jobs:
               -Wno-unused-parameter \
             " \
             -DCMAKE_C_FLAGS="\
-              -DQT_NO_DEBUG_OUTPUT \
-              -O1 -g3 -fno-omit-frame-pointer \
+              -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \
               -Wall -Wextra -Werror \
               -Wconversion \

@@ -46,7 +46,7 @@ jobs:
           echo "build_name=${BNAME}" >> $GITHUB_OUTPUT
           echo "build_file_name=${BNAME}.7z" >> $GITHUB_OUTPUT
       # 🔧 修改后的调试构建步骤
-      - name: Build qimgv (Debug + Symbols)
+      - name: Build qimgv (Debug Strict Mode)
         run: |
           cmake -B build -S . -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
@@ -54,9 +54,63 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
-            -DCMAKE_C_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Werror" \
-            -DCMAKE_CXX_FLAGS="-march=x86-64-v3 -g -O0 -Wall -Wextra -Werror -Wno-unused-parameter"
+            -DQT_NO_DEBUG_OUTPUT=ON \
+            -DCMAKE_CXX_FLAGS="\
+              -DQT_NO_DEBUG_OUTPUT \
+              -O1 -g3 -fno-omit-frame-pointer \
+              -march=x86-64-v3 \
+              -Wall -Wextra -Werror \
+              -Wconversion \
+              -Wsign-conversion \
+              -Wsign-compare \
+              -Wnarrowing \
+              -Wold-style-cast \
+              -Wcast-qual \
+              -Wcast-align=strict \
+              -pedantic -Wpedantic \
+              -Wzero-as-null-pointer-constant \
+              -Wnon-virtual-dtor \
+              -Woverloaded-virtual \
+              -Wsuggest-override \
+              -Wmissing-declarations \
+              -Wredundant-decls \
+              -Wshadow \
+              -Wundef \
+              -Wdouble-promotion \
+              -Wformat=2 \
+              -Wmisleading-indentation \
+              -Wduplicated-branches \
+              -Wduplicated-cond \
+              -Wlogical-op \
+              -Wno-unused-parameter \
+            " \
+            -DCMAKE_C_FLAGS="\
+              -DQT_NO_DEBUG_OUTPUT \
+              -O1 -g3 -fno-omit-frame-pointer \
+              -march=x86-64-v3 \
+              -Wall -Wextra -Werror \
+              -Wconversion \
+              -Wsign-conversion \
+              -Wsign-compare \
+              -Wnarrowing \
+              -Wold-style-cast \
+              -Wcast-qual \
+              -Wcast-align=strict \
+              -pedantic -Wpedantic \
+              -Wzero-as-null-pointer-constant \
+              -Wmissing-declarations \
+              -Wredundant-decls \
+              -Wshadow \
+              -Wundef \
+              -Wdouble-promotion \
+              -Wformat=2 \
+              -Wmisleading-indentation \
+              -Wduplicated-branches \
+              -Wduplicated-cond \
+              -Wlogical-op \
+            "
           cmake --build build --config Debug
+
       - name: Prepare Debug Package
         run: |
           TARGET="./${{ steps.vars.outputs.build_name }}"

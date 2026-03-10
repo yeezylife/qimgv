@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QMap>
 #include <QSize>
 #include <QUrl>
 #include <QMimeDatabase>
@@ -10,7 +11,6 @@
 #include <QImageReader>
 #include <cmath>
 #include <cstring>
-#include <memory>
 #include "utils/stuff.h"
 #include "settings.h"
 
@@ -45,20 +45,25 @@ private:
     QString mFormat;
     bool exifLoaded;
 
-    // guesses file type from its contents
-    // and sets extension
+    // 使用普通成员变量而非智能指针
+    QMap<QString, QString> exifTags;
+
+    // 静态函数返回映射表（解决翻译问题）
+    static const QMap<QString, QString>& getKeyMapping();
+
+    // guesses file type from its contents and sets extension
     void detectFormat();
     void loadExifOrientation();
     bool detectAPNG();
     bool detectAnimatedWebP();
     bool detectAnimatedJxl();
     bool detectAnimatedAvif();
-    std::shared_ptr<QMap<QString, QString>> exifTags;
+    
     QMimeType mMimeType;
     
-    // 新增：QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)
+    // QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)
     int transformationToExifOrientation(QImageIOHandler::Transformations transformation) const;
     
-    // 新增：格式化元数据值
+    // 格式化元数据值
     QString formatMetadataValue(const QString &key, const QVariant &value) const;
 };

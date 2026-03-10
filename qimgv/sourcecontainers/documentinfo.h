@@ -9,8 +9,11 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include <QImageReader>
+#include <QFile>
+#include <QDataStream>
 #include <cmath>
 #include <cstring>
+
 #include "utils/stuff.h"
 #include "settings.h"
 
@@ -18,9 +21,15 @@ enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };
 
 class DocumentInfo {
 public:
-    DocumentInfo(QString path);
+    explicit DocumentInfo(const QString &path);
     ~DocumentInfo();
-    
+
+    // 拷贝和移动操作（默认即可）
+    DocumentInfo(const DocumentInfo &) = default;
+    DocumentInfo& operator=(const DocumentInfo &) = default;
+    DocumentInfo(DocumentInfo &&) noexcept = default;
+    DocumentInfo& operator=(DocumentInfo &&) noexcept = default;
+
     QString directoryPath() const;
     QString filePath() const;
     QString fileName() const;
@@ -28,42 +37,39 @@ public:
     qint64 fileSize() const;
     DocumentType type() const;
     QMimeType mimeType() const;
-
-    // file extension (guessed from mime-type)
     QString format() const;
     int exifOrientation() const;
-
     QDateTime lastModified() const;
+
     void refresh();
-    void loadExifTags();
-    QMap<QString, QString> getExifTags();
+
+    // 懒加载 EXIF 标签（const 正确版本）
+    void loadExifTags() const;   // 注意：const 成员，可修改 mutable 成员
+    const QMap<QString, QString>& getExifTags() const;   // 返回 const 引用
+
+    bool isValid() const { return mDocumentType != NONE; }
 
 private:
     QFileInfo fileInfo;
-    DocumentType mDocumentType;
-    int mOrientation;
+
+    DocumentType mDocumentType = NONE;
+    int mOrientation = 0;
     QString mFormat;
-    bool exifLoaded;
+    QMimeType mMimeType;
 
-    // 使用普通成员变量而非智能指针
-    QMap<QString, QString> exifTags;
+    // mutable 成员，允许在 const 函数中懒加载
+    mutable bool exifLoaded = false;
+    mutable QMap<QString, QString> exifTags;
 
-    // 静态函数返回映射表（解决翻译问题）
     static const QMap<QString, QString>& getKeyMapping();
 
-    // guesses file type from its contents and sets extension
     void detectFormat();
     void loadExifOrientation();
     bool detectAPNG();
     bool detectAnimatedWebP();
     bool detectAnimatedJxl();
     bool detectAnimatedAvif();
-    
-    QMimeType mMimeType;
-    
-    // QImageIOHandler::Transformations 转换为标准 EXIF Orientation (1-8)
+
     int transformationToExifOrientation(QImageIOHandler::Transformations transformation) const;
-    
-    // 格式化元数据值
     QString formatMetadataValue(const QString &key, const QVariant &value) const;
 };

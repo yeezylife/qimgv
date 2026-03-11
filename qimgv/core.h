@@ -72,7 +72,7 @@ private:
     bool setDirectory(QString path);
 
     QDrag *mDrag;
-    QMimeData *getMimeDataForImage(std::shared_ptr<Image> img, MimeDataTarget target);
+    QMimeData *getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target);
     QTranslator *translator = nullptr;
 
     Randomizer randomizer;
@@ -94,10 +94,10 @@ private:
     QList<QString> currentSelection();
 
     template<typename Func, typename... Args>
-    void edit_template(bool save, QString actionName, Func func, Args&&... as);
+    void edit_template(bool save, const QString& actionName, Func func, Args&&... as);
 
-    void doInteractiveCopy(QString path, QString destDirectory, DialogResult &overwriteAllFiles);
-    void doInteractiveMove(QString path, QString destDirectory, DialogResult &overwriteAllFiles);
+    void doInteractiveCopy(const QString& path, const QString& destDirectory, DialogResult &overwriteAllFiles);
+    void doInteractiveMove(const QString& path, const QString& destDirectory, DialogResult &overwriteAllFiles);
 
 private slots:
     void readSettings();
@@ -115,15 +115,15 @@ private slots:
     void close();
     void scalingRequest(QSize, ScalingFilter);
     void onScalingFinished(QPixmap scaled, ScalerRequest req);
-    void copyCurrentFile(QString destDirectory);
-    void moveCurrentFile(QString destDirectory);
+    void copyCurrentFile(const QString& destDirectory);
+    void moveCurrentFile(const QString& destDirectory);
     void copyPathsTo(QList<QString> paths, QString destDirectory);
-    void interactiveCopy(QList<QString> paths, QString destDirectory);
-    void interactiveMove(QList<QString> paths, QString destDirectory);
+    void interactiveCopy(const QList<QString>& paths, const QString& destDirectory);
+    void interactiveMove(const QList<QString>& paths, const QString& destDirectory);
     void movePathsTo(QList<QString> paths, QString destDirectory);
-    FileOpResult removeFile(QString fileName, bool trash);
-    void onFileRemoved(QString filePath, int index);
-    void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
+    FileOpResult removeFile(const QString& fileName, bool trash);
+    void onFileRemoved(const QString& filePath, int index);
+    void onFileRenamed(const QString& fromPath, int indexFrom, const QString& toPath, int indexTo);
     void onFileAdded(const QString& filePath);
     void onFileModified(const QString& filePath);
     void showResizeDialog();
@@ -137,7 +137,7 @@ private slots:
     void toggleFullscreenInfoBar();
     void requestSavePath();
     void saveCurrentFile();
-    void saveCurrentFileAs(QString);
+    void saveCurrentFileAs(const QString&);
     void runScript(const QString&);
     void setWallpaper();
     void removePermanent();
@@ -147,7 +147,7 @@ private slots:
     void copyFileClipboard();
     void copyPathClipboard();
     void openFromClipboard();
-    void renameCurrentSelection(QString newName);
+    void renameCurrentSelection(const QString& newName);
     void sortBy(SortingMode mode);
     void sortByName();
     void sortByTime();

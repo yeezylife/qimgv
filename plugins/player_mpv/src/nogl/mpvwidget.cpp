@@ -1,8 +1,8 @@
 #include "mpvwidget.h"
 #include <stdexcept>
 
-static void wakeup(void *ctx) {
-    QMetaObject::invokeMethod((MpvWidget*)ctx, "on_mpv_events", Qt::QueuedConnection);       
+static void wakeup(void *ctx) noexcept {
+    QMetaObject::invokeMethod(static_cast<MpvWidget*>(ctx), "on_mpv_events", Qt::QueuedConnection);       
 }
 
 MpvWidget::MpvWidget(QWidget *parent, Qt::WindowFlags f)
@@ -106,11 +106,11 @@ void MpvWidget::setMuted(bool mode) {
         mpv::qt::set_property(mpv, "mute", "no");
 }
 
-bool MpvWidget::muted() {
+bool MpvWidget::muted() const {
     return mpv::qt::get_property(mpv, "mute").toBool();
 }
 
-int MpvWidget::volume() {
+int MpvWidget::volume() const {
     return mpv::qt::get_property(mpv, "volume").toInt();
 }
 

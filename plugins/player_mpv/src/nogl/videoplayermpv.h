@@ -11,13 +11,13 @@
 
 class MpvWidget;
 
-class VideoPlayerMpv : public VideoPlayer {
+class VideoPlayerMpv final : public VideoPlayer {
     Q_OBJECT
 public:
     explicit VideoPlayerMpv(QWidget *parent = nullptr);
-    bool showVideo(QString file);
+    [[nodiscard]] bool showVideo(const QString &file);
     void setVideoUnscaled(bool mode);
-    int volume();
+    [[nodiscard]] int volume() const;
 
 public slots:
     void seek(int pos);
@@ -27,11 +27,11 @@ public slots:
     void frameStepBack();
     void stop();
     void setPaused(bool mode);
-    void setMuted(bool);
-    bool muted();
+    void setMuted(bool mode);
+    [[nodiscard]] bool muted() const;
     void volumeUp();
     void volumeDown();
-    void setVolume(int);
+    void setVolume(int vol);
     void show();
     void hide();
     void setLoopPlayback(bool mode);

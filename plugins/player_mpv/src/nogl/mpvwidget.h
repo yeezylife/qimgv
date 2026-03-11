@@ -11,21 +11,21 @@
 #include <ctime>
 #include <QTimer>
 
-class MpvWidget Q_DECL_FINAL : public QWidget {
+class MpvWidget final : public QWidget {
     Q_OBJECT
 public:
-    MpvWidget(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+    explicit MpvWidget(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
     ~MpvWidget() override;
 
     void command(const QVariant& params);
     void setOption(const QString &name, const QVariant &value);
     void setProperty(const QString& name, const QVariant& value);
-    QVariant getProperty(const QString& name) const;
+    [[nodiscard]] QVariant getProperty(const QString& name) const;
     
     void setMuted(bool mode);
     void setRepeat(bool mode);
-    bool muted();
-    int volume();
+    [[nodiscard]] bool muted() const;
+    [[nodiscard]] int volume() const;
     void setVolume(int vol);
 
 signals:

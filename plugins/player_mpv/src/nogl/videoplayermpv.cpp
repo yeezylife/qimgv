@@ -27,7 +27,7 @@ VideoPlayerMpv::VideoPlayerMpv(QWidget *parent) : VideoPlayer(parent) {
     connect(m_mpv, SIGNAL(playbackFinished()), this, SIGNAL(playbackFinished()));
 }
 
-bool VideoPlayerMpv::showVideo(QString file) {
+bool VideoPlayerMpv::showVideo(const QString &file) {
     if(file.isEmpty())
         return false;
     m_mpv->command(QStringList() << "loadfile" << file);
@@ -70,7 +70,7 @@ void VideoPlayerMpv::setMuted(bool mode) {
     m_mpv->setMuted(mode);
 }
 
-bool VideoPlayerMpv::muted() {
+bool VideoPlayerMpv::muted() const {
     return m_mpv->muted();
 }
 
@@ -86,7 +86,7 @@ void VideoPlayerMpv::setVolume(int vol) {
     m_mpv->setVolume(vol);
 }
 
-int VideoPlayerMpv::volume() {
+int VideoPlayerMpv::volume() const {
     return m_mpv->volume();
 }
 

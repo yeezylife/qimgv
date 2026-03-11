@@ -19,7 +19,7 @@ ScriptManager *ScriptManager::getInstance() {
     return scriptManager;
 }
 
-void ScriptManager::runScript(const QString &scriptName, std::shared_ptr<Image> img) {
+void ScriptManager::runScript(const QString &scriptName, const std::shared_ptr<Image> &img) {
     if(scripts.contains(scriptName)) {
         Script script = scripts.value(scriptName);
         if(script.command.isEmpty())
@@ -67,10 +67,10 @@ void ScriptManager::runCommandDetached(const QString& cmd) {
 }
 
 // TODO: what if filename contains one of the tags?
-void ScriptManager::processArguments(QStringList &cmd, std::shared_ptr<Image> img) const {
+void ScriptManager::processArguments(QStringList &cmd, const std::shared_ptr<Image> &img) const {
     for (auto& i : cmd) {
         if(i.contains("%file%"))
-            i.replace("%file%", img.get()->filePath());
+            i.replace("%file%", img->filePath());
 #ifdef __WIN32
         // force "\" as a directory separator
         i.replace("/", "\\");
@@ -84,7 +84,7 @@ QStringList ScriptManager::splitCommandLine(const QString &cmdLine) {
     QStringList list;
     QString arg;
     bool escape = false;
-    enum { Idle, Arg, QuotedArg } state = Idle;
+    enum State : std::uint8_t { Idle, Arg, QuotedArg } state = Idle;
     
     for (QChar c : cmdLine) {
         switch (state) {

@@ -1,5 +1,6 @@
 #include "mpvwidget.h"
 #include <stdexcept>
+#include <array>
 
 static void wakeup(void *ctx) {
     QMetaObject::invokeMethod(static_cast<MpvWidget*>(ctx), "on_mpv_events", Qt::QueuedConnection);
@@ -71,10 +72,10 @@ void MpvWidget::setOption(const QString& name, const QVariant& value) {
 
 void MpvWidget::initializeGL() {
     mpv_opengl_init_params gl_init_params{get_proc_address, nullptr};
-    mpv_render_param params[]{
-        {MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_OPENGL)},
-        {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl_init_params},
-        {MPV_RENDER_PARAM_INVALID, nullptr}
+    std::array<mpv_render_param, 3> params{
+        mpv_render_param{MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_OPENGL)},
+        mpv_render_param{MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl_init_params},
+        mpv_render_param{MPV_RENDER_PARAM_INVALID, nullptr}
     };
 
     if(mpv_render_context_create(&mpv_gl, mpv, params) < 0)
@@ -86,10 +87,10 @@ void MpvWidget::paintGL() {
     mpv_opengl_fbo mpfbo{static_cast<int>(defaultFramebufferObject()), width(), height(), 0};
     int flip_y{1};
 
-    mpv_render_param params[]{
-        {MPV_RENDER_PARAM_OPENGL_FBO, &mpfbo},
-        {MPV_RENDER_PARAM_FLIP_Y, &flip_y},
-        {MPV_RENDER_PARAM_INVALID, nullptr}
+    std::array<mpv_render_param, 3> params{
+        mpv_render_param{MPV_RENDER_PARAM_OPENGL_FBO, &mpfbo},
+        mpv_render_param{MPV_RENDER_PARAM_FLIP_Y, &flip_y},
+        mpv_render_param{MPV_RENDER_PARAM_INVALID, nullptr}
     };
     // See render_gl.h on what OpenGL environment mpv expects, and
     // other API details.

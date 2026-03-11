@@ -111,11 +111,11 @@ void Settings::loadStylesheet() {
         auto fnt = QGuiApplication::font();
         QFontMetrics fm(fnt);
         // todo: use precise values for ~9-11 point sizes
-        int font_small = qMax((int)(fnt.pointSize() * 0.9f), 8);
-        int font_large = (int)(fnt.pointSize() * 1.8f);
+        int font_small = qMax(static_cast<int>(fnt.pointSize() * 0.9f), 8);
+        int font_large = static_cast<int>(fnt.pointSize() * 1.8f);
         int text_height = fm.height();
-        int text_padding = (int)(text_height * 0.10f);
-        int text_padding_large = (int)(text_height * 0.25f);
+        int text_padding = static_cast<int>(text_height * 0.10f);
+        int text_padding_large = static_cast<int>(text_height * 0.25f);
 
         // folderview top panel item sizes
         int top_panel_v_margin = 4;
@@ -133,10 +133,10 @@ void Settings::loadStylesheet() {
 
         // pseudo-dpi to scale some widget widths
         int text_height_base = 22;
-        qreal pDpr = qMax( ((qreal)(text_height) / text_height_base), 1.0);
-        int context_menu_width = 212 * pDpr;
-        int context_menu_button_height = 32 * pDpr;
-        int rename_overlay_width = 380 * pDpr;
+        qreal pDpr = qMax( static_cast<qreal>(text_height) / text_height_base, 1.0);
+        int context_menu_width = static_cast<int>(212 * pDpr);
+        int context_menu_button_height = static_cast<int>(32 * pDpr);
+        int rename_overlay_width = static_cast<int>(380 * pDpr);
 
         //qDebug()<< "dpr=" << qApp->devicePixelRatio() << "pDpr=" << pDpr;
 
@@ -301,7 +301,7 @@ QString Settings::mpvBinary() {
     return mpvPath;
 }
 
-void Settings::setMpvBinary(QString path) {
+void Settings::setMpvBinary(const QString &path) {
     if(QFile::exists(path)) {
         settings->settingsConf->setValue("mpvBinary", path);
     }
@@ -731,7 +731,7 @@ QStringList Settings::savedPaths() {
     return settings->stateConf->value("savedPaths", QDir::homePath()).toStringList();
 }
 
-void Settings::setSavedPaths(QStringList paths) {
+void Settings::setSavedPaths(const QStringList &paths) {
     settings->stateConf->setValue("savedPaths", paths);
 }
 //------------------------------------------------------------------------------
@@ -739,7 +739,7 @@ QStringList Settings::bookmarks() {
     return settings->stateConf->value("bookmarks").toStringList();
 }
 
-void Settings::setBookmarks(QStringList paths) {
+void Settings::setBookmarks(const QStringList &paths) {
     settings->stateConf->setValue("bookmarks", paths);
 }
 //------------------------------------------------------------------------------
@@ -1069,7 +1069,7 @@ QString Settings::lastPrinter() {
     return stateConf->value("lastPrinter", "").toString();
 }
 
-void Settings::setLastPrinter(QString name) {
+void Settings::setLastPrinter(const QString &name) {
     stateConf->setValue("lastPrinter", name);
 }
 //------------------------------------------------------------------------------
@@ -1125,7 +1125,7 @@ QString Settings::language() {
     return settingsConf->value("language", "en_US").toString();
 }
 
-void Settings::setLanguage(QString lang) {
+void Settings::setLanguage(const QString &lang) {
     settingsConf->setValue("language", lang);
 }
 //------------------------------------------------------------------------------
@@ -1144,7 +1144,7 @@ QString Settings::zoomLevels() {
     return settingsConf->value("fixedZoomLevels", defaultZoomLevels()).toString();
 }
 
-void Settings::setZoomLevels(QString levels) {
+void Settings::setZoomLevels(const QString &levels) {
     settingsConf->setValue("fixedZoomLevels", levels);
 }
 //------------------------------------------------------------------------------

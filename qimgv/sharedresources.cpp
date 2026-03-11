@@ -4,9 +4,7 @@
 
 SharedResources *shrRes = nullptr;
 
-SharedResources::SharedResources()
-{
-}
+SharedResources::SharedResources() = default;
 
 SharedResources::~SharedResources() {
     // 【修正说明】
@@ -21,11 +19,16 @@ SharedResources::~SharedResources() {
         shrRes = nullptr;
     }
 
-    delete mLoadingIcon72;
-    mLoadingIcon72 = nullptr;
+    // 安全释放 QPixmap 资源
+    if (mLoadingIcon72) {
+        delete mLoadingIcon72;
+        mLoadingIcon72 = nullptr;
+    }
     
-    delete mLoadingErrorIcon72;
-    mLoadingErrorIcon72 = nullptr;
+    if (mLoadingErrorIcon72) {
+        delete mLoadingErrorIcon72;
+        mLoadingErrorIcon72 = nullptr;
+    }
 }
 
 QPixmap *SharedResources::getPixmap(ShrIcon icon, qreal dpr) {

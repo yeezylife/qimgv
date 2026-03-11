@@ -88,6 +88,7 @@ int main(int argc, char *argv[]) {
 
     // needed for mpv
 #ifndef _MSC_VER
+    // 使用线程安全的 setlocale 版本
     setlocale(LC_NUMERIC, "C");
 #endif
 

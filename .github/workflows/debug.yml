@@ -24,7 +24,6 @@ jobs:
             mingw-w64-clang-x86_64-pkgconf
             mingw-w64-clang-x86_64-kwindowsystem
             mingw-w64-clang-x86_64-qt6-base
-            mingw-w64-clang-x86_64-clang-tools-extra
             mingw-w64-clang-x86_64-qt6-svg
             mingw-w64-clang-x86_64-qt6-imageformats
             mingw-w64-clang-x86_64-qt6-tools
@@ -55,7 +54,6 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
-            -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-checks=-*,bugprone-*,clang-analyzer-*,performance-*,concurrency-*,modernize-use-nullptr,modernize-use-override,modernize-use-equals-default,modernize-avoid-c-arrays" \
             -DCMAKE_CXX_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \

@@ -170,7 +170,7 @@ QList<QString> DirectoryPresenter::selectedPaths() const {
     if(!view || !model)
         return paths;
         
-    const auto selection = view->selection();
+    const auto& selection = view->selection();
     const int dirCount = model->dirCount();
     
     if(mShowDirs) {

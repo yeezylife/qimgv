@@ -24,6 +24,7 @@ jobs:
             mingw-w64-clang-x86_64-pkgconf
             mingw-w64-clang-x86_64-kwindowsystem
             mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-tidy
             mingw-w64-clang-x86_64-qt6-svg
             mingw-w64-clang-x86_64-qt6-imageformats
             mingw-w64-clang-x86_64-qt6-tools
@@ -100,7 +101,6 @@ jobs:
               -Wrange-loop-analysis \
               -Wunreachable-code \
               -Wunused-template \
-              -Wlifetime \
               -fsanitize=address,undefined" \
             -DCMAKE_C_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
@@ -137,7 +137,6 @@ jobs:
               -Wtautological-compare \
               -Wunreachable-code \
               -Wunused-template \
-              -Wlifetime \
               -fsanitize=address,undefined"
           cmake --build build --config Debug
 

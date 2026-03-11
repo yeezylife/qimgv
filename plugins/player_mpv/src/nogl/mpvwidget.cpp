@@ -107,16 +107,16 @@ void MpvWidget::setMuted(bool mode) {
 }
 
 bool MpvWidget::muted() {
-    return mpv::qt::get_property_variant(mpv, "mute").toBool();
+    return mpv::qt::get_property(mpv, "mute").toBool();
 }
 
 int MpvWidget::volume() {
-    return mpv::qt::get_property_variant(mpv, "volume").toInt();
+    return mpv::qt::get_property(mpv, "volume").toInt();
 }
 
 void MpvWidget::setVolume(int vol) {
-    qBound(0, vol, 100);
-    mpv::qt::set_property_variant(mpv, "volume", vol);
+    vol = qBound(0, vol, 100);
+    mpv::qt::set_property(mpv, "volume", vol);
 }
 
 void MpvWidget::setRepeat(bool mode) {

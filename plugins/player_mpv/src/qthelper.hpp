@@ -200,57 +200,6 @@ struct node_autofree {
     ~node_autofree() { mpv_free_node_contents(ptr); }
 };
 
-/**
- * Return the given property as mpv_node converted to QVariant, or QVariant()
- * on error.
- *
- * @deprecated use get_property() instead
- *
- * @param name the property name
- */
-static inline QVariant get_property_variant(mpv_handle *ctx, const QString &name)
-{
-    QVariant result = get_property(ctx, name);
-    if (is_error(result))
-        return QVariant();
-    return result;
-}
-
-/**
- * Set the given property as mpv_node converted from the QVariant argument.
- *
- * @deprecated use set_property() instead
- */
-static inline int set_property_variant(mpv_handle *ctx, const QString &name,
-                                       const QVariant &v)
-{
-    return set_property(ctx, name, v);
-}
-
-/**
- * Set the given option as mpv_node converted from the QVariant argument.
- *
- * @deprecated use set_property() instead
- */
-static inline int set_option_variant(mpv_handle *ctx, const QString &name,
-                                     const QVariant &v)
-{
-    return set_property(ctx, name, v);
-}
-
-/**
- * mpv_command_node() equivalent. Returns QVariant() on error (and
- * unfortunately, the same on success).
- *
- * @deprecated use command() instead
- */
-static inline QVariant command_variant(mpv_handle *ctx, const QVariant &args)
-{
-    QVariant result = command(ctx, args);
-    if (is_error(result))
-        return QVariant();
-    return result;
-}
 
 /**
  * This is used to return error codes wrapped in QVariant for functions which

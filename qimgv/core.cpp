@@ -764,7 +764,7 @@ void Core::showInDirectory() {
 #endif
 }
 
-void Core::interactiveCopy(QList<QString> paths, QString destDirectory) {
+void Core::interactiveCopy(const QList<QString>& paths, const QString& destDirectory) {
     DialogResult overwriteFiles;
     for(const auto& path : paths) {
         doInteractiveCopy(path, destDirectory, overwriteFiles);
@@ -774,7 +774,7 @@ void Core::interactiveCopy(QList<QString> paths, QString destDirectory) {
 }
 
 // todo: replacing DIR with a FILE?
-void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &overwriteFiles) {
+void Core::doInteractiveCopy(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles) {
     QFileInfo srcFi(path);
 // SINGLE FILE COPY ===========================================================================
     if(!srcFi.isDir()) {
@@ -832,7 +832,7 @@ void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &
 }
 // -----------------------------------------------------------------------------------
 
-void Core::interactiveMove(QList<QString> paths, QString destDirectory) {
+void Core::interactiveMove(const QList<QString>& paths, const QString& destDirectory) {
     DialogResult overwriteFiles;
     for(const auto& path : paths) {
         doInteractiveMove(path, destDirectory, overwriteFiles);
@@ -842,7 +842,7 @@ void Core::interactiveMove(QList<QString> paths, QString destDirectory) {
 }
 
 // todo: replacing DIR with a FILE?
-void Core::doInteractiveMove(QString path, QString destDirectory, DialogResult &overwriteFiles) {
+void Core::doInteractiveMove(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles) {
     QFileInfo srcFi(path);
 // SINGLE FILE MOVE ===========================================================================
     if(!srcFi.isDir()) {
@@ -911,7 +911,7 @@ void Core::movePathsTo(QList<QString> paths, QString destDirectory) {
     interactiveMove(paths, destDirectory);
 }
 
-void Core::moveCurrentFile(QString destDirectory) {
+void Core::moveCurrentFile(const QString& destDirectory) {
     if(model->isEmpty())
         return;
     // pause updates to avoid flicker
@@ -936,7 +936,7 @@ void Core::moveCurrentFile(QString destDirectory) {
     mw->repaint();
 }
 
-void Core::copyCurrentFile(QString destDirectory) {
+void Core::copyCurrentFile(const QString& destDirectory) {
     if(model->isEmpty())
         return;
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
@@ -1060,7 +1060,7 @@ void Core::saveCurrentFile() {
     saveCurrentFileAs(selectedPath());
 }
 
-void Core::saveCurrentFileAs(QString destPath) {
+void Core::saveCurrentFileAs(const QString& destPath) {
     if(model->isEmpty())
         return;
     if(saveFile(selectedPath(), destPath)) {

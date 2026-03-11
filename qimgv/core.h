@@ -94,10 +94,10 @@ private:
     QList<QString> currentSelection();
 
     template<typename Func, typename... Args>
-    void edit_template(bool save, const QString& actionName, Func func, Args&&... as);
+    void edit_template(bool save, const QString& action, Func editFunc, Args&&... as);
 
-    void doInteractiveCopy(const QString& path, const QString& destDirectory, DialogResult &overwriteAllFiles);
-    void doInteractiveMove(const QString& path, const QString& destDirectory, DialogResult &overwriteAllFiles);
+    void doInteractiveCopy(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles);
+    void doInteractiveMove(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles);
 
 private slots:
     void readSettings();

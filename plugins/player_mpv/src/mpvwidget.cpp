@@ -5,7 +5,7 @@ static void wakeup(void *ctx) {
     QMetaObject::invokeMethod(static_cast<MpvWidget*>(ctx), "on_mpv_events", Qt::QueuedConnection);
 }
 
-static void *get_proc_address(void *ctx, const char *name) {
+static void *get_proc_address(void *ctx, const char *name) noexcept {
     Q_UNUSED(ctx);
     QOpenGLContext *glctx = QOpenGLContext::currentContext();
     if (!glctx)
@@ -86,7 +86,7 @@ void MpvWidget::paintGL() {
     mpv_opengl_fbo mpfbo{static_cast<int>(defaultFramebufferObject()), width(), height(), 0};
     int flip_y{1};
 
-    mpv_render_param params[] = {
+    mpv_render_param params[]{
         {MPV_RENDER_PARAM_OPENGL_FBO, &mpfbo},
         {MPV_RENDER_PARAM_FLIP_Y, &flip_y},
         {MPV_RENDER_PARAM_INVALID, nullptr}
@@ -164,17 +164,17 @@ void MpvWidget::setMuted(bool mode) {
         mpv::qt::set_property(mpv, "mute", "no");
 }
 
-bool MpvWidget::muted() {
-    return mpv::qt::get_property_variant(mpv, "mute").toBool();
+bool MpvWidget::muted() const {
+    return mpv::qt::get_property(mpv, "mute").toBool();
 }
 
-int MpvWidget::volume() {
-    return mpv::qt::get_property_variant(mpv, "volume").toInt();
+int MpvWidget::volume() const {
+    return mpv::qt::get_property(mpv, "volume").toInt();
 }
 
 void MpvWidget::setVolume(int vol) {
-    qBound(0, vol, 100);
-    mpv::qt::set_property_variant(mpv, "volume", vol);
+    vol = qBound(0, vol, 100);
+    mpv::qt::set_property(mpv, "volume", vol);
 }
 
 void MpvWidget::setRepeat(bool mode) {

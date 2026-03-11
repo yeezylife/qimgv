@@ -4,6 +4,7 @@
 #include <mpv/client.h>
 
 #include <cstring>
+#include <memory>
 
 #include <QVariant>
 #include <QString>
@@ -19,7 +20,7 @@ namespace qt {
 class Handle
 {
     struct container {
-        container(mpv_handle *h) : mpv(h) {}
+        explicit container(mpv_handle *h) noexcept : mpv(h) {}
         ~container() { mpv_terminate_destroy(mpv); }
         mpv_handle *mpv;
     };
@@ -33,14 +34,14 @@ public:
     // destroying the mpv_handle.
     // Never create multiple wrappers from the same raw mpv_handle; copy the
     // wrapper instead (that's what it's for).
-    static Handle FromRawHandle(mpv_handle *handle) {
+    [[nodiscard]] static Handle FromRawHandle(mpv_handle *handle) noexcept {
         Handle h;
         h.sptr = QSharedPointer<container>(new container(handle));
         return h;
     }
 
     // Return the raw handle; for use with the libmpv C API.
-    operator mpv_handle*() const { return sptr ? (*sptr).mpv : nullptr; }
+    explicit operator mpv_handle*() const noexcept { return sptr ? (*sptr).mpv : nullptr; }
 };
 
 static inline QVariant node_to_variant(const mpv_node *node)
@@ -76,17 +77,17 @@ static inline QVariant node_to_variant(const mpv_node *node)
 }
 
 struct node_builder {
-    node_builder(const QVariant& v) {
+    explicit node_builder(const QVariant& v) {
         set(&node_, v);
     }
     ~node_builder() {
         free_node(&node_);
     }
-    mpv_node *node() { return &node_; }
+    [[nodiscard]] mpv_node *node() noexcept { return &node_; }
 private:
     Q_DISABLE_COPY(node_builder)
     mpv_node node_;
-    mpv_node_list *create_list(mpv_node *dst, bool is_map, int num) {
+    [[nodiscard]] mpv_node_list *create_list(mpv_node *dst, bool is_map, int num) {
         dst->format = is_map ? MPV_FORMAT_NODE_MAP : MPV_FORMAT_NODE_ARRAY;
         mpv_node_list *list = new mpv_node_list();
         dst->u.list = list;
@@ -105,14 +106,14 @@ private:
         free_node(dst);
         return nullptr;
     }
-    char *dup_qstring(const QString &s) {
+    [[nodiscard]] char *dup_qstring(const QString &s) {
         QByteArray b = s.toUtf8();
         char *r = new char[static_cast<size_t>(b.size()) + 1];
         if (r)
             std::memcpy(r, b.data(), static_cast<size_t>(b.size()) + 1);
         return r;
     }
-    bool test_type(const QVariant &v, QMetaType::Type t) {
+    [[nodiscard]] static bool test_type(const QVariant &v, QMetaType::Type t) noexcept {
         return v.userType() == static_cast<int>(t);
     }
     void set(mpv_node *dst, const QVariant &src) {

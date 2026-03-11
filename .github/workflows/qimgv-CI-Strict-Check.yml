@@ -43,6 +43,7 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
+            -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-checks=-*,bugprone-*,modernize-*,readability-*,performance-*,cppcoreguidelines-*" \
             -DCMAKE_CXX_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \
@@ -86,7 +87,10 @@ jobs:
               -Wunused-private-field \
               -Wunused-lambda-capture \
               -Wrange-loop-analysis \
-            " \
+              -Wunreachable-code \
+              -Wunused-template \
+              -Wlifetime \
+              -fsanitize=address,undefined" \
             -DCMAKE_C_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \
@@ -120,5 +124,8 @@ jobs:
               -Wself-assign \
               -Wself-assign-field \
               -Wtautological-compare \
-            "
+              -Wunreachable-code \
+              -Wunused-template \
+              -Wlifetime \
+              -fsanitize=address,undefined"
           cmake --build build --config Debug

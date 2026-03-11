@@ -602,7 +602,7 @@ void Core::onDraggedOut(QList<QString> paths) {
     mDrag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
 }
 
-QMimeData *Core::getMimeDataForImage(std::shared_ptr<Image> img, MimeDataTarget target) {
+QMimeData *Core::getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target) {
     auto mimeData = std::make_unique<QMimeData>().release();
     if(!img)
         return mimeData;
@@ -635,7 +635,7 @@ void Core::setFoldersDisplay(bool mode) {
         folderViewPresenter.setShowDirs(mode);
 }
 
-void Core::renameCurrentSelection(QString newName) {
+void Core::renameCurrentSelection(const QString& newName) {
     if(!model->fileCount() || newName.isEmpty() || selectedPath().isEmpty())
         return;
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
@@ -653,7 +653,7 @@ void Core::renameCurrentSelection(QString newName) {
     outputError(result);
 }
 
-FileOpResult Core::removeFile(QString filePath, bool trash) {
+FileOpResult Core::removeFile(const QString& filePath, bool trash) {
     if(model->isEmpty())
         return FileOpResult::NOTHING_TO_DO;
 
@@ -673,7 +673,7 @@ FileOpResult Core::removeFile(QString filePath, bool trash) {
     return result;
 }
 
-void Core::onFileRemoved(QString filePath, int index) {
+void Core::onFileRemoved(const QString& filePath, int index) {
     // no files left
     if(model->isEmpty()) {
         mw->closeImage();
@@ -693,7 +693,7 @@ void Core::onFileRemoved(QString filePath, int index) {
     updateInfoString();
 }
 
-void Core::onFileRenamed(QString fromPath, int /*indexFrom*/, QString /*toPath*/, int indexTo) {
+void Core::onFileRenamed(const QString& fromPath, int /*indexFrom*/, const QString& /*toPath*/, int indexTo) {
     if(state.currentFilePath == fromPath) {
         loadFileIndex(indexTo, true, settings->usePreloader());
     }
@@ -703,7 +703,7 @@ void Core::onFileAdded(const QString& filePath) {
     Q_UNUSED(filePath)
     // update file count
     updateInfoString();
-    if(model->fileCount() == 1 && state.currentFilePath == "")
+    if(model->fileCount() == 1 && state.currentFilePath.isEmpty())
         loadFileIndex(0, false, settings->usePreloader());
 }
 
@@ -824,7 +824,7 @@ void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &
     // copy all contents
     // TODO: skip symlinks? test
     QStringList entryList = srcDir.entryList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
-    for(auto entry : entryList) {
+    for(const auto& entry : entryList) {
         doInteractiveCopy(srcDir.absolutePath() + "/" + entry, dstDir.absolutePath(), overwriteFiles);
         if(overwriteFiles.cancel)
             return;
@@ -892,7 +892,7 @@ void Core::doInteractiveMove(QString path, QString destDirectory, DialogResult &
     // move all contents
     // TODO: skip symlinks? test
     QStringList entryList = srcDir.entryList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
-    for(auto entry : entryList) {
+    for(const auto& entry : entryList) {
         doInteractiveMove(srcDir.absolutePath() + "/" + entry, dstDir.absolutePath(), overwriteFiles);
         if(overwriteFiles.cancel)
             return;
@@ -991,7 +991,7 @@ void Core::edit_template(bool save, QString action, Func editFunc, Args&&... as)
         return;
     if(save && !mw->showConfirmation(action, tr("Perform action \"") + action + "\"? \n\n" + tr("Changes will be saved immediately.")))
         return;
-    for(auto path : currentSelection()) {
+    for(const auto& path : currentSelection()) {
         auto img = getEditableImage(path);
         if(!img)
             continue;
@@ -1201,13 +1201,9 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 }
 
 // TODO: don't use connect? otherwise there is no point using unique_ptr
-void Core::onScalingFinished(std::unique_ptr<QPixmap> scaled, ScalerRequest req) {
+void Core::onScalingFinished(QPixmap scaled, ScalerRequest req) {
     if (state.hasActiveImage && req.path() == state.currentFilePath) {
-        // 假设 mw->onScalingFinished 已调整为接受 QPixmap 值（推荐）
-        // 若 MainWindow 的槽尚未修改，请同步更新其签名
         mw->onScalingFinished(scaled);
-    } else {
-        // scaled 为局部对象，函数结束时自动销毁，无需 delete
     }
 }
 

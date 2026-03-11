@@ -78,7 +78,7 @@ void MpvWidget::initializeGL() {
         mpv_render_param{MPV_RENDER_PARAM_INVALID, nullptr}
     };
 
-    if(mpv_render_context_create(&mpv_gl, mpv, params) < 0)
+    if(mpv_render_context_create(&mpv_gl, mpv, params.data()) < 0)
         throw std::runtime_error("failed to initialize mpv GL context");
     mpv_render_context_set_update_callback(mpv_gl, MpvWidget::on_update, reinterpret_cast<void *>(this));
 }
@@ -94,7 +94,7 @@ void MpvWidget::paintGL() {
     };
     // See render_gl.h on what OpenGL environment mpv expects, and
     // other API details.
-    mpv_render_context_render(mpv_gl, params);
+    mpv_render_context_render(mpv_gl, params.data());
 }
 
 void MpvWidget::on_mpv_events() {

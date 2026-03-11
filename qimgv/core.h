@@ -107,14 +107,14 @@ private slots:
     void jumpToFirst();
     void jumpToLast();
     void onModelItemReady(std::shared_ptr<Image>, const QString&);
-    void onModelItemUpdated(QString fileName);
+    void onModelItemUpdated(const QString& fileName);
     void onModelSortingChanged(SortingMode mode);
     void onLoadFailed(const QString &path);
     void rotateLeft();
     void rotateRight();
     void close();
     void scalingRequest(QSize, ScalingFilter);
-    void onScalingFinished(std::unique_ptr<QPixmap> scaled, ScalerRequest req);
+    void onScalingFinished(QPixmap scaled, ScalerRequest req);
     void copyCurrentFile(QString destDirectory);
     void moveCurrentFile(QString destDirectory);
     void copyPathsTo(QList<QString> paths, QString destDirectory);
@@ -124,8 +124,8 @@ private slots:
     FileOpResult removeFile(QString fileName, bool trash);
     void onFileRemoved(QString filePath, int index);
     void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-    void onFileAdded(QString filePath);
-    void onFileModified(QString filePath);
+    void onFileAdded(const QString& filePath);
+    void onFileModified(const QString& filePath);
     void showResizeDialog();
     void resize(QSize size);
     void flipH();
@@ -143,7 +143,7 @@ private slots:
     void removePermanent();
     void moveToTrash();
     void reloadImage();
-    void reloadImage(QString fileName);
+    void reloadImage(const QString& fileName);
     void copyFileClipboard();
     void copyPathClipboard();
     void openFromClipboard();
@@ -161,7 +161,7 @@ private slots:
     void outputError(const FileOpResult &error) const;
     void showOpenDialog();
     void showInDirectory();
-    void onDirectoryViewFileActivated(QString filePath);
+    void onDirectoryViewFileActivated(const QString& filePath);
     bool loadFileIndex(int index, bool async, bool preload);
     void enableDocumentView();
     void enableFolderView();

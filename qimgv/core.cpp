@@ -210,9 +210,9 @@ void Core::loadTranslation() {
         translator = std::make_unique<QTranslator>().release();
     QString trPathFallback = QCoreApplication::applicationDirPath() + "/translations";
 #ifdef TRANSLATIONS_PATH
-    QString trPath = QString(TRANSLATIONS_PATH);
+    const QString& trPath = QString(TRANSLATIONS_PATH);
 #else
-    QString trPath = trPathFallback;
+    const QString& trPath = trPathFallback;
 #endif
     QString localeName = settings->language();
     if(localeName == "system")
@@ -328,7 +328,7 @@ void Core::onModelLoaded() {
         syncRandomizer();
 }
 
-void Core::onDirectoryViewFileActivated(QString filePath) {
+void Core::onDirectoryViewFileActivated(const QString& filePath) {
     // we aren`t using async load so it won't flicker with empty view
     mw->enableDocumentView();
     loadPath(filePath);
@@ -361,7 +361,7 @@ void Core::removePermanent() {
     }
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
     int successCount = 0;
-    for(auto path : paths) {
+    for(const auto& path : paths) {
         QFileInfo fi(path);
         if(fi.isDir())
             model->removeDir(path, false, true, result);
@@ -395,7 +395,7 @@ void Core::moveToTrash() {
     }
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
     int successCount = 0;
-    for(auto path : paths) {
+    for(const auto& path : paths) {
         result = removeFile(path, true);
         if(result == FileOpResult::SUCCESS)
             successCount++;
@@ -414,7 +414,7 @@ void Core::reloadImage() {
     reloadImage(selectedPath());
 }
 
-void Core::reloadImage(QString filePath) {
+void Core::reloadImage(const QString& filePath) {
     if(model->isEmpty())
         return;
     model->reload(filePath);
@@ -591,7 +591,7 @@ void Core::onDraggedOut(QList<QString> paths) {
     } else { // multi-selection, or single directory. drag urls
         mimeData = std::make_unique<QMimeData>().release();
         QList<QUrl> urlList;
-        for(auto path : paths)
+        for(const auto& path : paths)
             urlList << QUrl::fromLocalFile(path);
         mimeData->setUrls(urlList);
     }
@@ -699,7 +699,7 @@ void Core::onFileRenamed(QString fromPath, int /*indexFrom*/, QString /*toPath*/
     }
 }
 
-void Core::onFileAdded(QString filePath) {
+void Core::onFileAdded(const QString& filePath) {
     Q_UNUSED(filePath)
     // update file count
     updateInfoString();
@@ -708,7 +708,7 @@ void Core::onFileAdded(QString filePath) {
 }
 
 // !! fixme
-void Core::onFileModified(QString filePath) {
+void Core::onFileModified(const QString& filePath) {
     Q_UNUSED(filePath)
 }
 
@@ -766,7 +766,7 @@ void Core::showInDirectory() {
 
 void Core::interactiveCopy(QList<QString> paths, QString destDirectory) {
     DialogResult overwriteFiles;
-    for(auto path : paths) {
+    for(const auto& path : paths) {
         doInteractiveCopy(path, destDirectory, overwriteFiles);
         if(overwriteFiles.cancel)
             return;
@@ -834,7 +834,7 @@ void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &
 
 void Core::interactiveMove(QList<QString> paths, QString destDirectory) {
     DialogResult overwriteFiles;
-    for(auto path : paths) {
+    for(const auto& path : paths) {
         doInteractiveMove(path, destDirectory, overwriteFiles);
         if(overwriteFiles.cancel)
             return;
@@ -1486,7 +1486,7 @@ void Core::modelDelayLoad() {
     updateInfoString();
 }
 
-void Core::onModelItemUpdated(QString filePath) {
+void Core::onModelItemUpdated(const QString& filePath) {
     if(filePath == state.currentFilePath) {
         guiSetImage(model->getImage(filePath));
         updateInfoString();

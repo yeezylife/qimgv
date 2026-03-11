@@ -122,7 +122,7 @@ public:
     int volume();
     QString thumbnailCacheDir();
     QString mpvBinary();
-    void setMpvBinary(QString path);
+    void setMpvBinary(const QString &path);
     PanelPosition panelPosition();
     void setPanelPosition(PanelPosition);
     bool loopSlideshow();
@@ -142,7 +142,7 @@ public:
     bool useThumbnailCache();
     void setUseThumbnailCache(bool mode);
     QStringList savedPaths();
-    void setSavedPaths(QStringList paths);
+    void setSavedPaths(const QStringList &paths);
     QString tmpDir();
     int thumbnailerThreadCount();
     void setThumbnailerThreadCount(int count);
@@ -209,7 +209,7 @@ public:
     void setPlacesPanel(bool mode);
 
     QStringList bookmarks();
-    void setBookmarks(QStringList paths);
+    void setBookmarks(const QStringList &paths);
     bool placesPanelBookmarksExpanded();
     void setPlacesPanelBookmarksExpanded(bool mode);
     bool placesPanelTreeExpanded();
@@ -263,7 +263,7 @@ public:
     bool printFitToPage();
     void setPrintFitToPage(bool mode);
     QString lastPrinter();
-    void setLastPrinter(QString name);
+    void setLastPrinter(const QString &name);
     bool unloadThumbs();
     void setUnloadThumbs(bool mode);
     ThumbPanelStyle thumbPanelStyle();
@@ -285,11 +285,11 @@ public:
     bool panelCenterSelection();
     void setPanelCenterSelection(bool mode);
     QString language();
-    void setLanguage(QString lang);
+    void setLanguage(const QString &lang);
 
     QString defaultZoomLevels();
     QString zoomLevels();
-    void setZoomLevels(QString levels);
+    void setZoomLevels(const QString &levels);
     bool useFixedZoomLevels();
     void setUseFixedZoomLevels(bool mode);
     bool unlockMinZoom();

@@ -16,21 +16,21 @@ class DirectoryPresenter : public QObject {
 public:
     explicit DirectoryPresenter(QObject *parent = nullptr);
 
-    void setView(std::shared_ptr<IDirectoryView>);
-    void setModel(std::shared_ptr<DirectoryModel> newModel);
+    void setView(const std::shared_ptr<IDirectoryView> &);
+    void setModel(const std::shared_ptr<DirectoryModel> &newModel);
     void unsetModel();
 
     void selectAndFocus(int index);
-    void selectAndFocus(QString path);
+    void selectAndFocus(const QString &path);
 
-    void onFileRemoved(QString filePath, int index);
-    void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-    void onFileAdded(QString filePath);
-    void onFileModified(QString filePath);
+    void onFileRemoved(const QString &filePath, int index);
+    void onFileRenamed(const QString &fromPath, int indexFrom, const QString &toPath, int indexTo);
+    void onFileAdded(const QString &filePath);
+    void onFileModified(const QString &filePath);
 
-    void onDirRemoved(QString dirPath, int index);
-    void onDirRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-    void onDirAdded(QString dirPath);
+    void onDirRemoved(const QString &dirPath, int index);
+    void onDirRenamed(const QString &fromPath, int indexFrom, const QString &toPath, int indexTo);
+    void onDirAdded(const QString &dirPath);
 
     bool showDirs();
     void setShowDirs(bool mode);
@@ -49,8 +49,8 @@ public slots:
     void reloadModel();
 
 private slots:
-    void generateThumbnails(QList<int>, int, bool, bool);
-    void onThumbnailReady(std::shared_ptr<Thumbnail> thumb, QString filePath);
+    void generateThumbnails(const QList<int> &indexes, int size, bool crop, bool force);
+    void onThumbnailReady(const std::shared_ptr<Thumbnail> &thumb, const QString &filePath);
     void populateView();
     void onItemActivated(int absoluteIndex);
     void onDraggedOut();

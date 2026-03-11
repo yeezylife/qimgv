@@ -15,13 +15,13 @@ public:
 
     Scaler *scaler;
 
-    void load(QString filePath, bool asyncHint);
-    void preload(QString filePath);
+    void load(const QString &filePath, bool asyncHint);
+    void preload(const QString &filePath);
 
     int fileCount() const;
     int dirCount() const;
-    int indexOfFile(QString filePath) const;
-    int indexOfDir(QString filePath) const;
+    int indexOfFile(const QString &filePath) const;
+    int indexOfDir(const QString &filePath) const;
     QString fileNameAt(int index) const;
     bool containsFile(QString filePath) const;
     bool isEmpty() const;
@@ -38,7 +38,7 @@ public:
     void removeFile(const QString &filePath, bool trash, FileOpResult &result);
     void removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result);
 
-    bool setDirectory(QString);
+    bool setDirectory(const QString &path);
 
     void unload(int index);
 
@@ -47,18 +47,18 @@ public:
     std::shared_ptr<Image> getImageAt(int index);
     std::shared_ptr<Image> getImage(QString filePath);
 
-    void updateImage(QString filePath, std::shared_ptr<Image> img);
+    void updateImage(const QString &filePath, const std::shared_ptr<Image> &img);
 
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode() const;
 
     QString directoryPath() const;
-    void unload(QString filePath);
+    void unload(const QString &filePath);
     bool isLoaded(int index) const;
     bool isLoaded(QString filePath) const;
-    void reload(QString filePath);
+    void reload(const QString &filePath);
     QString filePathAt(int index) const;
-    void unloadExcept(QString filePath, bool keepNearby);
+    void unloadExcept(const QString &filePath, bool keepNearby);
     const FSEntry &fileEntryAt(int index) const;
 
     int totalCount() const;
@@ -102,7 +102,7 @@ private:
     mutable QMutex mMutex;
 
 private slots:
-    void onImageReady(std::shared_ptr<Image> img, const QString &path);
+    void onImageReady(const std::shared_ptr<Image> &img, const QString &path);
     void onSortingChanged();
     void onFileAdded(QString filePath);
     void onFileRemoved(QString filePath, int index);

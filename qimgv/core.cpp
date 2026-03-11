@@ -359,7 +359,7 @@ void Core::removePermanent() {
         if(!mw->showConfirmation(tr("Delete permanently"), msg))
             return;
     }
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     int successCount = 0;
     for(auto path : paths) {
         QFileInfo fi(path);
@@ -393,7 +393,7 @@ void Core::moveToTrash() {
         if(!mw->showConfirmation(tr("Move to trash"), msg))
             return;
     }
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     int successCount = 0;
     for(auto path : paths) {
         result = removeFile(path, true);
@@ -638,7 +638,7 @@ void Core::setFoldersDisplay(bool mode) {
 void Core::renameCurrentSelection(QString newName) {
     if(!model->fileCount() || newName.isEmpty() || selectedPath().isEmpty())
         return;
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->renameEntry(selectedPath(), newName, false, result);
     if(result == FileOpResult::DESTINATION_DIR_EXISTS) {
         mw->toggleRenameOverlay(newName);
@@ -666,7 +666,7 @@ FileOpResult Core::removeFile(QString filePath, bool trash) {
             reopen = true;
         }
     }
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->removeFile(filePath, trash, result);
     if(result != FileOpResult::SUCCESS && reopen)
         guiSetImage(img);
@@ -778,7 +778,7 @@ void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &
     QFileInfo srcFi(path);
 // SINGLE FILE COPY ===========================================================================
     if(!srcFi.isDir()) {
-        FileOpResult result;
+        FileOpResult result = FileOpResult::NOTHING_TO_DO;
         FileOperations::copyFileTo(path, destDirectory, overwriteFiles, result);
         if(result == FileOpResult::DESTINATION_FILE_EXISTS) {
             if(overwriteFiles.all) // skipping all
@@ -809,7 +809,7 @@ void Core::doInteractiveCopy(QString path, QString destDirectory, DialogResult &
                 overwriteFiles.yes = false;
         }
         // remove dst file; give up if not writable
-        FileOpResult result;
+        FileOpResult result = FileOpResult::NOTHING_TO_DO;
         FileOperations::removeFile(dstFi.absoluteFilePath(), result);
         if(result != FileOpResult::SUCCESS) {
             mw->showError(FileOperations::decodeResult(result));
@@ -846,7 +846,7 @@ void Core::doInteractiveMove(QString path, QString destDirectory, DialogResult &
     QFileInfo srcFi(path);
 // SINGLE FILE MOVE ===========================================================================
     if(!srcFi.isDir()) {
-        FileOpResult result;
+        FileOpResult result = FileOpResult::NOTHING_TO_DO;
         model->moveFileTo(path, destDirectory, overwriteFiles, result);
         if(result == FileOpResult::DESTINATION_FILE_EXISTS) {
             if(overwriteFiles.all) // skipping all
@@ -877,7 +877,7 @@ void Core::doInteractiveMove(QString path, QString destDirectory, DialogResult &
                 overwriteFiles.yes = false;
         }
         // remove dst file; give up if not writable
-        FileOpResult result;
+        FileOpResult result = FileOpResult::NOTHING_TO_DO;
         FileOperations::removeFile(dstFi.absoluteFilePath(), result);
         if(result != FileOpResult::SUCCESS) {
             mw->showError(FileOperations::decodeResult(result));
@@ -918,7 +918,7 @@ void Core::moveCurrentFile(QString destDirectory) {
     mw->setUpdatesEnabled(false);
     // move fails during file playback, so we close it temporarily
     mw->closeImage();
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->moveFileTo(selectedPath(), destDirectory, false, result);
     if(result == FileOpResult::SUCCESS) {
         mw->showMessageSuccess(tr("File moved."));
@@ -939,7 +939,7 @@ void Core::moveCurrentFile(QString destDirectory) {
 void Core::copyCurrentFile(QString destDirectory) {
     if(model->isEmpty())
         return;
-    FileOpResult result;
+    FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->copyFileTo(selectedPath(), destDirectory, false, result);
     if(result == FileOpResult::SUCCESS) {
         mw->showMessageSuccess(tr("File copied."));

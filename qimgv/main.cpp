@@ -145,9 +145,9 @@ int main(int argc, char *argv[]) {
         if(parser.isSet("gen-thumbs-size"))
             size = parser.value("gen-thumbs-size").toInt();
 
-        CmdOptionsRunner r;
-        QTimer::singleShot(0, &r,
-                           std::bind(&CmdOptionsRunner::generateThumbs, &r, parser.value("gen-thumbs"), size));
+        auto r = std::make_unique<CmdOptionsRunner>();
+        QTimer::singleShot(0, r.get(),
+                           std::bind(&CmdOptionsRunner::generateThumbs, r.get(), parser.value("gen-thumbs"), size));
         return a.exec();
     }
 

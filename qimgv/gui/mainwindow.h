@@ -143,9 +143,6 @@ private slots:
     void onWindowGeometryChanged();
     void onInfoUpdated();
     void showScriptSettings();
-    void setFilterNearest();
-    void setFilterBilinear();
-    void setFilter(ScalingFilter filter);
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;

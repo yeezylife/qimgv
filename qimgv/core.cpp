@@ -641,13 +641,13 @@ void Core::renameCurrentSelection(const QString& newName) {
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->renameEntry(selectedPath(), newName, false, result);
     if(result == FileOpResult::DESTINATION_DIR_EXISTS) {
-        mw->toggleRenameOverlay(newName);
+        mw->toggleRenameOverlay(std::move(newName));
     } else if(result == FileOpResult::DESTINATION_FILE_EXISTS) {
         if(mw->showConfirmation(tr("File exists"), tr("Overwrite file?"))) {
             model->renameEntry(selectedPath(), newName, true, result);
         } else {
             // show rename dialog again
-            mw->toggleRenameOverlay(newName);
+            mw->toggleRenameOverlay(std::move(newName));
         }
     }
     outputError(result);
@@ -1179,7 +1179,7 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 // TODO: don't use connect? otherwise there is no point using unique_ptr
 void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
     if (state.hasActiveImage && req.path() == state.currentFilePath) {
-        mw->onScalingFinished(scaled);
+        mw->onScalingFinished(std::move(scaled));
     }
 }
 
@@ -1511,8 +1511,8 @@ void Core::updateInfoString() {
     int index = model->indexOfFile(state.currentFilePath);
     mw->setCurrentInfo(index,
                        model->fileCount(),
-                       model->filePathAt(index),
-                       model->fileNameAt(index),
+                       std::move(model->filePathAt(index)),
+                       std::move(model->fileNameAt(index)),
                        imageSize,
                        fileSize,
                        slideshow,

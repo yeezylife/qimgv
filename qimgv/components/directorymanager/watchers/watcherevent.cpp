@@ -9,11 +9,14 @@ WatcherEvent::WatcherEvent(const QString &name, qint32 timerId, WatcherEvent::Ty
 {
 }
 
-WatcherEvent::WatcherEvent(const QString &name, quint32 cookie, qint32 timerId, Type type) noexcept :
-    mName(name),
-    mCookie(cookie),
-    mTimerId(timerId),
-    mType(type)
+WatcherEvent::WatcherEvent(const QString &name,
+                           quint32 cookie,
+                           qint32 timerId,
+                           Type type) noexcept // NOLINT(bugprone-easily-swappable-parameters)
+    : mName(name),
+      mCookie(cookie),
+      mTimerId(timerId),
+      mType(type)
 {
 }
 

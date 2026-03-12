@@ -8,9 +8,9 @@ class WindowsWatcherPrivate;
 class WindowsWatcher : public DirectoryWatcher {
     Q_OBJECT
 public:
-    explicit WindowsWatcher();
-    explicit WindowsWatcher(const QString &path);
-    virtual void setWatchPath(const QString& path);
+    explicit WindowsWatcher(QObject* parent = nullptr);
+
+    bool setWatchPath(const QString& path) override;
 
 private:
     Q_DECLARE_PRIVATE(WindowsWatcher)

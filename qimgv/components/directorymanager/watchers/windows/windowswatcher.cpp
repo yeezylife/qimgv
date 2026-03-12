@@ -81,8 +81,8 @@ void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, DWORD action
     }
 }
 
-WindowsWatcher::WindowsWatcher()
-    : DirectoryWatcher(new WindowsWatcherPrivate(this))
+WindowsWatcher::WindowsWatcher(QObject* parent)
+    : DirectoryWatcher(new WindowsWatcherPrivate(this), parent)
 {
     Q_D(WindowsWatcher);
     connect(d->workerThread.data(), &QThread::started, d->worker.data(), &WatcherWorker::run);
@@ -94,13 +94,6 @@ WindowsWatcher::WindowsWatcher()
 
     connect(windowsWorker, &WindowsWorker::started, this, &WindowsWatcher::observingStarted);
     connect(windowsWorker, &WindowsWorker::finished, this, &WindowsWatcher::observingStopped);
-}
-
-WindowsWatcher::WindowsWatcher(const QString& path)
-    : DirectoryWatcher(new WindowsWatcherPrivate(this))
-{
-    Q_D(WindowsWatcher);
-    setWatchPath(path);
 }
 
 void WindowsWatcher::setWatchPath(const QString &path) {

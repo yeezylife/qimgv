@@ -1,14 +1,15 @@
 #include <QDebug>
 #include "watcherevent.h"
 
-WatcherEvent::WatcherEvent(const QString &name, int timerId, WatcherEvent::Type type) noexcept :
+WatcherEvent::WatcherEvent(const QString &name, qint32 timerId, WatcherEvent::Type type) noexcept :
     mName(name),
+    mCookie(0),
     mTimerId(timerId),
     mType(type)
 {
 }
 
-WatcherEvent::WatcherEvent(const QString& name, uint cookie, int timerId, Type type) noexcept :
+WatcherEvent::WatcherEvent(const QString &name, quint32 cookie, qint32 timerId, Type type) noexcept :
     mName(name),
     mCookie(cookie),
     mTimerId(timerId),
@@ -34,18 +35,18 @@ void WatcherEvent::setType(WatcherEvent::Type type) noexcept {
     mType = type;
 }
 
-int WatcherEvent::timerId() const noexcept {
+qint32 WatcherEvent::timerId() const noexcept {
     return mTimerId;
 }
 
-void WatcherEvent::setTimerId(int timerId) noexcept {
+void WatcherEvent::setTimerId(qint32 timerId) noexcept {
     mTimerId = timerId;
 }
 
-uint WatcherEvent::cookie() const noexcept {
+quint32 WatcherEvent::cookie() const noexcept {
     return mCookie;
 }
 
-void WatcherEvent::setCookie(uint cookie) noexcept {
+void WatcherEvent::setCookie(quint32 cookie) noexcept {
     mCookie = cookie;
 }

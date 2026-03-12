@@ -230,7 +230,7 @@ void DirectoryPresenter::generateThumbnails(const QList<int> &indexes, int size,
         
         cachedSvgRenderer = new QSvgRenderer();
         cachedSvgRenderer->load(QString(":/res/icons/common/other/folder32-scalable.svg"));
-        int factor = qRound((size * 0.90f) / cachedSvgRenderer->defaultSize().width());
+        int factor = qRound((size * 0.90) / static_cast<qreal>(cachedSvgRenderer->defaultSize().width()));
         cachedDirPixmap = new QPixmap(cachedSvgRenderer->defaultSize() * factor);
         cachedDirPixmap->fill(Qt::transparent);
         QPainter pixPainter(cachedDirPixmap);

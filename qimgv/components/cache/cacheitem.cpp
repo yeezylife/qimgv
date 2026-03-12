@@ -2,8 +2,9 @@
 
 CacheItem::CacheItem() = default;
 
-CacheItem::CacheItem(std::shared_ptr<Image> _contents) {
-    contents = _contents;
+CacheItem::CacheItem(std::shared_ptr<Image> contents)
+    : contents(std::move(contents)) {
+    // 可以是空的，也可以放一些初始化逻辑
 }
 
 std::shared_ptr<Image> CacheItem::getContents() {

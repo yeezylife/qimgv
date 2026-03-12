@@ -274,8 +274,8 @@ bool DirectoryModel::isLoaded(int index) const {
     return cache.contains(filePathAt(index));
 }
 
-bool DirectoryModel::isLoaded(QString filePath) const {
-    return cache.contains(std::move(filePath));
+bool DirectoryModel::isLoaded(const QString& filePath) const {
+    return cache.contains(filePath);
 }
 
 std::shared_ptr<Image> DirectoryModel::getImageAt(int index) {

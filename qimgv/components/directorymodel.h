@@ -43,7 +43,7 @@ public:
     QString directoryPath() const;
     void unload(const QString &filePath);
     bool isLoaded(int index) const;
-    bool isLoaded(QString filePath) const;
+    bool isLoaded(const QString& filePath) const;
     void reload(const QString &filePath);
     QString filePathAt(int index) const;
     void unloadExcept(const QString &filePath, bool keepNearby);

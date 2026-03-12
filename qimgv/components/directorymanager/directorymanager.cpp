@@ -492,7 +492,7 @@ bool DirectoryManager::forceInsertFileEntry(const QString &filePath) {
     std::filesystem::directory_entry stdEntry(pathObj);
     // 使用宽字符接口避免日文编码问题
     QString fileName = QString::fromStdWString(stdEntry.path().filename().wstring());
-    FSEntry FSEntry(filePath, fileName, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
+    FSEntry entry(FilePath{filePath}, FileName{fileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     if(!directoryPath().isEmpty()) {
         qDebug() << "fileIns" << filePath << directoryPath();
@@ -546,7 +546,7 @@ void DirectoryManager::renameFileEntry(const QString &oldFilePath, const QString
     // insert
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
-    FSEntry FSEntry(newFilePath, newFileName, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
+    FSEntry newEntry(FilePath{newFilePath}, FileName{newFileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     qDebug() << "fileRen" << oldFilePath << newFilePath;
     emit fileRenamed(oldFilePath, oldIndex, newFilePath, indexOfFile(newFilePath));

@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
         a.setStyle(QStyleFactory::create("Fusion"));
 #else
     QApplication a(argc, argv);
-    // use some style workarounds
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     a.setStyle(new ProxyStyle());
 #endif
 

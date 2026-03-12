@@ -111,11 +111,11 @@ void Settings::loadStylesheet() {
         auto fnt = QGuiApplication::font();
         QFontMetrics fm(fnt);
         // todo: use precise values for ~9-11 point sizes
-        int font_small = qMax(std::lround(fnt.pointSize() * 0.9f), 8);
-        int font_large = std::lround(fnt.pointSize() * 1.8f);
+        int font_small = qMax(static_cast<int>(std::lround(fnt.pointSize() * 0.9)), 8);
+        int font_large = static_cast<int>(std::lround(fnt.pointSize() * 1.8));
         int text_height = fm.height();
-        int text_padding = std::lround(text_height * 0.10f);
-        int text_padding_large = std::lround(text_height * 0.25f);
+        int text_padding = static_cast<int>(std::lround(text_height * 0.10));
+        int text_padding_large = static_cast<int>(std::lround(text_height * 0.25));
 
         // folderview top panel item sizes
         int top_panel_v_margin = 4;

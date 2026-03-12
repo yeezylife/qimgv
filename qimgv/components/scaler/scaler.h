@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QImage>
 #include <QPixmap>
+#include <utility> // 增加 std::move 支持
 #include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -12,34 +13,36 @@
 class Scaler : public QObject {
     Q_OBJECT
 public:
+    // explicit 防止隐式转换
     explicit Scaler(Cache *_cache, QObject *parent = nullptr);
-    ~Scaler() override; // 确保退出时线程安全
+    ~Scaler() override;
 
 signals:
-    // 使用值传递，Qt 内部会通过隐式共享（Copy-on-Write）优化，安全且高效
-    void scalingFinished(QPixmap result, ScalerRequest request);
-    void acceptScalingResult(QImage image, ScalerRequest req);
+    // 信号参数建议保持值传递或常量引用，Qt 内部处理 QueuedConnection 时会自动处理
+    void scalingFinished(const QPixmap &result, const ScalerRequest &request);
+    void acceptScalingResult(const QImage &image, const ScalerRequest &req);
 
 public slots:
-    void requestScaled(ScalerRequest req);
+    // 修改为 const &
+    void requestScaled(const ScalerRequest &req);
 
 private slots:
-    void onTaskStart(ScalerRequest req);
-    void onTaskFinish(QImage scaled, ScalerRequest req);
-    void slotForwardScaledResult(QImage image, ScalerRequest req);
+    // 修改为 const &
+    void onTaskStart(const ScalerRequest &req);
+    void onTaskFinish(const QImage &scaled, const ScalerRequest &req);
+    void slotForwardScaledResult(const QImage &image, const ScalerRequest &req);
 
 private:
-    void startRequest(const ScalerRequest& req);
+    void startRequest(const ScalerRequest &req);
 
     QThreadPool *pool;
     Cache *cache;
 
-    // 状态管理
     bool buffered;
     bool running;
     
     ScalerRequest bufferedRequest;
     ScalerRequest startedRequest;
 
-    mutable QMutex mutex; // 保护状态位和请求变量
+    mutable QMutex mutex; 
 };

@@ -29,7 +29,7 @@ public:
     void addShortcut(const QString &keys, const QString &action);
     void resetDefaults();
     void resetDefaults(const QString &action);
-    void adjustFromVersion(QVersionNumber lastVer);
+    void adjustFromVersion(const QVersionNumber &lastVer);  // 改为 const 引用
     void saveShortcuts();
     
     QString actionForShortcut(const QString &keys) const;

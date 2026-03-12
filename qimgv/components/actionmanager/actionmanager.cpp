@@ -5,9 +5,7 @@ ActionManager *actionManager = nullptr;
 ActionManager::ActionManager(QObject *parent) : QObject(parent) {
 }
 
-ActionManager::~ActionManager() {
-    // 不要在这里删除自己，由外部管理
-}
+ActionManager::~ActionManager() = default;  // 使用 = default 定义默认析构
 
 ActionManager* ActionManager::getInstance() {
     if(!actionManager) {
@@ -160,7 +158,7 @@ void ActionManager::resetDefaults(const QString &action) {
     }
 }
 
-void ActionManager::adjustFromVersion(QVersionNumber lastVer) {
+void ActionManager::adjustFromVersion(const QVersionNumber &lastVer) {  // 改为 const 引用
     if(lastVer < QVersionNumber(0, 9, 2)) {
         resetDefaults("print");
         resetDefaults("openSettings");

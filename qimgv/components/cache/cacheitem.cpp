@@ -3,33 +3,37 @@
 CacheItem::CacheItem() = default;
 
 CacheItem::CacheItem(std::shared_ptr<Image> contents)
-    : contents(std::move(contents)) {
-    // 可以是空的，也可以放一些初始化逻辑
+    : contents(std::move(contents))
+{
+    // 构造函数主体可以留空，或放其他初始化逻辑
 }
 
-std::shared_ptr<Image> CacheItem::getContents() {
+std::shared_ptr<Image> CacheItem::getContents() const
+{
     return contents;
 }
 
-void CacheItem::lock() {
+void CacheItem::lock()
+{
     sem.acquire(1);
 }
 
-void CacheItem::unlock() {
+void CacheItem::unlock()
+{
     sem.release(1);
 }
 
-bool CacheItem::tryLock(int timeout) {
-    // QSemaphore::tryAcquire(int n, int timeout)
-    // timeout 单位为毫秒
-    // 返回 true 表示成功获取信号量，false 表示超时
-    return sem.tryAcquire(1, timeout);
+bool CacheItem::tryLock(int timeoutMs)
+{
+    return sem.tryAcquire(1, timeoutMs);
 }
 
-int CacheItem::lockStatus() {
+int CacheItem::lockStatus() const
+{
     return sem.available();
 }
 
-bool CacheItem::isLocked() const {
+bool CacheItem::isLocked() const
+{
     return sem.available() == 0;
 }

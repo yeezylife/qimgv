@@ -1,24 +1,26 @@
 #pragma once
 
 #include <QSemaphore>
+#include <memory>                      // for std::shared_ptr
 #include "sourcecontainers/image.h"
 
 class CacheItem {
 public:
-    CacheItem();
-    CacheItem(std::shared_ptr<Image> contents);
+    CacheItem() = default;
+    explicit CacheItem(std::shared_ptr<Image> contents);
+
     ~CacheItem() = default;
 
-    std::shared_ptr<Image> getContents();
+    [[nodiscard]] std::shared_ptr<Image> getContents() const;
 
     void lock();
     void unlock();
-    bool tryLock(int timeout);  // 新增：带超时的锁定方法
+    bool tryLock(int timeoutMs);       // timeout in milliseconds
 
-    int lockStatus();
-    bool isLocked() const;
-    
+    [[nodiscard]] int lockStatus() const;
+    [[nodiscard]] bool isLocked() const;
+
 private:
     std::shared_ptr<Image> contents;
-    QSemaphore sem{1};  // 改为值成员，避免手动管理内存
+    QSemaphore sem{1};
 };

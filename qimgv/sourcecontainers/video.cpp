@@ -1,7 +1,7 @@
 #include "video.h"
 #include <time.h>
 
-Video::Video(QString _path) : Image(_path) {
+Video::Video(QString _path) : Image(std::move(_path)) {
     Video::load();
 }
 

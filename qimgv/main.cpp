@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 #else
     QApplication a(argc, argv);
     // use some style workarounds
-    a.setStyle(std::make_unique<ProxyStyle>().release());
+    a.setStyle(new ProxyStyle());
 #endif
 
     QCoreApplication::setOrganizationName("qimgv");
@@ -87,10 +87,8 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setDesktopFileName(QCoreApplication::applicationName() + ".desktop");
 
     // needed for mpv
-#ifndef _MSC_VER
-    // 使用线程安全的 setlocale 版本
-    setlocale(LC_NUMERIC, "C");
-#endif
+    // 设置线程安全的数值格式，确保浮点数解析一致性
+    QLocale::setDefault(QLocale::c());
 
 #ifdef __GLIBC__
     // default value of 128k causes memory fragmentation issues

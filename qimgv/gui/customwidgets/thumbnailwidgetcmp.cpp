@@ -206,7 +206,7 @@ void ThumbnailWidgetCmp::paint(QPainter *painter, const QStyleOptionGraphicsItem
 
     if(!thumbnail) { // not loaded
         // todo: recolor once in shrRes
-        QPixmap loadingIcon(*shrRes->getPixmap(ShrIcon::SHR_ICON_LOADING, dpr));
+        QPixmap loadingIcon(shrRes.getPixmap(ShrIcon::SHR_ICON_LOADING, dpr));
         if(isHighlighted())
             ImageLib::recolor(loadingIcon, settings->colorScheme().accent);
         else
@@ -214,7 +214,7 @@ void ThumbnailWidgetCmp::paint(QPainter *painter, const QStyleOptionGraphicsItem
         drawIcon(painter, &loadingIcon);
     } else {
         if(thumbnail->pixmap().get()->width() == 0) { // invalid thumb
-            QPixmap errorIcon(*shrRes->getPixmap(ShrIcon::SHR_ICON_ERROR, dpr));
+            QPixmap errorIcon(shrRes.getPixmap(ShrIcon::SHR_ICON_ERROR, dpr));
             if(isHighlighted())
                 ImageLib::recolor(errorIcon, settings->colorScheme().accent);
             else

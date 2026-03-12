@@ -64,7 +64,7 @@ CompareFunction DirectoryManager::compareFunction() {
     return cmpFn;
 }
 
-void DirectoryManager::startFileWatcher(QString directoryPath) {
+void DirectoryManager::startFileWatcher(const QString &directoryPath) {
     if(directoryPath == "")
         return;
     if(!watcher)
@@ -106,7 +106,7 @@ void DirectoryManager::readSettings() {
     regex.setPattern(settings->supportedFormatsRegex());
 }
 
-bool DirectoryManager::setDirectory(QString dirPath) {
+bool DirectoryManager::setDirectory(const QString &dirPath) {
     if(dirPath.isEmpty()) {
         return false;
     }
@@ -134,7 +134,7 @@ bool DirectoryManager::setDirectory(QString dirPath) {
     return true;
 }
 
-bool DirectoryManager::setDirectoryRecursive(QString dirPath) {
+bool DirectoryManager::setDirectoryRecursive(const QString &dirPath) {
     if(dirPath.isEmpty()) {
         return false;
     }
@@ -163,21 +163,21 @@ QString DirectoryManager::directoryPath() const {
         return "";
 }
 
-int DirectoryManager::indexOfFile(QString filePath) const {
+int DirectoryManager::indexOfFile(const QString &filePath) const {
     auto item = find_if(fileEntryVec.begin(), fileEntryVec.end(), [filePath](const FSEntry& e) {
         return e.path == filePath;
     });
     if(item != fileEntryVec.end())
-        return distance(fileEntryVec.begin(), item);
+        return static_cast<int>(distance(fileEntryVec.begin(), item));
     return -1;
 }
 
-int DirectoryManager::indexOfDir(QString dirPath) const {
+int DirectoryManager::indexOfDir(const QString &dirPath) const {
     auto item = find_if(dirEntryVec.begin(), dirEntryVec.end(), [dirPath](const FSEntry& e) {
         return e.path == dirPath;
     });
     if(item != dirEntryVec.end())
-        return distance(dirEntryVec.begin(), item);
+        return static_cast<int>(distance(dirEntryVec.begin(), item));
     return -1;
 }
 
@@ -211,7 +211,7 @@ QString DirectoryManager::lastFile() const {
     return filePath;
 }
 
-QString DirectoryManager::prevOfFile(QString filePath) const {
+QString DirectoryManager::prevOfFile(const QString &filePath) const {
     QString prevFilePath = "";
     int currentIndex = indexOfFile(filePath);
     if(currentIndex > 0)
@@ -219,7 +219,7 @@ QString DirectoryManager::prevOfFile(QString filePath) const {
     return prevFilePath;
 }
 
-QString DirectoryManager::nextOfFile(QString filePath) const {
+QString DirectoryManager::nextOfFile(const QString &filePath) const {
     QString nextFilePath = "";
     int currentIndex = indexOfFile(filePath);
     // 修复：将 size() 转换为 int 进行比较，避免 signed/unsigned 不匹配
@@ -228,7 +228,7 @@ QString DirectoryManager::nextOfFile(QString filePath) const {
     return nextFilePath;
 }
 
-QString DirectoryManager::prevOfDir(QString dirPath) const {
+QString DirectoryManager::prevOfDir(const QString &dirPath) const {
     QString prevDirectoryPath = "";
     int currentIndex = indexOfDir(dirPath);
     if(currentIndex > 0)
@@ -236,7 +236,7 @@ QString DirectoryManager::prevOfDir(QString dirPath) const {
     return prevDirectoryPath;
 }
 
-QString DirectoryManager::nextOfDir(QString dirPath) const {
+QString DirectoryManager::nextOfDir(const QString &dirPath) const {
     QString nextDirectoryPath = "";
     int currentIndex = indexOfDir(dirPath);
     // 修复：将 size() 转换为 int 进行比较
@@ -272,7 +272,7 @@ const FSEntry &DirectoryManager::fileEntryAt(int index) const {
         return defaultEntry;
 }
 
-QDateTime DirectoryManager::lastModified(QString filePath) const {
+QDateTime DirectoryManager::lastModified(const QString &filePath) const {
     QFileInfo info;
     if(containsFile(filePath))
         info.setFile(filePath);
@@ -281,11 +281,11 @@ QDateTime DirectoryManager::lastModified(QString filePath) const {
 
 // TODO: what about symlinks?
 inline
-bool DirectoryManager::isSupportedFile(QString path) const {
+bool DirectoryManager::isSupportedFile(const QString &path) const {
     return ( isFile(path) && regex.match(path).hasMatch() );
 }
 
-bool DirectoryManager::isFile(QString path) const {
+bool DirectoryManager::isFile(const QString &path) const {
     std::filesystem::path pathObj(path.toStdWString());
     if(!std::filesystem::exists(pathObj))
         return false;
@@ -294,7 +294,7 @@ bool DirectoryManager::isFile(QString path) const {
     return true;
 }
 
-bool DirectoryManager::isDir(QString path) const {
+bool DirectoryManager::isDir(const QString &path) const {
     std::filesystem::path pathObj(path.toStdWString());
     if(!std::filesystem::exists(pathObj))
         return false;
@@ -307,18 +307,18 @@ bool DirectoryManager::isEmpty() const {
     return fileEntryVec.empty();
 }
 
-bool DirectoryManager::containsFile(QString filePath) const {
+bool DirectoryManager::containsFile(const QString &filePath) const {
     return (std::find(fileEntryVec.begin(), fileEntryVec.end(), filePath) != fileEntryVec.end());
 }
 
-bool DirectoryManager::containsDir(QString dirPath) const {
+bool DirectoryManager::containsDir(const QString &dirPath) const {
     return (std::find(dirEntryVec.begin(), dirEntryVec.end(), dirPath) != dirEntryVec.end());
 }
 
 // ##############################################################
 // ###################### PRIVATE METHODS #######################
 // ##############################################################
-void DirectoryManager::loadEntryList(QString directoryPath, bool recursive) {
+void DirectoryManager::loadEntryList(const QString &directoryPath, bool recursive) {
     dirEntryVec.clear();
     fileEntryVec.clear();
     if(recursive) { // load files only
@@ -329,7 +329,7 @@ void DirectoryManager::loadEntryList(QString directoryPath, bool recursive) {
 }
 
 // both directories & files - 优化版本，使用 Qt 的 QDir 提高性能
-void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, QString directoryPath) {
+void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, const QString &directoryPath) {
     QRegularExpressionMatch match;
     
     // 使用 Qt 的 QDir 进行文件系统操作，提高跨平台性能
@@ -391,7 +391,7 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
     }
 }
 
-void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &entryVec, QString directoryPath) {
+void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &entryVec, const QString &directoryPath) {
     QRegularExpressionMatch match;
     std::filesystem::path pathObj(directoryPath.toStdWString());
     for(const auto & entry : fs::recursive_directory_iterator(pathObj)) {
@@ -621,13 +621,13 @@ bool DirectoryManager::fileWatcherActive() {
 //----------------------------------------------------------------------------
 // fs watcher events  ( onFile___External() )
 // these take file NAMES, not paths
-void DirectoryManager::onFileRemovedExternal(QString fileName) {
+void DirectoryManager::onFileRemovedExternal(const QString &fileName) {
     QString fullPath = watcher->watchPath() + "/" + fileName;
     removeDirEntry(fullPath);
     removeFileEntry(fullPath);
 }
 
-void DirectoryManager::onFileAddedExternal(QString fileName) {
+void DirectoryManager::onFileAddedExternal(const QString &fileName) {
     QString fullPath = watcher->watchPath() + "/" + fileName;
     if(isDir(fullPath))
         insertDirEntry(fullPath);
@@ -635,7 +635,7 @@ void DirectoryManager::onFileAddedExternal(QString fileName) {
         insertFileEntry(fullPath);
 }
 
-void DirectoryManager::onFileRenamedExternal(QString oldName, QString newName) {
+void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QString &newName) {
     QString oldPath = watcher->watchPath() + "/" + oldName;
     QString newPath = watcher->watchPath() + "/" + newName;
     if(isDir(newPath))
@@ -644,6 +644,6 @@ void DirectoryManager::onFileRenamedExternal(QString oldName, QString newName) {
         renameFileEntry(oldPath, newName);
 }
 
-void DirectoryManager::onFileModifiedExternal(QString fileName) {
+void DirectoryManager::onFileModifiedExternal(const QString &fileName) {
     updateFileEntry(watcher->watchPath() + "/" + fileName);
 }

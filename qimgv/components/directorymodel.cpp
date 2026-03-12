@@ -79,12 +79,12 @@ QString DirectoryModel::directoryPath() const {
     return dirManager.directoryPath();
 }
 
-bool DirectoryModel::containsFile(QString filePath) const {
-    return dirManager.containsFile(std::move(filePath));
+bool DirectoryModel::containsFile(const QString &filePath) const {
+    return dirManager.containsFile(filePath);
 }
 
-bool DirectoryModel::containsDir(QString dirPath) const {
-    return dirManager.containsDir(std::move(dirPath));
+bool DirectoryModel::containsDir(const QString &dirPath) const {
+    return dirManager.containsDir(dirPath);
 }
 
 bool DirectoryModel::isEmpty() const {
@@ -99,16 +99,16 @@ QString DirectoryModel::lastFile() const {
     return dirManager.lastFile();
 }
 
-QString DirectoryModel::nextOf(QString filePath) const {
-    return dirManager.nextOfFile(std::move(filePath));
+QString DirectoryModel::nextOf(const QString &filePath) const {
+    return dirManager.nextOfFile(filePath);
 }
 
-QString DirectoryModel::prevOf(QString filePath) const {
-    return dirManager.prevOfFile(std::move(filePath));
+QString DirectoryModel::prevOf(const QString &filePath) const {
+    return dirManager.prevOfFile(filePath);
 }
 
-QDateTime DirectoryModel::lastModified(QString filePath) const {
-    return dirManager.lastModified(std::move(filePath));
+QDateTime DirectoryModel::lastModified(const QString &filePath) const {
+    return dirManager.lastModified(filePath);
 }
 
 // -----------------------------------------------------------------------------
@@ -247,7 +247,7 @@ void DirectoryModel::onFileAdded(QString filePath) {
     emit fileAdded(std::move(filePath));
 }
 
-void DirectoryModel::onFileModified(const QString &filePath) {
+void DirectoryModel::onFileModified(QString filePath) {
     QDateTime modTime = lastModified(filePath);
     if(modTime.isValid()) {
         auto img = cache.get(filePath);
@@ -260,12 +260,12 @@ void DirectoryModel::onFileModified(const QString &filePath) {
     }
 }
 
-void DirectoryModel::onFileRemoved(const QString &filePath, int index) {
+void DirectoryModel::onFileRemoved(QString filePath, int index) {
     unload(filePath);
     emit fileRemoved(filePath, index);
 }
 
-void DirectoryModel::onFileRenamed(const QString &fromPath, int indexFrom, QString toPath, int indexTo) {
+void DirectoryModel::onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo) {
     unload(fromPath);
     emit fileRenamed(fromPath, indexFrom, std::move(toPath), indexTo);
 }

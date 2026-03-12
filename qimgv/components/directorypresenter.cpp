@@ -247,7 +247,7 @@ void DirectoryPresenter::generateThumbnails(const QList<int> &indexes, int size,
             // 使用缓存的目录图标
             std::shared_ptr<QPixmap> dirPixmap = std::make_shared<QPixmap>(*cachedDirPixmap);
             std::shared_ptr<Thumbnail> thumb = std::make_shared<Thumbnail>(
-                model->dirNameAt(i), "Folder", size, dirPixmap);
+                model->dirNameAt(i), size, "Folder", dirPixmap);
             view->setThumbnail(i, thumb);
         } else {
             QString path = model->filePathAt(i - model->dirCount());

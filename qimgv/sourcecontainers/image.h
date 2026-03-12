@@ -61,6 +61,7 @@ public:
 
 protected:
     virtual void load() = 0;
+    void loadImage() { load(); }  // 非虚函数包装器
 
     // 成员变量
     std::unique_ptr<DocumentInfo> mDocInfo;

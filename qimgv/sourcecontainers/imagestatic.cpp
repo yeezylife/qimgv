@@ -9,13 +9,13 @@
 ImageStatic::ImageStatic(QString path)
     : Image(std::move(path))
 {
-    load();
+    loadImage();
 }
 
 ImageStatic::ImageStatic(std::unique_ptr<DocumentInfo> info)
     : Image(std::move(info))
 {
-    load();
+    loadImage();
 }
 
 void ImageStatic::load() {

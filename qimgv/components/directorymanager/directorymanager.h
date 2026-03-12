@@ -46,22 +46,22 @@ public:
     QString directoryPath() const;
     int indexOfFile(const QString &filePath) const;
     int indexOfDir(const QString &dirPath) const;
-    QString filePathAt(int index) const;
+    const QString &filePathAt(int index) const;
     unsigned long fileCount() const;
     unsigned long dirCount() const;
     inline bool isSupportedFile(const QString &filePath) const;
     bool isEmpty() const;
     bool containsFile(const QString &filePath) const;
-    QString fileNameAt(int index) const;
-    QString prevOfFile(const QString &filePath) const;
-    QString nextOfFile(const QString &filePath) const;
-    QString prevOfDir(const QString &dirPath) const;
-    QString nextOfDir(const QString &dirPath) const;
+    const QString &fileNameAt(int index) const;
+    const QString &prevOfFile(const QString &filePath) const;
+    const QString &nextOfFile(const QString &filePath) const;
+    const QString &prevOfDir(const QString &dirPath) const;
+    const QString &nextOfDir(const QString &dirPath) const;
     void sortEntryLists();
-    QDateTime lastModified(const QString &filePath) const;
+    const QDateTime &lastModified(const QString &filePath) const;
 
-    QString firstFile() const;
-    QString lastFile() const;
+    const QString &firstFile() const;
+    const QString &lastFile() const;
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode() const;
     bool isFile(const QString &path) const;
@@ -70,8 +70,8 @@ public:
     unsigned long totalCount() const;
     bool containsDir(const QString &dirPath) const;
     const FSEntry &fileEntryAt(int index) const;
-    QString dirPathAt(int index) const;
-    QString dirNameAt(int index) const;
+    const QString &dirPathAt(int index) const;
+    const QString &dirNameAt(int index) const;
     bool fileWatcherActive();
 
     bool insertFileEntry(const QString &filePath);

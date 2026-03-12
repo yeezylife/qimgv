@@ -181,68 +181,60 @@ int DirectoryManager::indexOfDir(const QString &dirPath) const {
     return -1;
 }
 
-QString DirectoryManager::filePathAt(int index) const {
-    return checkFileRange(index) ? fileEntryVec.at(index).path : "";
+const QString &DirectoryManager::filePathAt(int index) const {
+    static const QString emptyString;
+    return checkFileRange(index) ? fileEntryVec.at(index).path : emptyString;
 }
 
-QString DirectoryManager::fileNameAt(int index) const {
-    return checkFileRange(index) ? fileEntryVec.at(index).name : "";
+const QString &DirectoryManager::fileNameAt(int index) const {
+    static const QString emptyString;
+    return checkFileRange(index) ? fileEntryVec.at(index).name : emptyString;
 }
 
-QString DirectoryManager::dirPathAt(int index) const {
-    return checkDirRange(index) ? dirEntryVec.at(index).path : "";
+const QString &DirectoryManager::dirPathAt(int index) const {
+    static const QString emptyString;
+    return checkDirRange(index) ? dirEntryVec.at(index).path : emptyString;
 }
 
-QString DirectoryManager::dirNameAt(int index) const {
-    return checkDirRange(index) ? dirEntryVec.at(index).name : "";
+const QString &DirectoryManager::dirNameAt(int index) const {
+    static const QString emptyString;
+    return checkDirRange(index) ? dirEntryVec.at(index).name : emptyString;
 }
 
-QString DirectoryManager::firstFile() const {
-    QString filePath = "";
-    if(fileEntryVec.size())
-        filePath = fileEntryVec.front().path;
-    return filePath;
+const QString &DirectoryManager::firstFile() const {
+    static const QString emptyString;
+    return fileEntryVec.empty() ? emptyString : fileEntryVec.front().path;
 }
 
-QString DirectoryManager::lastFile() const {
-    QString filePath = "";
-    if(fileEntryVec.size())
-        filePath = fileEntryVec.back().path;
-    return filePath;
+const QString &DirectoryManager::lastFile() const {
+    static const QString emptyString;
+    return fileEntryVec.empty() ? emptyString : fileEntryVec.back().path;
 }
 
-QString DirectoryManager::prevOfFile(const QString &filePath) const {
-    QString prevFilePath = "";
+const QString &DirectoryManager::prevOfFile(const QString &filePath) const {
+    static const QString emptyString;
     int currentIndex = indexOfFile(filePath);
-    if(currentIndex > 0)
-        prevFilePath = fileEntryVec.at(currentIndex - 1).path;
-    return prevFilePath;
+    return (currentIndex > 0) ? fileEntryVec.at(currentIndex - 1).path : emptyString;
 }
 
-QString DirectoryManager::nextOfFile(const QString &filePath) const {
-    QString nextFilePath = "";
+const QString &DirectoryManager::nextOfFile(const QString &filePath) const {
+    static const QString emptyString;
     int currentIndex = indexOfFile(filePath);
-    // 修复：将 size() 转换为 int 进行比较，避免 signed/unsigned 不匹配
-    if(currentIndex >= 0 && currentIndex < static_cast<int>(fileEntryVec.size()) - 1)
-        nextFilePath = fileEntryVec.at(currentIndex + 1).path;
-    return nextFilePath;
+    return (currentIndex >= 0 && currentIndex < static_cast<int>(fileEntryVec.size()) - 1) 
+           ? fileEntryVec.at(currentIndex + 1).path : emptyString;
 }
 
-QString DirectoryManager::prevOfDir(const QString &dirPath) const {
-    QString prevDirectoryPath = "";
+const QString &DirectoryManager::prevOfDir(const QString &dirPath) const {
+    static const QString emptyString;
     int currentIndex = indexOfDir(dirPath);
-    if(currentIndex > 0)
-        prevDirectoryPath = dirEntryVec.at(currentIndex - 1).path;
-    return prevDirectoryPath;
+    return (currentIndex > 0) ? dirEntryVec.at(currentIndex - 1).path : emptyString;
 }
 
-QString DirectoryManager::nextOfDir(const QString &dirPath) const {
-    QString nextDirectoryPath = "";
+const QString &DirectoryManager::nextOfDir(const QString &dirPath) const {
+    static const QString emptyString;
     int currentIndex = indexOfDir(dirPath);
-    // 修复：将 size() 转换为 int 进行比较
-    if(currentIndex >= 0 && currentIndex < static_cast<int>(dirEntryVec.size()) - 1)
-        nextDirectoryPath = dirEntryVec.at(currentIndex + 1).path;
-    return nextDirectoryPath;
+    return (currentIndex >= 0 && currentIndex < static_cast<int>(dirEntryVec.size()) - 1) 
+           ? dirEntryVec.at(currentIndex + 1).path : emptyString;
 }
 
 bool DirectoryManager::checkFileRange(int index) const {

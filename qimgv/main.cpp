@@ -112,7 +112,6 @@ int main(int argc, char *argv[]) {
     settings = Settings::getInstance();
     scriptManager = ScriptManager::getInstance();
     actionManager = ActionManager::getInstance();
-    shrRes = SharedResources::getInstance();
 
     atexit(saveSettings);
 

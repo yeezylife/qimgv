@@ -638,16 +638,19 @@ void Core::setFoldersDisplay(bool mode) {
 void Core::renameCurrentSelection(const QString& newName) {
     if(!model->fileCount() || newName.isEmpty() || selectedPath().isEmpty())
         return;
+
     FileOpResult result = FileOpResult::NOTHING_TO_DO;
     model->renameEntry(selectedPath(), newName, false, result);
+
     if(result == FileOpResult::DESTINATION_DIR_EXISTS) {
-        mw->toggleRenameOverlay(std::move(newName));
+        // 修复：去掉 std::move
+        mw->toggleRenameOverlay(newName); 
     } else if(result == FileOpResult::DESTINATION_FILE_EXISTS) {
         if(mw->showConfirmation(tr("File exists"), tr("Overwrite file?"))) {
             model->renameEntry(selectedPath(), newName, true, result);
         } else {
-            // show rename dialog again
-            mw->toggleRenameOverlay(std::move(newName));
+            // 修复：去掉 std::move
+            mw->toggleRenameOverlay(newName);
         }
     }
     outputError(result);
@@ -1179,7 +1182,9 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 // TODO: don't use connect? otherwise there is no point using unique_ptr
 void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
     if (state.hasActiveImage && req.path() == state.currentFilePath) {
-        mw->onScalingFinished(std::move(scaled));
+        // 修复：去掉 std::move，直接传入 scaled
+        // 前提是 mw->onScalingFinished 的参数也改成了 const QPixmap&
+        mw->onScalingFinished(scaled); 
     }
 }
 

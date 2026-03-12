@@ -67,7 +67,7 @@ class MW : public FloatingWidgetContainer
 public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
-    void onScalingFinished(QPixmap&& scaled);
+    void onScalingFinished(const QPixmap& scaled);
     void showImage(std::unique_ptr<QPixmap> pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& movie);
     void showVideo(QString&& file);
@@ -247,7 +247,7 @@ public slots:
     void showContextMenu();
     void onSortingChanged(SortingMode);
     void toggleImageInfoOverlay();
-    void toggleRenameOverlay(QString&& currentName);
+    void toggleRenameOverlay(const QString& currentName);
     void setFilterNearest();
     void setFilterBilinear();
     void setFilter(ScalingFilter filter);

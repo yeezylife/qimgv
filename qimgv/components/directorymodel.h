@@ -19,13 +19,13 @@ public:
     int indexOfFile(const QString &filePath) const;
     int indexOfDir(const QString &filePath) const;
     QString fileNameAt(int index) const;
-    bool containsFile(QString filePath) const;
+    bool containsFile(const QString &filePath) const;
     bool isEmpty() const;
-    QString nextOf(QString filePath) const;
-    QString prevOf(QString filePath) const;
+    QString nextOf(const QString &filePath) const;
+    QString prevOf(const QString &filePath) const;
     QString firstFile() const;
     QString lastFile() const;
-    QDateTime lastModified(QString filePath) const;
+    QDateTime lastModified(const QString &filePath) const;
     bool forceInsert(const QString &filePath);
     void copyFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
     void moveFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
@@ -54,7 +54,7 @@ public:
     bool autoRefresh();
     bool saveFile(const QString &filePath);
     bool saveFile(const QString &filePath, const QString &destPath);
-    bool containsDir(QString dirPath) const;
+    bool containsDir(const QString &dirPath) const;
     FileListSource source();
     // 线程安全的辅助方法
     bool isCacheFull() const;
@@ -62,8 +62,8 @@ public:
     int getCacheSize() const;
 
 signals:
-    void fileRemoved(QString filePath, int index);
-    void fileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
+    void fileRemoved(const QString &filePath, int index);
+    void fileRenamed(const QString &fromPath, int indexFrom, const QString &toPath, int indexTo);
     void fileAdded(QString filePath);
     void fileModified(QString filePath);
     void dirRemoved(QString dirPath, int index);
@@ -87,8 +87,8 @@ private:
 private slots:
     void onImageReady(const std::shared_ptr<Image> &img, const QString &path);
     void onSortingChanged();
-    void onFileAdded(QString filePath);
-    void onFileRemoved(QString filePath, int index);
-    void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-    void onFileModified(QString filePath);
+    void onFileAdded(const QString &filePath);
+    void onFileRemoved(const QString &filePath, int index);
+    void onFileRenamed(const QString &fromPath, int indexFrom, const QString &toPath, int indexTo);
+    void onFileModified(const QString &filePath);
 };

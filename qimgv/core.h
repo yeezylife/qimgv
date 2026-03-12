@@ -42,7 +42,7 @@ public:
 
 public slots:
     void updateInfoString();
-    bool loadPath(QString);
+    bool loadPath(const QString& path);
 
 private:
     QElapsedTimer t;
@@ -173,7 +173,7 @@ private slots:
     void sortBySize();
     void showRenameDialog();
     void onDraggedOut();
-    void onDraggedOut(QList<QString> paths);
+    void onDraggedOut(const QList<QString>& paths);
     void onDropIn(const QMimeData *mimeData, QObject* source);
     void toggleShuffle();
     void onModelLoaded();

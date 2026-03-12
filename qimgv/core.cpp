@@ -581,7 +581,7 @@ void Core::onDraggedOut() {
     onDraggedOut(currentSelection());
 }
 
-void Core::onDraggedOut(QList<QString> paths) {
+void Core::onDraggedOut(const QList<QString>& paths) {
     if(paths.isEmpty())
         return;
     QMimeData *mimeData;
@@ -1194,7 +1194,7 @@ void Core::reset() {
     model->setDirectory("");
 }
 
-bool Core::loadPath(QString path) {
+bool Core::loadPath(const QString& path) {
     if(path.isEmpty())
         return false;
     if(path.startsWith("file://", Qt::CaseInsensitive))

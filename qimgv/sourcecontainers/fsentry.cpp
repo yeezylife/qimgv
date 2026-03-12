@@ -23,23 +23,23 @@ FSEntry::FSEntry(const QString &filePath) {
 // 通过 std::move 将包装后的内容“移入”成员变量，避免 QString 引用计数的不必要增减
 FSEntry::FSEntry(const FilePath &_path, const FileName &_name, std::uintmax_t _size, 
                  std::filesystem::file_time_type _modifyTime, bool _isDirectory) noexcept
-    : path(std::move(_path.value)),
-      name(std::move(_name.value)),
+    : path(_path.value),
+      name(_name.value),
       size(_size),
       modifyTime(_modifyTime),
       isDirectory(_isDirectory)
 {}
 
 FSEntry::FSEntry(const FilePath &_path, const FileName &_name, std::uintmax_t _size, bool _isDirectory) noexcept
-    : path(std::move(_path.value)),
-      name(std::move(_name.value)),
+    : path(_path.value),
+      name(_name.value),
       size(_size),
       isDirectory(_isDirectory)
 {}
 
 FSEntry::FSEntry(const FilePath &_path, const FileName &_name, bool _isDirectory) noexcept
-    : path(std::move(_path.value)),
-      name(std::move(_name.value)),
+    : path(_path.value),
+      name(_name.value),
       isDirectory(_isDirectory)
 {}
 

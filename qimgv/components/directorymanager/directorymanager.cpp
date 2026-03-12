@@ -514,6 +514,7 @@ void DirectoryManager::updateFileEntry(const QString &filePath) {
 }
 
 void DirectoryManager::renameFileEntry(const QString &oldFilePath, const QString &newFileName) {
+    // oldFilePath: 完整的旧文件路径，newFileName: 新的文件名（不包含路径）
     QFileInfo fi(oldFilePath);
     QString newFilePath = fi.absolutePath() + "/" + newFileName;
     if(!containsFile(oldFilePath)) {
@@ -573,6 +574,7 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
 }
 
 void DirectoryManager::renameDirEntry(const QString &oldDirPath, const QString &newDirName) {
+    // oldDirPath: 完整的旧目录路径，newDirName: 新的目录名（不包含路径）
     if(!containsDir(oldDirPath))
         return;
     QFileInfo fi(oldDirPath);

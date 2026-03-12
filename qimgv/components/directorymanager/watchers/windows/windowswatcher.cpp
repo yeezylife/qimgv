@@ -82,7 +82,7 @@ void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, DWORD action
 }
 
 WindowsWatcher::WindowsWatcher(QObject* parent)
-    : DirectoryWatcher(parent)
+    : DirectoryWatcher(new WindowsWatcherPrivate(this))
 {
     Q_D(WindowsWatcher);
     connect(d->workerThread.data(), &QThread::started, d->worker.data(), &WatcherWorker::run);

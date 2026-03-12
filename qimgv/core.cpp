@@ -1131,7 +1131,7 @@ void Core::setWallpaper() {
     if((status == ERROR_SUCCESS) && (hKey != nullptr)) {
         LPCTSTR value = TEXT("WallpaperStyle");
         LPCTSTR data  = TEXT("10");
-        status = RegSetValueEx(hKey, value, 0, REG_SZ, (LPBYTE)data, _tcslen(data) + 1);
+        RegSetValueEx(hKey, value, 0, REG_SZ, (LPBYTE)data, _tcslen(data) + 1);
         RegCloseKey(hKey);
     }
     // set wallpaper path

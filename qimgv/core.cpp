@@ -903,11 +903,11 @@ void Core::doInteractiveMove(const QString& path, const QString& destDirectory, 
 
 // -----------------------------------------------------------------------------------
 
-void Core::copyPathsTo(QList<QString> paths, QString destDirectory) {
+void Core::copyPathsTo(const QList<QString>& paths, const QString& destDirectory) {
     interactiveCopy(paths, destDirectory);
 }
 
-void Core::movePathsTo(QList<QString> paths, QString destDirectory) {
+void Core::movePathsTo(const QList<QString>& paths, const QString& destDirectory) {
     interactiveMove(paths, destDirectory);
 }
 
@@ -986,26 +986,6 @@ std::shared_ptr<ImageStatic> Core::getEditableImage(const QString &filePath) {
 }
 
 template<typename Func, typename... Args>
-void Core::edit_template(bool save, QString action, Func editFunc, Args&&... as) {
-    if(model->isEmpty())
-        return;
-    if(save && !mw->showConfirmation(action, tr("Perform action \"") + action + "\"? \n\n" + tr("Changes will be saved immediately.")))
-        return;
-    for(const auto& path : currentSelection()) {
-        auto img = getEditableImage(path);
-        if(!img)
-            continue;
-        QImage result = editFunc(*img->getImage(), std::forward<Args>(as)...);
-        img->setEditedImage(std::unique_ptr<const QImage>( new QImage(std::move(result)) ));
-        model->updateImage(path, std::static_pointer_cast<Image>(img));
-        if(save) {
-            saveFile(path);
-            if(state.currentFilePath != path)
-                model->unload(path);
-        }
-    }
-    updateInfoString();
-}
 
 void Core::flipH() {
     edit_template((mw->currentViewMode() == MODE_FOLDERVIEW), tr("Flip horizontal"), ImageLib::flippedH);
@@ -1152,7 +1132,7 @@ void Core::setWallpaper() {
     LONG status;
     HKEY hKey;
     status = RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("Control Panel\\Desktop"), 0, KEY_WRITE, &hKey);
-    if((status == ERROR_SUCCESS) && (hKey != NULL)) {
+    if((status == ERROR_SUCCESS) && (hKey != nullptr)) {
         LPCTSTR value = TEXT("WallpaperStyle");
         LPCTSTR data  = TEXT("10");
         status = RegSetValueEx(hKey, value, 0, REG_SZ, (LPBYTE)data, _tcslen(data) + 1);

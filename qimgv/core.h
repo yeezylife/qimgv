@@ -94,7 +94,26 @@ private:
     QList<QString> currentSelection();
 
     template<typename Func, typename... Args>
-    void edit_template(bool save, const QString& action, Func editFunc, Args&&... as);
+    void edit_template(bool save, const QString& action, Func editFunc, Args&&... as) {
+        if(model->isEmpty())
+            return;
+        if(save && !mw->showConfirmation(action, tr("Perform action \"") + action + "\"? \n\n" + tr("Changes will be saved immediately.")))
+            return;
+        for(const auto& path : currentSelection()) {
+            auto img = getEditableImage(path);
+            if(!img)
+                continue;
+            QImage result = editFunc(*img->getImage(), std::forward<Args>(as)...);
+            img->setEditedImage(std::unique_ptr<const QImage>( new QImage(std::move(result)) ));
+            model->updateImage(path, std::static_pointer_cast<Image>(img));
+            if(save) {
+                saveFile(path);
+                if(state.currentFilePath != path)
+                    model->unload(path);
+            }
+        }
+        updateInfoString();
+    }
 
     void doInteractiveCopy(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles);
     void doInteractiveMove(const QString& path, const QString& destDirectory, DialogResult &overwriteFiles);
@@ -117,10 +136,10 @@ private slots:
     void onScalingFinished(QPixmap scaled, ScalerRequest req);
     void copyCurrentFile(const QString& destDirectory);
     void moveCurrentFile(const QString& destDirectory);
-    void copyPathsTo(QList<QString> paths, QString destDirectory);
+    void copyPathsTo(const QList<QString>& paths, const QString& destDirectory);
     void interactiveCopy(const QList<QString>& paths, const QString& destDirectory);
     void interactiveMove(const QList<QString>& paths, const QString& destDirectory);
-    void movePathsTo(QList<QString> paths, QString destDirectory);
+    void movePathsTo(const QList<QString>& paths, const QString& destDirectory);
     FileOpResult removeFile(const QString& fileName, bool trash);
     void onFileRemoved(const QString& filePath, int index);
     void onFileRenamed(const QString& fromPath, int indexFrom, const QString& toPath, int indexTo);

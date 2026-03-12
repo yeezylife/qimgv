@@ -50,10 +50,10 @@ void WindowsWorker::run() {
         
         do {
             // 在当前线程中安全地转换文件名
-            int len = notify->FileNameLength / sizeof(WCHAR);
+            qsizetype len = static_cast<qsizetype>(notify->FileNameLength / sizeof(WCHAR));
             
             // 安全检查：防止异常长度
-            if (len <= 0 || len > 2048) {
+            if (len == 0 || len > 4096) {
                 qDebug() << "Invalid FileNameLength:" << notify->FileNameLength;
                 break;
             }
@@ -61,7 +61,7 @@ void WindowsWorker::run() {
             // 在发送信号前转换为 QString（数据复制到这里就安全了）
             QString fileName = QString::fromWCharArray(
                 reinterpret_cast<wchar_t*>(notify->FileName), 
-                len);
+                static_cast<qsizetype>(len));
             
             DWORD action = notify->Action;
             

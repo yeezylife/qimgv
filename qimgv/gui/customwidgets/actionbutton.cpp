@@ -9,22 +9,22 @@ ActionButton::ActionButton(QWidget *parent)
     setProperty("checked", false);
 }
 
-ActionButton::ActionButton(QString _actionName, QString _iconPath, QWidget *parent)
+ActionButton::ActionButton(QString&& _actionName, QString&& _iconPath, QWidget *parent)
     :  ActionButton(parent)
 {
-    setIconPath(_iconPath);
-    setAction(_actionName);
+    setIconPath(std::move(_iconPath));
+    setAction(std::move(_actionName));
 }
 
-ActionButton::ActionButton(QString _actionName, QString _iconPath, int _size, QWidget *parent)
-    :  ActionButton(_actionName, _iconPath, parent)
+ActionButton::ActionButton(QString&& _actionName, QString&& _iconPath, int _size, QWidget *parent)
+    :  ActionButton(std::move(_actionName), std::move(_iconPath), parent)
 {
     if(_size > 0)
         setFixedSize(_size, _size);
 }
 
-void ActionButton::setAction(QString _actionName) {
-    actionName = _actionName;
+void ActionButton::setAction(QString&& _actionName) {
+    actionName = std::move(_actionName);
 }
 
 void ActionButton::setTriggerMode(TriggerMode mode) {

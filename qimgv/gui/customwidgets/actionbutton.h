@@ -11,9 +11,9 @@ enum TriggerMode {
 class ActionButton : public IconButton {
 public:
     ActionButton(QWidget *parent = nullptr);
-    ActionButton(QString _actionName, QString _iconPath, QWidget *parent = nullptr);
-    ActionButton(QString _actionName, QString _iconPath, int _size, QWidget *parent = nullptr);
-    void setAction(QString _actionName);
+    ActionButton(QString&& _actionName, QString&& _iconPath, QWidget *parent = nullptr);
+    ActionButton(QString&& _actionName, QString&& _iconPath, int _size, QWidget *parent = nullptr);
+    void setAction(QString&& _actionName);
     void setTriggerMode(TriggerMode mode);
     TriggerMode triggerMode();
 

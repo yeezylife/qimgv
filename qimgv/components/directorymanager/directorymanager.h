@@ -58,7 +58,7 @@ public:
     const QString &prevOfDir(const QString &dirPath) const;
     const QString &nextOfDir(const QString &dirPath) const;
     void sortEntryLists();
-    const QDateTime &lastModified(const QString &filePath) const;
+    QDateTime lastModified(const QString &filePath) const;
 
     const QString &firstFile() const;
     const QString &lastFile() const;

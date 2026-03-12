@@ -485,7 +485,7 @@ bool DirectoryManager::forceInsertFileEntry(const QString &filePath) {
     // 使用宽字符接口避免日文编码问题
     QString fileName = QString::fromStdWString(stdEntry.path().filename().wstring());
     FSEntry entry(FilePath{filePath}, FileName{fileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
-    insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    insert_sorted(fileEntryVec, entry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     if(!directoryPath().isEmpty()) {
         qDebug() << "fileIns" << filePath << directoryPath();
         emit fileAdded(filePath);
@@ -539,7 +539,7 @@ void DirectoryManager::renameFileEntry(const QString &oldFilePath, const QString
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry(FilePath{newFilePath}, FileName{newFileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
-    insert_sorted(fileEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    insert_sorted(fileEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     qDebug() << "fileRen" << oldFilePath << newFilePath;
     emit fileRenamed(oldFilePath, oldIndex, newFilePath, indexOfFile(newFilePath));
 }
@@ -553,11 +553,11 @@ bool DirectoryManager::insertDirEntry(const QString &dirPath) {
     std::filesystem::directory_entry stdEntry(pathObj);
     // 使用宽字符接口避免日文编码问题
     QString dirName = QString::fromStdWString(stdEntry.path().filename().wstring());
-    FSEntry FSEntry;
-    FSEntry.name = dirName;
-    FSEntry.path = dirPath;
-    FSEntry.isDirectory = true;
-    insert_sorted(dirEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    FSEntry newEntry;
+    newEntry.name = dirName;
+    newEntry.path = dirPath;
+    newEntry.isDirectory = true;
+    insert_sorted(dirEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     qDebug() << "dirIns" << dirPath;
     emit dirAdded(dirPath);
     return true;
@@ -583,11 +583,11 @@ void DirectoryManager::renameDirEntry(const QString &oldDirPath, const QString &
     // insert
     std::filesystem::path pathObj(newDirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
-    FSEntry FSEntry;
-    FSEntry.name = newDirName;
-    FSEntry.path = newDirPath;
-    FSEntry.isDirectory = true;
-    insert_sorted(dirEntryVec, FSEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    FSEntry newEntry;
+    newEntry.name = newDirName;
+    newEntry.path = newDirPath;
+    newEntry.isDirectory = true;
+    insert_sorted(dirEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     qDebug() << "dirRen" << oldDirPath << newDirPath;
     emit dirRenamed(oldDirPath, oldIndex, newDirPath, indexOfDir(newDirPath));
 }

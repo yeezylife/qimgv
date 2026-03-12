@@ -34,8 +34,8 @@ private:
 
 private slots:
     void onTaskStart(const QString &filePath, int size);
-    void onTaskEnd(std::shared_ptr<Thumbnail> thumbnail, const QString &filePath);
+    void onTaskEnd(const std::shared_ptr<Thumbnail> &thumbnail, const QString &filePath);
 
 signals:
-    void thumbnailReady(std::shared_ptr<Thumbnail> thumbnail, QString filePath);
+    void thumbnailReady(const std::shared_ptr<Thumbnail> &thumbnail, const QString &filePath);
 };

@@ -32,7 +32,7 @@ std::shared_ptr<Thumbnail> Thumbnailer::getThumbnail(const QString &filePath, in
     return nullptr;
 }
 
-// 异步获取：直接发射“空”信号，告知调用者任务已结束（无需生成）
+// 异步获取：直接发射"空"信号，告知调用者任务已结束（无需生成）
 // 这样可以防止调用者因为收不到信号而反复请求
 void Thumbnailer::getThumbnailAsync(const QString &path, int size, bool crop, bool force) {
     Q_UNUSED(crop);
@@ -58,7 +58,7 @@ void Thumbnailer::onTaskStart(const QString &filePath, int size) {
     runningTasks.insert(filePath, size);
 }
 
-void Thumbnailer::onTaskEnd(std::shared_ptr<Thumbnail> thumbnail, const QString &filePath) {
+void Thumbnailer::onTaskEnd(const std::shared_ptr<Thumbnail> &thumbnail, const QString &filePath) {
     // 因为线程不会启动，这个函数理论上不会被调用
     if(thumbnail) {
         runningTasks.remove(filePath, thumbnail->size());

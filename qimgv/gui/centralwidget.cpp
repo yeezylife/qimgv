@@ -1,9 +1,9 @@
 #include "centralwidget.h"
 
-CentralWidget::CentralWidget(std::shared_ptr<DocumentWidget> _docWidget, std::shared_ptr<FolderViewProxy> _folderView, QWidget *parent)
+CentralWidget::CentralWidget(std::shared_ptr<DocumentWidget>&& _docWidget, std::shared_ptr<FolderViewProxy>&& _folderView, QWidget *parent)
     : QStackedWidget(parent),
-      documentView(_docWidget),
-      folderView(_folderView),
+      documentView(std::move(_docWidget)),
+      folderView(std::move(_folderView)),
       mode(MODE_DOCUMENT)
 {
     setMouseTracking(true);

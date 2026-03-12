@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QObject>
 #include "cache/cache.h"
 #include "directorymanager/directorymanager.h"
@@ -12,12 +11,9 @@ class DirectoryModel : public QObject {
 public:
     explicit DirectoryModel(QObject *parent = nullptr);
     ~DirectoryModel();
-
     Scaler *scaler;
-
     void load(const QString &filePath, bool asyncHint);
     void preload(const QString &filePath);
-
     int fileCount() const;
     int dirCount() const;
     int indexOfFile(const QString &filePath) const;
@@ -30,28 +26,20 @@ public:
     QString firstFile() const;
     QString lastFile() const;
     QDateTime lastModified(QString filePath) const;
-
-    bool forceInsert(QString filePath);
+    bool forceInsert(const QString &filePath);
     void copyFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
     void moveFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
     void renameEntry(const QString &oldFilePath, const QString &newName, bool force, FileOpResult &result);
     void removeFile(const QString &filePath, bool trash, FileOpResult &result);
     void removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result);
-
     bool setDirectory(const QString &path);
-
     void unload(int index);
-
     bool loaderBusy() const;
-
     std::shared_ptr<Image> getImageAt(int index);
-    std::shared_ptr<Image> getImage(QString filePath);
-
+    std::shared_ptr<Image> getImage(const QString &filePath);
     void updateImage(const QString &filePath, const std::shared_ptr<Image> &img);
-
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode() const;
-
     QString directoryPath() const;
     void unload(const QString &filePath);
     bool isLoaded(int index) const;
@@ -60,23 +48,19 @@ public:
     QString filePathAt(int index) const;
     void unloadExcept(const QString &filePath, bool keepNearby);
     const FSEntry &fileEntryAt(int index) const;
-
     int totalCount() const;
     QString dirNameAt(int index) const;
     QString dirPathAt(int index) const;
-
     bool autoRefresh();
-
     bool saveFile(const QString &filePath);
     bool saveFile(const QString &filePath, const QString &destPath);
-
     bool containsDir(QString dirPath) const;
     FileListSource source();
-    
     // 线程安全的辅助方法
     bool isCacheFull() const;
     void clearCache();
     int getCacheSize() const;
+
 signals:
     void fileRemoved(QString filePath, int index);
     void fileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
@@ -97,7 +81,6 @@ private:
     Loader loader;
     Cache cache;
     FileListSource fileListSource;
-    
     // 线程安全增强：添加互斥锁
     mutable QMutex mMutex;
 
@@ -105,7 +88,7 @@ private slots:
     void onImageReady(const std::shared_ptr<Image> &img, const QString &path);
     void onSortingChanged();
     void onFileAdded(QString filePath);
-    void onFileRemoved(QString filePath, int index);
-    void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-    void onFileModified(QString filePath);
+    void onFileRemoved(const QString &filePath, int index);
+    void onFileRenamed(const QString &fromPath, int indexFrom, QString toPath, int indexTo);
+    void onFileModified(const QString &filePath);
 };

@@ -23,8 +23,8 @@ DirectoryModel::~DirectoryModel() {
     delete scaler;
 }
 
-int DirectoryModel::totalCount() const {
-    return static_cast<int>(dirManager.totalCount());
+size_t DirectoryModel::totalCount() const {
+    return dirManager.totalCount();
 }
 
 int DirectoryModel::fileCount() const {
@@ -51,19 +51,19 @@ const FSEntry &DirectoryModel::fileEntryAt(int index) const {
     return dirManager.fileEntryAt(index);
 }
 
-QString DirectoryModel::fileNameAt(int index) const {
+const QString &DirectoryModel::fileNameAt(int index) const {
     return dirManager.fileNameAt(index);
 }
 
-QString DirectoryModel::filePathAt(int index) const {
+const QString &DirectoryModel::filePathAt(int index) const {
     return dirManager.filePathAt(index);
 }
 
-QString DirectoryModel::dirNameAt(int index) const {
+const QString &DirectoryModel::dirNameAt(int index) const {
     return dirManager.dirNameAt(index);
 }
 
-QString DirectoryModel::dirPathAt(int index) const {
+const QString &DirectoryModel::dirPathAt(int index) const {
     return dirManager.dirPathAt(index);
 }
 
@@ -75,7 +75,7 @@ FileListSource DirectoryModel::source() {
     return dirManager.source();
 }
 
-QString DirectoryModel::directoryPath() const {
+const QString &DirectoryModel::directoryPath() const {
     return dirManager.directoryPath();
 }
 
@@ -91,23 +91,23 @@ bool DirectoryModel::isEmpty() const {
     return dirManager.isEmpty();
 }
 
-QString DirectoryModel::firstFile() const {
+const QString &DirectoryModel::firstFile() const {
     return dirManager.firstFile();
 }
 
-QString DirectoryModel::lastFile() const {
+const QString &DirectoryModel::lastFile() const {
     return dirManager.lastFile();
 }
 
-QString DirectoryModel::nextOf(const QString &filePath) const {
+const QString &DirectoryModel::nextOf(const QString &filePath) const {
     return dirManager.nextOfFile(filePath);
 }
 
-QString DirectoryModel::prevOf(const QString &filePath) const {
+const QString &DirectoryModel::prevOf(const QString &filePath) const {
     return dirManager.prevOfFile(filePath);
 }
 
-QDateTime DirectoryModel::lastModified(const QString &filePath) const {
+const QDateTime &DirectoryModel::lastModified(const QString &filePath) const {
     return dirManager.lastModified(filePath);
 }
 
@@ -243,11 +243,11 @@ void DirectoryModel::onSortingChanged() {
     emit sortingChanged(sortingMode());
 }
 
-void DirectoryModel::onFileAdded(QString filePath) {
-    emit fileAdded(std::move(filePath));
+void DirectoryModel::onFileAdded(const QString &filePath) {
+    emit fileAdded(filePath);
 }
 
-void DirectoryModel::onFileModified(QString filePath) {
+void DirectoryModel::onFileModified(const QString &filePath) {
     QDateTime modTime = lastModified(filePath);
     if(modTime.isValid()) {
         auto img = cache.get(filePath);
@@ -260,14 +260,14 @@ void DirectoryModel::onFileModified(QString filePath) {
     }
 }
 
-void DirectoryModel::onFileRemoved(QString filePath, int index) {
+void DirectoryModel::onFileRemoved(const QString &filePath, int index) {
     unload(filePath);
     emit fileRemoved(filePath, index);
 }
 
-void DirectoryModel::onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo) {
+void DirectoryModel::onFileRenamed(const QString &fromPath, int indexFrom, const QString &toPath, int indexTo) {
     unload(fromPath);
-    emit fileRenamed(fromPath, indexFrom, std::move(toPath), indexTo);
+    emit fileRenamed(fromPath, indexFrom, toPath, indexTo);
 }
 
 bool DirectoryModel::isLoaded(int index) const {

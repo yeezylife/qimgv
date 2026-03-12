@@ -22,7 +22,7 @@ void DirectoryPresenter::setView(const std::shared_ptr<IDirectoryView> &_view) {
         return;
     view = _view;
     if(model)
-        view->populate(mShowDirs ? model->totalCount() : model->fileCount());
+        view->populate(mShowDirs ? static_cast<int>(model->totalCount()) : static_cast<int>(model->fileCount()));
     connect(dynamic_cast<QObject *>(view.get()), SIGNAL(itemActivated(int)),
             this, SLOT(onItemActivated(int)));
     connect(dynamic_cast<QObject *>(view.get()), SIGNAL(thumbnailsRequested(QList<int>, int, bool, bool)),
@@ -60,7 +60,7 @@ void DirectoryPresenter::reloadModel() {
 void DirectoryPresenter::populateView() {
     if(!model || !view)
         return;
-    view->populate(mShowDirs ? model->totalCount() : model->fileCount());
+    view->populate(mShowDirs ? static_cast<int>(model->totalCount()) : static_cast<int>(model->fileCount()));
     selectAndFocus(0);
 }
 

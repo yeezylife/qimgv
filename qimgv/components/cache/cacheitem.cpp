@@ -1,7 +1,5 @@
 #include "cacheitem.h"
 
-CacheItem::CacheItem() = default;
-
 CacheItem::CacheItem(std::shared_ptr<Image> contents)
     : contents(std::move(contents))
 {

@@ -89,10 +89,10 @@ void Core::connectComponents() {
             this, &Core::loadPath);
 
     connect(&folderViewPresenter, &DirectoryPresenter::draggedOut,
-            this, qOverload<QList<QString>>(&Core::onDraggedOut));
+            this, &Core::onDraggedOutList);
 
     connect(&folderViewPresenter, &DirectoryPresenter::droppedInto,
-            this, qOverload<QList<QString>,QString>(&Core::movePathsTo));
+            this, &Core::movePathsTo);
 
     connect(scriptManager, &ScriptManager::error, mw, &MW::showError);
 
@@ -100,7 +100,7 @@ void Core::connectComponents() {
     connect(mw, &MW::droppedIn,             this, &Core::onDropIn);
     connect(mw, &MW::copyRequested,         this, &Core::copyCurrentFile);
     connect(mw, &MW::moveRequested,         this, &Core::moveCurrentFile);
-    connect(mw, &MW::copyUrlsRequested,     this, qOverload<QList<QString>, QString>(&Core::copyPathsTo));
+    connect(mw, &MW::copyUrlsRequested,     this, &Core::copyPathsTo);
     connect(mw, &MW::moveUrlsRequested,     this, &Core::movePathsTo);
     connect(mw, &MW::cropRequested,         this, &Core::crop);
     connect(mw, &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
@@ -112,7 +112,7 @@ void Core::connectComponents() {
     connect(mw, &MW::sortingSelected,       this, &Core::sortBy);
     connect(mw, &MW::showFoldersChanged,    this, &Core::setFoldersDisplay);
     connect(mw, &MW::discardEditsRequested, this, &Core::discardEdits);
-    connect(mw, &MW::draggedOut,            this, qOverload<>(&Core::onDraggedOut));
+    connect(mw, &MW::draggedOut,            this, &Core::onDraggedOut);
 
     connect(mw, &MW::playbackFinished, this, &Core::onPlaybackFinished);
 
@@ -578,10 +578,10 @@ void Core::onDropIn(const QMimeData *mimeData, QObject* source) {
 // drag'n'drop
 // drag image out of the program
 void Core::onDraggedOut() {
-    onDraggedOut(currentSelection());
+    onDraggedOutList(currentSelection());
 }
 
-void Core::onDraggedOut(const QList<QString>& paths) {
+void Core::onDraggedOutList(const QList<QString>& paths) {
     if(paths.isEmpty())
         return;
     QMimeData *mimeData;
@@ -954,9 +954,7 @@ void Core::copyCurrentFile(const QString& destDirectory) {
 void Core::toggleCropPanel() {
     if(model->isEmpty())
         return;
-    if(mw->isCropPanelActive()) {
-        mw->triggerCropPanel();
-    } else if(state.hasActiveImage) {
+    if(state.hasActiveImage) {
         mw->triggerCropPanel();
     }
 }
@@ -984,8 +982,6 @@ void Core::showResizeDialog() {
 std::shared_ptr<ImageStatic> Core::getEditableImage(const QString &filePath) {
     return std::dynamic_pointer_cast<ImageStatic>(model->getImage(filePath));
 }
-
-template<typename Func, typename... Args>
 
 void Core::flipH() {
     edit_template((mw->currentViewMode() == MODE_FOLDERVIEW), tr("Flip horizontal"), ImageLib::flippedH);
@@ -1181,7 +1177,7 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 }
 
 // TODO: don't use connect? otherwise there is no point using unique_ptr
-void Core::onScalingFinished(QPixmap scaled, ScalerRequest req) {
+void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
     if (state.hasActiveImage && req.path() == state.currentFilePath) {
         mw->onScalingFinished(scaled);
     }
@@ -1197,21 +1193,22 @@ void Core::reset() {
 bool Core::loadPath(const QString& path) {
     if(path.isEmpty())
         return false;
-    if(path.startsWith("file://", Qt::CaseInsensitive))
-        path.remove(0, 7);
+    QString cleanPath = path;
+    if(cleanPath.startsWith("file://", Qt::CaseInsensitive))
+        cleanPath = cleanPath.mid(7);
 
     stopSlideshow();
     state.delayModel = false;
-    QFileInfo fileInfo(path);
+    QFileInfo fileInfo(cleanPath);
     if(fileInfo.isDir()) {
-        state.directoryPath = QDir(path).absolutePath();
+        state.directoryPath = QDir(cleanPath).absolutePath();
     } else if(fileInfo.isFile()) {
         state.directoryPath = fileInfo.absolutePath();
         if(model->directoryPath() != state.directoryPath)
             state.delayModel = true;
     } else {
-        mw->showError(tr("Could not open path: ") + path);
-        qDebug() << "Could not open path: " << path;
+        mw->showError(tr("Could not open path: ") + cleanPath);
+        qDebug() << "Could not open path: " << cleanPath;
         return false;
     }
     if(!state.delayModel && !setDirectory(state.directoryPath))
@@ -1240,7 +1237,7 @@ bool Core::loadPath(const QString& path) {
     }
 }
 
-bool Core::setDirectory(QString path) {
+bool Core::setDirectory(const QString& path) {
     if(model->directoryPath() != path) {
         this->reset();
         if(!model->setDirectory(path)) {
@@ -1441,7 +1438,7 @@ void Core::onLoadFailed(const QString &path) {
         mw->closeImage();
 }
 
-void Core::onModelItemReady(std::shared_ptr<Image> img, const QString &path) {
+void Core::onModelItemReady(const std::shared_ptr<Image>& img, const QString &path) {
     if(path == state.currentFilePath) {
         state.currentImg = img;
         guiSetImage(img);
@@ -1477,7 +1474,7 @@ void Core::onModelSortingChanged(SortingMode mode) {
     folderViewPresenter.selectAndFocus(state.currentFilePath);
 }
 
-void Core::guiSetImage(std::shared_ptr<Image> img) {
+void Core::guiSetImage(const std::shared_ptr<Image>& img) {
     state.hasActiveImage = true;
     if(!img) {
         mw->showMessage(tr("Error: could not load image."));

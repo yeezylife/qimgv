@@ -69,7 +69,7 @@ private:
 
     void rotateByDegrees(int degrees);
     void reset();
-    bool setDirectory(QString path);
+    bool setDirectory(const QString& path);
 
     QDrag *mDrag;
     QMimeData *getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target);
@@ -80,7 +80,7 @@ private:
 
     void attachModel(DirectoryModel *_model);
     QString selectedPath();
-    void guiSetImage(std::shared_ptr<Image> img);
+    void guiSetImage(const std::shared_ptr<Image>& img);
     QTimer slideshowTimer;
 
     void startSlideshowTimer();
@@ -125,15 +125,15 @@ private slots:
     void nextImageSlideshow();
     void jumpToFirst();
     void jumpToLast();
-    void onModelItemReady(std::shared_ptr<Image>, const QString&);
+    void onModelItemReady(const std::shared_ptr<Image>& img, const QString& path);
     void onModelItemUpdated(const QString& fileName);
     void onModelSortingChanged(SortingMode mode);
     void onLoadFailed(const QString &path);
     void rotateLeft();
     void rotateRight();
     void close();
-    void scalingRequest(QSize, ScalingFilter);
-    void onScalingFinished(QPixmap scaled, ScalerRequest req);
+    void scalingRequest(QSize size, ScalingFilter filter);
+    void onScalingFinished(const QPixmap& scaled, const ScalerRequest& req);
     void copyCurrentFile(const QString& destDirectory);
     void moveCurrentFile(const QString& destDirectory);
     void copyPathsTo(const QList<QString>& paths, const QString& destDirectory);
@@ -156,8 +156,8 @@ private slots:
     void toggleFullscreenInfoBar();
     void requestSavePath();
     void saveCurrentFile();
-    void saveCurrentFileAs(const QString&);
-    void runScript(const QString&);
+    void saveCurrentFileAs(const QString& destPath);
+    void runScript(const QString& scriptName);
     void setWallpaper();
     void removePermanent();
     void moveToTrash();
@@ -173,7 +173,7 @@ private slots:
     void sortBySize();
     void showRenameDialog();
     void onDraggedOut();
-    void onDraggedOut(const QList<QString>& paths);
+    void onDraggedOutList(const QList<QString>& paths);
     void onDropIn(const QMimeData *mimeData, QObject* source);
     void toggleShuffle();
     void onModelLoaded();

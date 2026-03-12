@@ -1,4 +1,5 @@
 #include "documentinfo.h"
+#include <array>
 
 using namespace Qt::StringLiterals;
 
@@ -48,8 +49,6 @@ DocumentInfo::DocumentInfo(const QString &path)
 
     detectFormat();
 }
-
-DocumentInfo::~DocumentInfo() {}
 
 QString DocumentInfo::directoryPath() const {
     return fileInfo.absolutePath();
@@ -200,12 +199,12 @@ bool DocumentInfo::detectAnimatedWebP() {
 
     in.skipRawData(12);
 
-    char header[5] = {0};
+    std::array<char, 5> header{};
 
-    if(in.readRawData(header,4) != 4)
+    if(in.readRawData(header.data(), 4) != 4)
         return false;
 
-    if(strcmp(header,"VP8X") != 0)
+    if(strcmp(header.data(),"VP8X") != 0)
         return false;
 
     in.skipRawData(4);
@@ -215,7 +214,7 @@ bool DocumentInfo::detectAnimatedWebP() {
     if(in.readRawData(&flags,1) != 1)
         return false;
 
-    return flags & (1<<1);
+    return flags & 0x02;
 }
 
 bool DocumentInfo::detectAnimatedJxl() {
@@ -236,12 +235,12 @@ bool DocumentInfo::detectAnimatedAvif() {
 
     in.skipRawData(4);
 
-    char buf[9] = {0};
+    std::array<char, 9> buf{};
 
-    if(in.readRawData(buf,8) != 8)
+    if(in.readRawData(buf.data(), 8) != 8)
         return false;
 
-    return strcmp(buf,"ftypavis") == 0;
+    return strcmp(buf.data(),"ftypavis") == 0;
 }
 
 int DocumentInfo::transformationToExifOrientation(QImageIOHandler::Transformations transformation) const {
@@ -350,7 +349,7 @@ void DocumentInfo::loadExifTags() const {
         // EXIF UserComment 特殊处理
         if(key == u"UserComment"_s && formattedValue.startsWith(u"charset="_s)) {
 
-            int spaceIndex = formattedValue.indexOf(u' ');
+            qsizetype spaceIndex = formattedValue.indexOf(u' ');
 
             if(spaceIndex > 0)
                 formattedValue = formattedValue.mid(spaceIndex + 1);

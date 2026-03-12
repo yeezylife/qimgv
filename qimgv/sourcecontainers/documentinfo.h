@@ -22,9 +22,11 @@ enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };
 class DocumentInfo {
 public:
     explicit DocumentInfo(const QString &path);
-    ~DocumentInfo();
 
-    // 拷贝和移动操作（默认即可）
+    // 析构函数
+    ~DocumentInfo() = default;
+
+    // 拷贝和移动操作
     DocumentInfo(const DocumentInfo &) = default;
     DocumentInfo& operator=(const DocumentInfo &) = default;
     DocumentInfo(DocumentInfo &&) noexcept = default;
@@ -43,9 +45,9 @@ public:
 
     void refresh();
 
-    // 懒加载 EXIF 标签（const 正确版本）
-    void loadExifTags() const;   // 注意：const 成员，可修改 mutable 成员
-    const QMap<QString, QString>& getExifTags() const;   // 返回 const 引用
+    // 懒加载 EXIF 标签
+    void loadExifTags() const;
+    const QMap<QString, QString>& getExifTags() const;
 
     bool isValid() const { return mDocumentType != NONE; }
 
@@ -57,7 +59,6 @@ private:
     QString mFormat;
     QMimeType mMimeType;
 
-    // mutable 成员，允许在 const 函数中懒加载
     mutable bool exifLoaded = false;
     mutable QMap<QString, QString> exifTags;
 

@@ -25,7 +25,7 @@ public:
     const QString &prevOf(const QString &filePath) const;
     const QString &firstFile() const;
     const QString &lastFile() const;
-    const QDateTime &lastModified(const QString &filePath) const;
+    const QDateTime lastModified(const QString &filePath) const;
     bool forceInsert(const QString &filePath);
     void copyFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
     void moveFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result);
@@ -40,7 +40,7 @@ public:
     void updateImage(const QString &filePath, const std::shared_ptr<Image> &img);
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode() const;
-    const QString &directoryPath() const;
+    const QString directoryPath() const;
     void unload(const QString &filePath);
     bool isLoaded(int index) const;
     bool isLoaded(const QString& filePath) const;

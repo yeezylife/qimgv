@@ -75,7 +75,7 @@ FileListSource DirectoryModel::source() {
     return dirManager.source();
 }
 
-const QString &DirectoryModel::directoryPath() const {
+const QString DirectoryModel::directoryPath() const {
     return dirManager.directoryPath();
 }
 
@@ -107,7 +107,7 @@ const QString &DirectoryModel::prevOf(const QString &filePath) const {
     return dirManager.prevOfFile(filePath);
 }
 
-const QDateTime &DirectoryModel::lastModified(const QString &filePath) const {
+const QDateTime DirectoryModel::lastModified(const QString &filePath) const {
     return dirManager.lastModified(filePath);
 }
 

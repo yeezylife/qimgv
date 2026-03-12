@@ -67,19 +67,19 @@ class MW : public FloatingWidgetContainer
 public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
-    void onScalingFinished(QPixmap scaled);
+    void onScalingFinished(QPixmap&& scaled);
     void showImage(std::unique_ptr<QPixmap> pixmap);
-    void showAnimation(std::shared_ptr<QMovie> movie);
-    void showVideo(QString file);
+    void showAnimation(const std::shared_ptr<QMovie>& movie);
+    void showVideo(QString&& file);
 
-    void setCurrentInfo(int fileIndex, int fileCount, QString filePath, QString fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
+    void setCurrentInfo(int fileIndex, int fileCount, QString&& filePath, QString&& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(QMap<QString, QString>);
     std::shared_ptr<FolderViewProxy> getFolderView();
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
 
     ViewMode currentViewMode();
 
-    bool showConfirmation(QString title, QString msg);
+    bool showConfirmation(const QString& title, const QString& msg);
     DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
 
 private:
@@ -87,7 +87,6 @@ private:
     QHBoxLayout layout;                                     // 默认构造
     QTimer windowGeometryChangeTimer;                       // 默认构造
     int currentDisplay = 0;
-    bool cropPanelActive = false;
     bool showInfoBarFullscreen = false;
     bool showInfoBarWindowed = false;
     bool maximized = false;
@@ -107,8 +106,7 @@ private:
     ControlsOverlay *controlsOverlay = nullptr;
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
     std::shared_ptr<InfoBarProxy> infoBarWindowed;          // 默认 nullptr
-    PanelPosition panelPosition = PANEL_BOTTOM;              // 假设默认值
-    CurrentInfo info;                                        // 默认构造（各字段已初始化）
+    CurrentInfo info{};                                      // 默认构造（各字段已初始化）
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QDesktopWidget desktopWidget;
 #endif
@@ -145,6 +143,9 @@ private slots:
     void onWindowGeometryChanged();
     void onInfoUpdated();
     void showScriptSettings();
+    void setFilterNearest();
+    void setFilterBilinear();
+    void setFilter(ScalingFilter filter);
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -160,8 +161,6 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void leaveEvent(QEvent *event) override;
-
-   // bool focusNextPrevChild(bool);
 signals:
     void opened(QString);
     void fullscreenStateChanged(bool);
@@ -213,9 +212,9 @@ public slots:
     void toggleFolderView();
     void enableFolderView();
     void enableDocumentView();
-    void showOpenDialog(QString path);
-    void showSaveDialog(QString filePath);
-    QString getSaveFileName(QString fileName);
+    void showOpenDialog(const QString& path);
+    void showSaveDialog(const QString& filePath);
+    QString getSaveFileName(const QString& fileName);
     void showResizeDialog(QSize initialSize);
     void showSettings();
     void triggerFullScreen();
@@ -251,12 +250,12 @@ public slots:
     void showContextMenu();
     void onSortingChanged(SortingMode);
     void toggleImageInfoOverlay();
-    void toggleRenameOverlay(QString currentName);
+    void toggleRenameOverlay(QString&& currentName);
     void setFilterNearest();
     void setFilterBilinear();
     void setFilter(ScalingFilter filter);
     void toggleScalingFilter();
-    void setDirectoryPath(QString path);
+    void setDirectoryPath(const QString& path);
     void toggleLockZoom();
     void toggleLockView();
     void toggleFullscreenInfoBar();

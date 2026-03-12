@@ -248,17 +248,17 @@ void MW::showImage(std::unique_ptr<QPixmap> pixmap) {
     updateCropPanelData();
 }
 
-void MW::showAnimation(std::shared_ptr<QMovie> movie) {
+void MW::showAnimation(const std::shared_ptr<QMovie>& movie) {
     if(settings->autoResizeWindow())
         preShowResize(movie->frameRect().size());
     viewerWidget->showAnimation(movie);
     updateCropPanelData();
 }
 
-void MW::showVideo(QString file) {
+void MW::showVideo(QString&& file) {
     if(settings->autoResizeWindow())
         preShowResize(QSize()); // tmp. find a way to get this though mpv BEFORE playback
-    viewerWidget->showVideo(file);
+    viewerWidget->showVideo(std::move(file));
 }
 
 void MW::showContextMenu() {
@@ -279,7 +279,7 @@ void MW::onSortingChanged(SortingMode mode) {
     }
 }
 
-void MW::setDirectoryPath(QString path) {
+void MW::setDirectoryPath(const QString& path) {
     //closeImage();
     info.directoryPath = path;
     info.directoryName = path.split("/").last();
@@ -324,12 +324,12 @@ void MW::toggleImageInfoOverlay() {
         imageInfoOverlay->hide();
 }
 
-void MW::toggleRenameOverlay(QString currentName) {
+void MW::toggleRenameOverlay(QString&& currentName) {
     if(!renameOverlay)
         setupRenameOverlay();
     if(renameOverlay->isHidden()) {
         renameOverlay->setBackdropEnabled((centralWidget->currentViewMode() == MODE_FOLDERVIEW));
-        renameOverlay->setName(currentName);
+        renameOverlay->setName(std::move(currentName));
         renameOverlay->show();
     } else {
         renameOverlay->hide();
@@ -386,8 +386,8 @@ bool MW::isCropPanelActive() {
     return (activeSidePanel == SIDEPANEL_CROP);
 }
 
-void MW::onScalingFinished(QPixmap scaled) {
-    viewerWidget->onScalingFinished(scaled);
+void MW::onScalingFinished(QPixmap&& scaled) {
+    viewerWidget->onScalingFinished(std::move(scaled));
 }
 
 void MW::saveWindowGeometry() {
@@ -530,7 +530,7 @@ void MW::showSaveDialog(QString filePath) {
         emit saveAsRequested(newFilePath);
 }
 
-QString MW::getSaveFileName(QString filePath) {
+QString MW::getSaveFileName(const QString& filePath) {
     docWidget->hideFloatingPanel();
     QStringList filters;
     // generate filter for writable images
@@ -570,7 +570,7 @@ QString MW::getSaveFileName(QString filePath) {
         filters.append(QString::fromUtf8(format.toUpper()) + " (*." + QString::fromUtf8(format) + ")");
     }
     // add everything else from imagewriter
-    for(auto fmt : writerFormats) {
+    for(const auto& fmt : writerFormats) {
         if(filters.filter(fmt).isEmpty())
             filters.append(fmt.toUpper() + " (*." + fmt + ")");
     }
@@ -579,7 +579,7 @@ QString MW::getSaveFileName(QString filePath) {
     // find matching filter for the current image
     QString selectedFilter = "JPEG (*.jpg *.jpeg *jpe *jfif)";
     QFileInfo fi(filePath);
-    for(auto filter : filters) {
+    for(const auto& filter : filters) {
         if(filter.contains(fi.suffix().toLower())) {
             selectedFilter = filter;
             break;
@@ -589,7 +589,7 @@ QString MW::getSaveFileName(QString filePath) {
     return newFilePath;
 }
 
-void MW::showOpenDialog(QString path) {
+void MW::showOpenDialog(const QString& path) {
     docWidget->hideFloatingPanel();
 
     QFileDialog dialog(this);
@@ -981,7 +981,7 @@ void MW::showError(QString text) {
     floatingMessage->showMessage(text,  FloatingMessageIcon::ICON_ERROR, 2800);
 }
 
-bool MW::showConfirmation(QString title, QString msg) {
+bool MW::showConfirmation(const QString& title, const QString& msg) {
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(title);
     msgBox.setText(msg);

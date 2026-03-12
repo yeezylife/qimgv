@@ -11,6 +11,7 @@ Scaler::Scaler(Cache *_cache, QObject *parent)
     pool = new QThreadPool(this);
     pool->setMaxThreadCount(1); 
     
+    // Qt6 会自动处理值传递的 QueuedConnection 优化
     connect(this, &Scaler::acceptScalingResult, this, &Scaler::slotForwardScaledResult, Qt::QueuedConnection);
 }
 
@@ -18,7 +19,6 @@ Scaler::~Scaler() {
     pool->waitForDone();
 }
 
-// 修复：改为 const ScalerRequest &req
 void Scaler::requestScaled(const ScalerRequest &req) {
     QString toReserve;
     QString toRelease;
@@ -81,7 +81,6 @@ void Scaler::startRequest(const ScalerRequest& req) {
     pool->start(runnable);
 }
 
-// 修复：改为 const ScalerRequest &req
 void Scaler::onTaskStart(const ScalerRequest &req) {
     QMutexLocker locker(&mutex);
     running = true;
@@ -92,8 +91,8 @@ void Scaler::onTaskStart(const ScalerRequest &req) {
     startedRequest = req;
 }
 
-// 修复：改为 const QImage &scaled 和 const ScalerRequest &req
-void Scaler::onTaskFinish(const QImage &scaled, const ScalerRequest &req) {
+// 修复点：参数移除 const &，改为值传递
+void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
     QString toRelease;
     bool hasNextTask = false;
     ScalerRequest nextReq;
@@ -110,8 +109,8 @@ void Scaler::onTaskFinish(const QImage &scaled, const ScalerRequest &req) {
             hasNextTask = true;
             nextReq = bufferedRequest;
         } else {
-            // 优化：使用 std::move(scaled)，因为此后不再需要该临时结果
-            emit acceptScalingResult(std::move(scaled), req);
+            // 此时 scaled 是非 const 的左值，move 后将完美触发移动语义
+            emit acceptScalingResult(std::move(scaled), std::move(req));
         }
     }
 
@@ -124,10 +123,10 @@ void Scaler::onTaskFinish(const QImage &scaled, const ScalerRequest &req) {
     }
 }
 
-// 修复：改为 const QImage &image 和 const ScalerRequest &req
-void Scaler::slotForwardScaledResult(const QImage &image, const ScalerRequest &req) {
-    // 这里的 image 虽然是 const&，但 QPixmap::fromImage 会处理其内部数据
-    QPixmap result = QPixmap::fromImage(image);
-    // 优化：req 是最后一次使用，可以使用 std::move
-    emit scalingFinished(std::move(result), req);
+// 修复点：参数移除 const &，改为值传递
+void Scaler::slotForwardScaledResult(QImage image, ScalerRequest req) {
+    // QPixmap::fromImage 在 Qt6 中针对右值有优化
+    QPixmap result = QPixmap::fromImage(std::move(image));
+    // 彻底消除警告，实现真正的资源转移
+    emit scalingFinished(std::move(result), std::move(req));
 }

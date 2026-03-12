@@ -3,6 +3,7 @@
 #include <QPixmap>
 #include <QMutex>
 #include <QtGlobal>
+#include <memory>   // 引入 std::unique_ptr
 
 enum ShrIcon {
     SHR_ICON_ERROR,
@@ -12,19 +13,20 @@ enum ShrIcon {
 class SharedResources
 {
 public:
-    static SharedResources* getInstance();
-    ~SharedResources();
+    static SharedResources& getInstance();                // 返回引用
+    ~SharedResources() = default;                         // 默认析构即可
 
-    QPixmap *getPixmap(ShrIcon icon, qreal dpr);
+    QPixmap& getPixmap(ShrIcon icon, qreal dpr);          // 返回引用
+    const QPixmap& getPixmap(ShrIcon icon, qreal dpr) const; // const 重载，保证只读
 
 private:
-    SharedResources();                                    // 私有构造函数，强制使用单例
+    SharedResources() = default;                          // 私有构造函数，强制使用单例
     Q_DISABLE_COPY(SharedResources)                       // 禁止拷贝
 
-    QPixmap *mLoadingIcon72 = nullptr;
-    QPixmap *mLoadingErrorIcon72 = nullptr;
-    QMutex mutex;                                          // 用于线程安全
+    mutable std::unique_ptr<QPixmap> mLoadingIcon72;      // 使用智能指针管理资源
+    mutable std::unique_ptr<QPixmap> mLoadingErrorIcon72;
+    mutable QMutex mutex;                                 // 用于线程安全
 };
 
-// 保留全局指针，用于兼容旧代码
-extern SharedResources *shrRes;
+// 保留全局引用，用于兼容旧代码
+extern SharedResources& shrRes;

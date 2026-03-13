@@ -214,8 +214,8 @@ bool ImageViewerV2::imageFitsInternal() const {
     if(!pixmap)
         return true;
     
-    return (pixmap->width() <= static_cast<int>(viewport()->width() * dpr) &&
-            pixmap->height() <= static_cast<int>(viewport()->height() * dpr));
+    return (pixmap->width() <= static_cast<int>(static_cast<qreal>(viewport()->width()) * dpr) &&
+            pixmap->height() <= static_cast<int>(static_cast<qreal>(viewport()->height()) * dpr));
 }
 
 float ImageViewerV2::currentScaleInternal() const {
@@ -253,7 +253,7 @@ void ImageViewerV2::onFullscreenModeChanged(bool mode) {
     mIsFullscreen = mode;
     QColor bgColor = mode ? settings->colorScheme().background_fullscreen 
                           : settings->colorScheme().background;
-    bgColor.setAlphaF(static_cast<qreal>(mode ? 1.0 : settings->backgroundOpacity()));
+    bgColor.setAlphaF(static_cast<float>(mode ? 1.0f : settings->backgroundOpacity()));
     scene->setBackgroundBrush(bgColor);
 }
 
@@ -1119,7 +1119,8 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
     } 
     else if(event->buttons() & Qt::RightButton) {
         if(mouseInteraction == MOUSE_ZOOM || 
-           abs(mousePressPos.y() - event->pos().y()) > static_cast<float>(zoomThreshold) / dpr) 
+           static_cast<float>(std::abs(mousePressPos.y() - event->pos().y())) >
+               static_cast<float>(zoomThreshold) / dpr) 
         {
             if(cursor().shape() != Qt::SizeVerCursor)
                 setCursor(Qt::SizeVerCursor);

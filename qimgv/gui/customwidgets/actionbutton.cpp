@@ -16,7 +16,7 @@ ActionButton::ActionButton(QString _actionName, QString _iconPath, QWidget *pare
 {
     // 使用 std::move 将局部变量的所有权转交给成员/底层函数
     setAction(std::move(_actionName));
-    setIconPath(std::move(_iconPath));
+    setIconPath(_iconPath);
 }
 
 ActionButton::ActionButton(QString _actionName, QString _iconPath, int _size, QWidget *parent)

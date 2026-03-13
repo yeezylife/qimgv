@@ -27,6 +27,9 @@ struct State {
     QString currentFilePath = "";
     QString directoryPath = "";
     std::shared_ptr<Image> currentImg;
+    bool slideshowActive = false;
+    bool shuffle = false;
+    bool isEdited = false;
 };
 
 enum MimeDataTarget {
@@ -111,6 +114,10 @@ private:
                 if(state.currentFilePath != path)
                     model->unload(path);
             }
+        }
+        if(state.hasActiveImage) {
+            auto img = model->getImage(state.currentFilePath);
+            state.isEdited = img->isEdited();
         }
         updateInfoString();
     }

@@ -272,6 +272,7 @@ void Core::toggleShuffle() {
         mw->showMessage(tr("Shuffle mode: ON"));
     }
     shuffle = !shuffle;
+    state.shuffle = shuffle;
     updateInfoString();
 }
 
@@ -289,6 +290,7 @@ void Core::toggleSlideshow() {
 void Core::startSlideshow() {
     if(!slideshow) {
         slideshow = true;
+        state.slideshowActive = true;
         mw->setLoopPlayback(false);
         enableDocumentView();
         startSlideshowTimer();
@@ -299,6 +301,7 @@ void Core::startSlideshow() {
 void Core::stopSlideshow() {
     if(slideshow) {
         slideshow = false;
+        state.slideshowActive = false;
         mw->setLoopPlayback(true);
         slideshowTimer.stop();
         updateInfoString();
@@ -1060,6 +1063,7 @@ void Core::discardEdits() {
         imgStatic->discardEditedImage();
         model->updateImage(selectedPath(), img);
     }
+    state.isEdited = false;
     mw->hideSaveOverlay();
 }
 
@@ -1498,6 +1502,7 @@ void Core::guiSetImage(const std::shared_ptr<Image>& img) {
         showGui();
         mw->showVideo(video->filePath());
     }
+    state.isEdited = img->isEdited();
     img->isEdited() ? mw->showSaveOverlay() : mw->hideSaveOverlay();
     mw->setExifInfo(img->getExifTags());
 }

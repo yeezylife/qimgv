@@ -139,9 +139,9 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
     if(result != FileOpResult::SUCCESS)
         return;
     if(isDir)
-        dirManager.renameDirEntry(oldPath, newName);
+        dirManager.renameDirEntry(DirPath{oldPath}, DirName{newName}); 
     else
-        dirManager.renameFileEntry(oldPath, newName);
+        dirManager.renameFileEntry(FilePath{oldPath}, FileName{newName});
 }
 
 void DirectoryModel::removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result) {

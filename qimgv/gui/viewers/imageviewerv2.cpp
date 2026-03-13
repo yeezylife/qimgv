@@ -53,7 +53,7 @@ ImageViewerV2::ImageViewerV2(QWidget *parent)
     if(qApp->platformName() == "wayland")
         wayland = true;
 
-    dpr = devicePixelRatioF();
+    dpr = static_cast<float>(devicePixelRatioF());
     zoomThreshold = static_cast<int>(dpr * 4.);
 
     initializeScene();
@@ -64,7 +64,7 @@ ImageViewerV2::ImageViewerV2(QWidget *parent)
     checkboard = new QPixmap(":res/icons/common/other/checkerboard.png");
     lastTouchpadScroll.start();
 
-    readSettings();
+    initSettings();  // 替换虚函数调用 readSettings()
 }
 
 ImageViewerV2::~ImageViewerV2() {
@@ -130,14 +130,15 @@ bool ImageViewerV2::eventFilter(QObject *o, QEvent *ev) {
         onDPRChanged();
     }
 #endif
-    return QObject::eventFilter(o, ev);
+    return QGraphicsView::eventFilter(o, ev);  // 改为调用直接基类
 }
 
 void ImageViewerV2::onDPRChanged() {
-    if(dpr == devicePixelRatioF())
+    float newDpr = static_cast<float>(devicePixelRatioF());
+    if(dpr == newDpr)
         return;
     
-    dpr = devicePixelRatioF();
+    dpr = newDpr;
     zoomThreshold = static_cast<int>(dpr * 4.);
     
     if(pixmap) {
@@ -152,7 +153,10 @@ void ImageViewerV2::onDPRChanged() {
     }
 }
 
-void ImageViewerV2::readSettings() {
+// ----------------------------------------------------------------------------
+// 内部非虚实现
+// ----------------------------------------------------------------------------
+void ImageViewerV2::initSettings() {
     transparencyGrid = settings->transparencyGrid();
     smoothAnimatedImages = settings->smoothAnimatedImages();
     smoothUpscaling = settings->smoothUpscaling();
@@ -168,7 +172,8 @@ void ImageViewerV2::readSettings() {
     focusIn1to1 = settings->focusPointIn1to1Mode();
     trackpadDetection = settings->trackpadDetection();
     
-    if((useFixedZoomLevels = settings->useFixedZoomLevels())) {
+    useFixedZoomLevels = settings->useFixedZoomLevels();   // 移出 if
+    if(useFixedZoomLevels) {
         zoomLevels.clear();
         auto levelsStr = settings->zoomLevels().split(',');
         for(const auto& i : levelsStr)
@@ -178,15 +183,77 @@ void ImageViewerV2::readSettings() {
     
     onFullscreenModeChanged(mIsFullscreen);
     updateMinScale();
-    setScalingFilter(settings->scalingFilter());
-    setFitMode(imageFitModeDefault);
+    setScalingFilterImpl(settings->scalingFilter());   // 调用非虚实现
+    setFitModeImpl(imageFitModeDefault);                // 调用非虚实现
 }
+
+void ImageViewerV2::setScalingFilterImpl(ScalingFilter filter) {
+    if(mScalingFilter == filter)
+        return;
+    
+    mScalingFilter = filter;
+    pixmapItem.setTransformationMode(selectTransformationMode());
+    
+    if(mScalingFilter == QI_FILTER_NEAREST)
+        swapToOriginalPixmap();
+    
+    requestScaling();
+}
+
+void ImageViewerV2::setFitModeImpl(ImageFitMode mode) {
+    if(scaleTimer->isActive())
+        scaleTimer->stop();
+    
+    stopPosAnimation();
+    imageFitMode = mode;
+    applyFitMode();
+    requestScaling();
+}
+
+bool ImageViewerV2::imageFitsInternal() const {
+    if(!pixmap)
+        return true;
+    
+    return (pixmap->width() <= static_cast<int>(viewport()->width() * dpr) &&
+            pixmap->height() <= static_cast<int>(viewport()->height() * dpr));
+}
+
+float ImageViewerV2::currentScaleInternal() const {
+    return static_cast<float>(pixmapItem.scale());
+}
+
+// ----------------------------------------------------------------------------
+// 虚函数实现（调用内部非虚函数）
+// ----------------------------------------------------------------------------
+void ImageViewerV2::readSettings() {
+    initSettings();
+}
+
+void ImageViewerV2::setScalingFilter(ScalingFilter filter) {
+    setScalingFilterImpl(filter);
+}
+
+void ImageViewerV2::setFitMode(ImageFitMode mode) {
+    setFitModeImpl(mode);
+}
+
+bool ImageViewerV2::imageFits() const {
+    return imageFitsInternal();
+}
+
+float ImageViewerV2::currentScale() const {
+    return currentScaleInternal();
+}
+
+// ----------------------------------------------------------------------------
+// 其余部分保持不变，但需修正窄化转换和整数除法
+// ----------------------------------------------------------------------------
 
 void ImageViewerV2::onFullscreenModeChanged(bool mode) {
     mIsFullscreen = mode;
     QColor bgColor = mode ? settings->colorScheme().background_fullscreen 
                           : settings->colorScheme().background;
-    bgColor.setAlphaF(mode ? 1.0 : settings->backgroundOpacity());
+    bgColor.setAlphaF(static_cast<qreal>(mode ? 1.0 : settings->backgroundOpacity()));
     scene->setBackgroundBrush(bgColor);
 }
 
@@ -384,11 +451,10 @@ void ImageViewerV2::closeImage() {
 }
 
 void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame) {
-    // 修复：改为常引用，避免不必要的值拷贝构造
     if(!movie && newFrame.size() != scaledSizeR() * dpr)
         return;
     
-    pixmapScaled = newFrame; // 这里会自动处理引用计数，非常高效
+    pixmapScaled = newFrame;
     pixmapScaled.setDevicePixelRatio(dpr);
     pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();
@@ -511,19 +577,6 @@ void ImageViewerV2::toggleTransparencyGrid() {
     scene->update();
 }
 
-void ImageViewerV2::setScalingFilter(ScalingFilter filter) {
-    if(mScalingFilter == filter)
-        return;
-    
-    mScalingFilter = filter;
-    pixmapItem.setTransformationMode(selectTransformationMode());
-    
-    if(mScalingFilter == QI_FILTER_NEAREST)
-        swapToOriginalPixmap();
-    
-    requestScaling();
-}
-
 void ImageViewerV2::setLoopPlayback(bool mode) {
     if(movie && mode && loopPlayback != mode)
         startAnimation();
@@ -531,20 +584,11 @@ void ImageViewerV2::setLoopPlayback(bool mode) {
 }
 
 void ImageViewerV2::setFilterNearest() {
-    if(mScalingFilter != QI_FILTER_NEAREST) {
-        mScalingFilter = QI_FILTER_NEAREST;
-        pixmapItem.setTransformationMode(selectTransformationMode());
-        swapToOriginalPixmap();
-        requestScaling();
-    }
+    setScalingFilterImpl(QI_FILTER_NEAREST);
 }
 
 void ImageViewerV2::setFilterBilinear() {
-    if(mScalingFilter != QI_FILTER_BILINEAR) {
-        mScalingFilter = QI_FILTER_BILINEAR;
-        pixmapItem.setTransformationMode(selectTransformationMode());
-        requestScaling();
-    }
+    setScalingFilterImpl(QI_FILTER_BILINEAR);
 }
 
 Qt::TransformationMode ImageViewerV2::selectTransformationMode() {
@@ -588,7 +632,7 @@ void ImageViewerV2::requestScaling() {
     if(scaleTimer->isActive())
         scaleTimer->stop();
     
-    if(currentScale() < FAST_SCALE_THRESHOLD)
+    if(currentScaleInternal() < FAST_SCALE_THRESHOLD)
         emit scalingRequested(scaledSizeR() * dpr, mScalingFilter);
 }
 
@@ -618,16 +662,16 @@ void ImageViewerV2::doZoomIn(bool atCursor) {
     else
         setZoomAnchor(viewport()->rect().center());
     
-    float newScale = currentScale() * (1.0f + zoomStep);
+    float newScale = currentScaleInternal() * (1.0f + zoomStep);
     
     if(useFixedZoomLevels && zoomLevels.count()) {
-        if(currentScale() < zoomLevels.first()) {
-            newScale = qMin(currentScale() * (1.0f + zoomStep), zoomLevels.first());
-        } else if(currentScale() >= zoomLevels.last()) {
-            newScale = currentScale() * (1.0f + zoomStep);
+        if(currentScaleInternal() < zoomLevels.first()) {
+            newScale = qMin(currentScaleInternal() * (1.0f + zoomStep), zoomLevels.first());
+        } else if(currentScaleInternal() >= zoomLevels.last()) {
+            newScale = currentScaleInternal() * (1.0f + zoomStep);
         } else {
             for(int i = 0; i < zoomLevels.count(); i++) {
-                if(currentScale() < zoomLevels.at(i)) {
+                if(currentScaleInternal() < zoomLevels.at(i)) {
                     newScale = zoomLevels.at(i);
                     break;
                 }
@@ -660,16 +704,16 @@ void ImageViewerV2::doZoomOut(bool atCursor) {
     else
         setZoomAnchor(viewport()->rect().center());
     
-    float newScale = currentScale() * (1.0f - zoomStep);
+    float newScale = currentScaleInternal() * (1.0f - zoomStep);
     
     if(useFixedZoomLevels && zoomLevels.count()) {
-        if(currentScale() > zoomLevels.last()) {
-            newScale = qMax(zoomLevels.last(), currentScale() * (1.0f - zoomStep));
-        } else if(currentScale() <= zoomLevels.first()) {
-            newScale = currentScale() * (1.0f - zoomStep);
+        if(currentScaleInternal() > zoomLevels.last()) {
+            newScale = qMax(zoomLevels.last(), currentScaleInternal() * (1.0f - zoomStep));
+        } else if(currentScaleInternal() <= zoomLevels.first()) {
+            newScale = currentScaleInternal() * (1.0f - zoomStep);
         } else {
-            for(int i = zoomLevels.count() - 1; i >= 0; i--) {
-                if(currentScale() > zoomLevels.at(i)) {
+            for(int i = static_cast<int>(zoomLevels.size()) - 1; i >= 0; i--) {
+                if(currentScaleInternal() > zoomLevels.at(i)) {
                     newScale = zoomLevels.at(i);
                     break;
                 }
@@ -696,7 +740,7 @@ void ImageViewerV2::setZoomAnchor(QPoint viewportPos) {
 }
 
 void ImageViewerV2::zoomAnchored(float newScale) {
-    if(currentScale() == newScale)
+    if(currentScaleInternal() == newScale)
         return;
     
     QPointF vportCenter = mapToScene(viewport()->geometry()).boundingRect().center();
@@ -737,8 +781,8 @@ void ImageViewerV2::swapToOriginalPixmap() {
 // ============================================================================
 
 void ImageViewerV2::updateFitWindowScale() {
-    float scaleFitX = (float)viewport()->width() * dpr / pixmap->width();
-    float scaleFitY = (float)viewport()->height() * dpr / pixmap->height();
+    float scaleFitX = static_cast<float>(viewport()->width()) * dpr / static_cast<float>(pixmap->width());
+    float scaleFitY = static_cast<float>(viewport()->height()) * dpr / static_cast<float>(pixmap->height());
     
     fitWindowScale = qMin(scaleFitX, scaleFitY);
     
@@ -750,7 +794,7 @@ void ImageViewerV2::updateFitWindowStretchScale() {
     if(!pixmap)
         return;
 
-    fitWindowStretchScale = (float)viewport()->height() * dpr / pixmap->height();
+    fitWindowStretchScale = static_cast<float>(viewport()->height()) * dpr / static_cast<float>(pixmap->height());
 
     if(expandImage && fitWindowStretchScale > expandLimit)
         fitWindowStretchScale = expandLimit;
@@ -765,11 +809,11 @@ void ImageViewerV2::updateMinScale() {
     
     if(settings->unlockMinZoom()) {
         if(!pixmap->isNull())
-            minScale = qMax(10. / pixmap->width(), 10. / pixmap->height());
+            minScale = static_cast<float>(qMax(10. / pixmap->width(), 10. / pixmap->height()));
         else
             minScale = 1.0f;
     } else {
-        minScale = imageFits() ? 1.0f : fitWindowScale;
+        minScale = imageFitsInternal() ? 1.0f : fitWindowScale;
     }
     
     if(mViewLock != LOCK_NONE && lockedScale < minScale)
@@ -780,14 +824,14 @@ void ImageViewerV2::fitWidth() {
     if(!pixmap)
         return;
     
-    float scaleX = (float)viewport()->width() * dpr / pixmap->width();
+    float scaleX = static_cast<float>(viewport()->width()) * dpr / static_cast<float>(pixmap->width());
     
     if(!expandImage && scaleX > 1.0f)
         scaleX = 1.0f;
     if(scaleX > expandLimit)
         scaleX = expandLimit;
     
-    if(currentScale() != scaleX) {
+    if(currentScaleInternal() != scaleX) {
         swapToOriginalPixmap();
         doZoom(scaleX);
     }
@@ -807,10 +851,10 @@ void ImageViewerV2::fitWindow() {
     if(!pixmap)
         return;
     
-    if(imageFits() && !expandImage) {
+    if(imageFitsInternal() && !expandImage) {
         fitNormal();
     } else {
-        if(currentScale() != fitWindowScale) {
+        if(currentScaleInternal() != fitWindowScale) {
             swapToOriginalPixmap();
             doZoom(fitWindowScale);
         }
@@ -834,7 +878,7 @@ void ImageViewerV2::fitWindowStretch() {
 
     updateFitWindowStretchScale();
 
-    if(currentScale() != fitWindowStretchScale) {
+    if(currentScaleInternal() != fitWindowStretchScale) {
         swapToOriginalPixmap();
         doZoom(fitWindowStretchScale);
     }
@@ -891,37 +935,27 @@ void ImageViewerV2::applyFitMode() {
     }
 }
 
-void ImageViewerV2::setFitMode(ImageFitMode newMode) {
-    if(scaleTimer->isActive())
-        scaleTimer->stop();
-    
-    stopPosAnimation();
-    imageFitMode = newMode;
-    applyFitMode();
-    requestScaling();
-}
-
 void ImageViewerV2::setFitOriginal() {
-    setFitMode(FIT_ORIGINAL);
+    setFitModeImpl(FIT_ORIGINAL);
 }
 
 void ImageViewerV2::setFitWidth() {
-    setFitMode(FIT_WIDTH);
+    setFitModeImpl(FIT_WIDTH);
 }
 
 void ImageViewerV2::setFitWindow() {
-    setFitMode(FIT_WINDOW);
+    setFitModeImpl(FIT_WINDOW);
 }
 
 void ImageViewerV2::setFitWindowStretch() {
-    setFitMode(FIT_WINDOW_STRETCH);
+    setFitModeImpl(FIT_WINDOW_STRETCH);
 }
 
 void ImageViewerV2::centerOnPixmap() {
     auto imgRect = pixmapItem.sceneBoundingRect();
     auto vport = mapToScene(viewport()->geometry()).boundingRect();
-    hs->setValue(pixmapItem.offset().x() - (int)(vport.width() - imgRect.width()) / 2);
-    vs->setValue(pixmapItem.offset().y() - (int)(vport.height() - imgRect.height()) / 2);
+    hs->setValue(qRound(pixmapItem.offset().x() - (vport.width() - imgRect.width()) / 2.0));
+    vs->setValue(qRound(pixmapItem.offset().y() - (vport.height() - imgRect.height()) / 2.0));
 }
 
 void ImageViewerV2::centerIfNecessary() {
@@ -933,9 +967,9 @@ void ImageViewerV2::centerIfNecessary() {
     auto vport = mapToScene(viewport()->geometry()).boundingRect();
     
     if(sz.width() <= viewport()->width())
-        hs->setValue(pixmapItem.offset().x() - (int)(vport.width() - imgRect.width()) / 2);
+        hs->setValue(qRound(pixmapItem.offset().x() - (vport.width() - imgRect.width()) / 2.0));
     if(sz.height() <= viewport()->height())
-        vs->setValue(pixmapItem.offset().y() - (int)(vport.height() - imgRect.height()) / 2);
+        vs->setValue(qRound(pixmapItem.offset().y() - (vport.height() - imgRect.height()) / 2.0));
 }
 
 void ImageViewerV2::snapToEdges() {
@@ -982,7 +1016,7 @@ bool ImageViewerV2::lockZoomEnabled() {
 }
 
 void ImageViewerV2::lockZoom() {
-    lockedScale = pixmapItem.scale();
+    lockedScale = static_cast<float>(pixmapItem.scale());
     imageFitMode = FIT_FREE;
     saveViewportPos();
 }
@@ -1037,7 +1071,7 @@ void ImageViewerV2::applySavedViewportPos() {
 
 void ImageViewerV2::mousePressEvent(QMouseEvent *event) {
     if(!pixmap) {
-        QWidget::mousePressEvent(event);
+        QGraphicsView::mousePressEvent(event);   // 改为 QGraphicsView::
         return;
     }
     
@@ -1052,7 +1086,7 @@ void ImageViewerV2::mousePressEvent(QMouseEvent *event) {
 }
 
 void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
-    QWidget::mouseMoveEvent(event);
+    QGraphicsView::mouseMoveEvent(event);   // 改为 QGraphicsView::
     
     if(!pixmap || mouseInteraction == MOUSE_DRAG || mouseInteraction == MOUSE_WHEEL_ZOOM)
         return;
@@ -1085,7 +1119,7 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
     } 
     else if(event->buttons() & Qt::RightButton) {
         if(mouseInteraction == MOUSE_ZOOM || 
-           abs(mousePressPos.y() - event->pos().y()) > zoomThreshold / dpr) 
+           abs(mousePressPos.y() - event->pos().y()) > static_cast<float>(zoomThreshold) / dpr) 
         {
             if(cursor().shape() != Qt::SizeVerCursor)
                 setCursor(Qt::SizeVerCursor);
@@ -1134,7 +1168,7 @@ void ImageViewerV2::mouseMoveZoom(QMouseEvent *event) {
     float stepMultiplier = 0.003f;
     int currentPos = event->pos().y();
     int moveDistance = mouseMoveStartPos.y() - currentPos;
-    float newScale = currentScale() * (1.0f + stepMultiplier * moveDistance * dpr);
+    float newScale = currentScaleInternal() * (1.0f + stepMultiplier * static_cast<float>(moveDistance) * dpr);
     mouseMoveStartPos = event->pos();
     imageFitMode = FIT_FREE;
 
@@ -1187,8 +1221,8 @@ void ImageViewerV2::wheelEvent(QWheelEvent *event) {
                 stopPosAnimation();
                 int dx = abs(angleDelta.x()) > abs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
                 int dy = abs(angleDelta.y()) > abs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
-                hs->setValue(hs->value() - dx * TRACKPAD_SCROLL_MULTIPLIER);
-                vs->setValue(vs->value() - dy * TRACKPAD_SCROLL_MULTIPLIER);
+                hs->setValue(qRound(hs->value() - dx * TRACKPAD_SCROLL_MULTIPLIER));
+                vs->setValue(qRound(vs->value() - dy * TRACKPAD_SCROLL_MULTIPLIER));
                 centerIfNecessary();
                 snapToEdges();
             }
@@ -1200,21 +1234,21 @@ void ImageViewerV2::wheelEvent(QWheelEvent *event) {
                (event->angleDelta().y() > 0 && imgRect.top() < -2))
             {
                 event->accept();
-                scroll(0, -angleDelta.y() * WHEEL_SCROLL_MULTIPLIER * 
-                       settings->mouseScrollingSpeed(), true);
+                scroll(0, qRound(-angleDelta.y() * WHEEL_SCROLL_MULTIPLIER * 
+                                 settings->mouseScrollingSpeed()), true);
             } else {
                 event->ignore();
             }
         } 
         else {
            event->ignore();
-           QWidget::wheelEvent(event);
+           QGraphicsView::wheelEvent(event);   // 改为 QGraphicsView::
         }
         saveViewportPos();
     } 
     else {
         event->ignore();
-        QWidget::wheelEvent(event);
+        QGraphicsView::wheelEvent(event);      // 改为 QGraphicsView::
     }
 }
 
@@ -1268,14 +1302,6 @@ ImageFitMode ImageViewerV2::fitMode() const {
     return imageFitMode;
 }
 
-bool ImageViewerV2::imageFits() const {
-    if(!pixmap)
-        return true;
-    
-    return (pixmap->width() <= (viewport()->width() * dpr) &&
-            pixmap->height() <= (viewport()->height() * dpr));
-}
-
 bool ImageViewerV2::scaledImageFits() const {
     if(!pixmap)
         return true;
@@ -1309,10 +1335,6 @@ QRect ImageViewerV2::scaledRectR() const {
     QRectF pixmapSceneRect = pixmapItem.mapRectToScene(pixmapItem.boundingRect());
     return QRect(mapFromScene(pixmapSceneRect.topLeft()),
                  mapFromScene(pixmapSceneRect.bottomRight()));
-}
-
-float ImageViewerV2::currentScale() const {
-    return pixmapItem.scale();
 }
 
 QSize ImageViewerV2::sourceSize() const {

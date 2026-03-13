@@ -36,7 +36,7 @@ class ImageViewerV2 : public QGraphicsView
 public:
     ImageViewerV2(QWidget* parent = nullptr);
     ~ImageViewerV2();
-    
+
     virtual ImageFitMode fitMode() const;
     virtual QRect scaledRectR() const;
     virtual float currentScale() const;
@@ -48,7 +48,7 @@ public:
     virtual bool imageFits() const;
     virtual ScalingFilter scalingFilter() const;
     virtual QWidget *widget();
-    
+
     bool scaledImageFits() const;
     bool hasAnimation() const;
     QSize scaledSizeR() const;
@@ -92,7 +92,7 @@ public slots:
     virtual void setFilterNearest();
     virtual void setFilterBilinear();
     virtual void setScalingFilter(ScalingFilter filter);
-    
+
     void setLoopPlayback(bool mode);
     void toggleTransparencyGrid();
     void nextFrame();
@@ -131,18 +131,18 @@ private:
     std::shared_ptr<QMovie> movie;
     QGraphicsPixmapItem pixmapItem, pixmapItemScaled;
     QPixmap *checkboard;
-    
+
     // Timers and scrollbars
     QTimer *animationTimer, *scaleTimer;
     QScrollBar *hs, *vs;
     QTimeLine *scrollTimeLineX, *scrollTimeLineY;
     QElapsedTimer lastTouchpadScroll;
-    
+
     // Mouse interaction state
     QPoint mouseMoveStartPos, mousePressPos, drawPos;
     MouseInteractionState mouseInteraction;
     QPair<QPointF, QPoint> zoomAnchor;
-    
+
     // Display settings
     bool transparencyGrid;
     bool expandImage;
@@ -157,7 +157,7 @@ private:
     bool trackpadDetection;
     bool dragsEnabled;
     bool wayland;
-    
+
     // Zoom and scale settings
     QList<float> zoomLevels;
     float zoomStep;
@@ -170,7 +170,7 @@ private:
     ImageFitMode imageFitMode, imageFitModeDefault;
     ImageFocusPoint focusIn1to1;
     ScalingFilter mScalingFilter;
-    
+
     // Constants
     static constexpr int SCROLL_UPDATE_RATE = 7;
     static constexpr int DEFAULT_SCROLL_DISTANCE = 240;
@@ -179,23 +179,30 @@ private:
     static constexpr int ANIMATION_SPEED = 150;
     static constexpr float FAST_SCALE_THRESHOLD = 1.0f;
     static constexpr int LARGE_VIEWPORT_SIZE = 2073600;
-    
+
     int zoomThreshold;
     int dragThreshold;
-    
+
+    // Internal non-virtual helpers
+    void initSettings();
+    void setScalingFilterImpl(ScalingFilter filter);
+    void setFitModeImpl(ImageFitMode mode);
+    bool imageFitsInternal() const;
+    float currentScaleInternal() const;
+
     // Initialization
     void initializeScene();
     void initializeTimers();
     void initializeScrollBars();
     void setupConnections();
-    
+
     // Zoom operations
     void zoomAnchored(float newScale);
     void doZoom(float newScale);
     void doZoomIn(bool atCursor);
     void doZoomOut(bool atCursor);
     void setZoomAnchor(QPoint viewportPos);
-    
+
     // Fit mode operations
     void fitNormal();
     void fitWidth();
@@ -206,29 +213,29 @@ private:
     void updateFitWindowScale();
     void updateFitWindowStretchScale();
     void updateMinScale();
-    
+
     // Scroll operations
     void scroll(int dx, int dy, bool animated);
     void scrollSmooth(int dx, int dy);
     void scrollPrecise(int dx, int dy);
     void stopPosAnimation();
-    
+
     // Mouse operations
     void mousePan(QMouseEvent *event);
     void mouseMoveZoom(QMouseEvent *event);
-    
+
     // View operations
     void centerIfNecessary();
     void snapToEdges();
     void saveViewportPos();
     void applySavedViewportPos();
     void lockZoom();
-    
+
     // Pixmap operations
     void updatePixmap(std::unique_ptr<QPixmap> newPixmap);
     void swapToOriginalPixmap();
     Qt::TransformationMode selectTransformationMode();
-    
+
     // Utility functions
     void reset();
     QPointF sceneRoundPos(QPointF scenePoint) const;

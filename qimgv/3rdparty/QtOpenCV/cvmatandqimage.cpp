@@ -114,9 +114,9 @@ cv::Mat image2Mat(const QImage &img, int requiredMatType, MatColorOrder requried
     QImage::Format format = findClosestFormat(img.format());
     QImage image = (format==img.format()) ? img : img.convertToFormat(format);
 
-    MatColorOrder srcOrder;
+    MatColorOrder srcOrder = MatColorOrder::RGB; // Initialize to avoid clang-analyzer warnings
     cv::Mat mat0 = image2Mat_shared(image, &srcOrder);
-    // 如果无法获取共享矩阵（例如格式不支持），提前返回空矩阵
+    // If shared conversion fails, return empty Mat
     if (mat0.empty())
         return cv::Mat();
 
@@ -330,7 +330,6 @@ QImage mat2Image_shared(const cv::Mat &mat, QImage::Format formatHint)
         }
     }
 
-    // 显式转换 step 从 size_t 到 qsizetype，避免窄化警告
     QImage img(mat.data, mat.cols, mat.rows, static_cast<qsizetype>(mat.step), formatHint);
 
     //Should we add directly support for user-customed-colorTable?

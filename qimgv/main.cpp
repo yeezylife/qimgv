@@ -79,10 +79,6 @@ int main(int argc, char *argv[]) {
     a.setStyle(new ProxyStyle());
 #endif
 
-    QCoreApplication::setOrganizationName("qimgv");
-    QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
-    QCoreApplication::setApplicationName("qimgv");
-    QCoreApplication::setApplicationVersion(appVersion.toString());
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     QGuiApplication::setDesktopFileName(QCoreApplication::applicationName() + ".desktop");
 
@@ -110,6 +106,12 @@ int main(int argc, char *argv[]) {
     settings = Settings::getInstance();
     scriptManager = ScriptManager::getInstance();
     actionManager = ActionManager::getInstance();
+
+    // 设置 Qt 应用程序信息（移到 Settings 初始化之后）
+    QCoreApplication::setOrganizationName("qimgv");
+    QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
+    QCoreApplication::setApplicationName("qimgv");
+    QCoreApplication::setApplicationVersion(appVersion.toString());
 
     atexit(saveSettings);
 

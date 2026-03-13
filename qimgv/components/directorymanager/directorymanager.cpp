@@ -446,7 +446,7 @@ bool DirectoryManager::forceInsertFileEntry(const QString &filePath) {
     QString fileName = QString::fromStdWString(stdEntry.path().filename().wstring());
     
     // 使用包装类构造
-    FSEntry entry(FilePath{filePath}, FileName{fileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
+    FSEntry entry(FilePath(filePath), FileName(fileName), stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, entry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     
     if(!directoryPath().isEmpty()) {
@@ -505,7 +505,7 @@ void DirectoryManager::renameFileEntry(FilePath oldFilePath, FileName newFileNam
     
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
-    FSEntry newEntry(FilePath{newFilePath}, FileName{newFileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
+    FSEntry newEntry(FilePath(newFilePath), FileName(newFileName), stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
     
     qDebug() << "fileRen" << oldFilePath.value << newFilePath;

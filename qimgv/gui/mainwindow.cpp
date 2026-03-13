@@ -57,7 +57,7 @@ void MW::setupUi() {
     connect(folderView.get(), &FolderViewProxy::moveUrlsRequested, this, &MW::moveUrlsRequested);
     connect(folderView.get(), &FolderViewProxy::showFoldersChanged, this, &MW::showFoldersChanged);
 
-    centralWidget.reset(new CentralWidget(docWidget, folderView, this));
+    centralWidget.reset(new CentralWidget(std::move(docWidget), std::move(folderView), this));
     layout.addWidget(centralWidget.get());
     controlsOverlay = new ControlsOverlay(docWidget.get());
     infoBarFullscreen = new FullscreenInfoOverlayProxy(viewerWidget.get());
@@ -324,12 +324,12 @@ void MW::toggleImageInfoOverlay() {
         imageInfoOverlay->hide();
 }
 
-void MW::toggleRenameOverlay(QString&& currentName) {
+void MW::toggleRenameOverlay(const QString& currentName) {
     if(!renameOverlay)
         setupRenameOverlay();
     if(renameOverlay->isHidden()) {
         renameOverlay->setBackdropEnabled((centralWidget->currentViewMode() == MODE_FOLDERVIEW));
-        renameOverlay->setName(std::move(currentName));
+        renameOverlay->setName(currentName);
         renameOverlay->show();
     } else {
         renameOverlay->hide();
@@ -386,8 +386,8 @@ bool MW::isCropPanelActive() {
     return (activeSidePanel == SIDEPANEL_CROP);
 }
 
-void MW::onScalingFinished(QPixmap&& scaled) {
-    viewerWidget->onScalingFinished(std::move(scaled));
+void MW::onScalingFinished(const QPixmap& scaled) {
+    viewerWidget->onScalingFinished(scaled);
 }
 
 void MW::saveWindowGeometry() {
@@ -524,7 +524,7 @@ void MW::showDefault() {
     }
 }
 
-void MW::showSaveDialog(QString filePath) {
+void MW::showSaveDialog(const QString& filePath) {
     QString newFilePath = getSaveFileName(filePath);
     if(!newFilePath.isEmpty())
         emit saveAsRequested(newFilePath);
@@ -790,7 +790,7 @@ void MW::closeFullScreenOrExit() {
 }
 
 // todo: this is crap, use shared state object
-void MW::setCurrentInfo(int _index, int _fileCount, QString _filePath, QString _fileName, QSize _imageSize, qint64 _fileSize, bool slideshow, bool shuffle, bool edited) {
+void MW::setCurrentInfo(int _index, int _fileCount, const QString& _filePath, const QString& _fileName, QSize _imageSize, qint64 _fileSize, bool slideshow, bool shuffle, bool edited) {
     info.index = _index;
     info.fileCount = _fileCount;
     info.fileName = _fileName;

@@ -84,13 +84,19 @@ public:
     using OldDirPath   = const QString&;
     using NewDirName   = const QString&;
 
-    void renameFileEntry(OldFilePath oldFilePath, NewFileName newName);
+    // 使用结构体包装参数以消除类型混淆警告
+    struct FilePath { const QString& value; };
+    struct FileName { const QString& value; };
+    struct DirPath { const QString& value; };
+    struct DirName { const QString& value; };
+
+    void renameFileEntry(FilePath oldFilePath, FileName newFileName);
 
     bool insertDirEntry(const QString &dirPath);
     //bool forceInsertDirEntry(const QString &dirPath);
     void removeDirEntry(const QString &dirPath);
     //void updateDirEntry(const QString &dirPath);
-    void renameDirEntry(OldDirPath oldDirPath, NewDirName newName);
+    void renameDirEntry(DirPath oldDirPath, DirName newDirName);
 
     FileListSource source() const;
 

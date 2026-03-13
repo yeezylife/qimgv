@@ -513,10 +513,10 @@ void DirectoryManager::updateFileEntry(const QString &filePath) {
     emit fileModified(filePath);
 }
 
-void DirectoryManager::renameFileEntry(OldFilePath oldFilePath, NewFileName newFileName) {
+void DirectoryManager::renameFileEntry(FilePath oldFilePath, FileName newFileName) {
     // oldFilePath: 完整的旧文件路径，newFileName: 新的文件名（不包含路径）
-    QFileInfo fi(oldFilePath);
-    QString newFilePath = fi.absolutePath() + "/" + newFileName;
+    QFileInfo fi(oldFilePath.value);
+    QString newFilePath = fi.absolutePath() + "/" + newFileName.value;
     if(!containsFile(oldFilePath)) {
         if(containsFile(newFilePath))
             updateFileEntry(newFilePath);
@@ -573,25 +573,25 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
     emit dirRemoved(dirPath, index);
 }
 
-void DirectoryManager::renameDirEntry(OldDirPath oldDirPath, NewDirName newDirName) {
+void DirectoryManager::renameDirEntry(DirPath oldDirPath, DirName newDirName) {
     // oldDirPath: 完整的旧目录路径，newDirName: 新的目录名（不包含路径）
-    if(!containsDir(oldDirPath))
+    if(!containsDir(oldDirPath.value))
         return;
-    QFileInfo fi(oldDirPath);
-    QString newDirPath = fi.absolutePath() + "/" + newDirName;
+    QFileInfo fi(oldDirPath.value);
+    QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
     // remove the old one
-    int oldIndex = indexOfDir(oldDirPath);
+    int oldIndex = indexOfDir(oldDirPath.value);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
     // insert
     std::filesystem::path pathObj(newDirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry;
-    newEntry.name = newDirName;
+    newEntry.name = newDirName.value;
     newEntry.path = newDirPath;
     newEntry.isDirectory = true;
     insert_sorted(dirEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
-    qDebug() << "dirRen" << oldDirPath << newDirPath;
-    emit dirRenamed(oldDirPath, oldIndex, newDirPath, indexOfDir(newDirPath));
+    qDebug() << "dirRen" << oldDirPath.value << newDirPath;
+    emit dirRenamed(oldDirPath.value, oldIndex, newDirPath, indexOfDir(newDirPath));
 }
 
 

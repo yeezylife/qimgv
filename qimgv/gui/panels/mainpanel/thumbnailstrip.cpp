@@ -13,9 +13,9 @@ void ThumbnailStrip::updateScrollbarIndicator() {
         return;
     qreal itemCenter = (qreal)(lastSelected() + 0.5) / itemCount();
     if(scrollBar->orientation() == Qt::Horizontal)
-        indicator = QRect(qRound(scrollBar->width() * itemCenter - indicatorSize), 2, indicatorSize, scrollBar->height() - 4);
+        indicator = QRect(qRound(scrollBar->width() * itemCenter) - indicatorSize, 2, indicatorSize, scrollBar->height() - 4);
     else
-        indicator = QRect(2, qRound(scrollBar->height() * itemCenter - indicatorSize), scrollBar->width() - 4, indicatorSize);
+        indicator = QRect(2, qRound(scrollBar->height() * itemCenter) - indicatorSize, scrollBar->width() - 4, indicatorSize);
 }
 
 // no layout; manual item positioning
@@ -35,7 +35,7 @@ ThumbnailWidget* ThumbnailStrip::createThumbnailWidget() {
 
 void ThumbnailStrip::addItemToLayout(ThumbnailWidget* widget, int pos) {
     scene.addItem(widget);
-    updateThumbnailPositions(pos, static_cast<int>(thumbnails.count() - 1));
+    updateThumbnailPositions(pos, static_cast<int>(thumbnails.count()) - 1);
 }
 
 void ThumbnailStrip::removeItemFromLayout(int pos) {
@@ -64,7 +64,7 @@ void ThumbnailStrip::removeAll() {
 }
 
 void ThumbnailStrip::updateThumbnailPositions() {
-    updateThumbnailPositions(0, static_cast<int>(thumbnails.count() - 1));
+    updateThumbnailPositions(0, static_cast<int>(thumbnails.count()) - 1);
 }
 
 void ThumbnailStrip::updateThumbnailPositions(int start, int end) {
@@ -137,7 +137,7 @@ void ThumbnailStrip::readSettings() {
         thumbnails.at(i)->setThumbStyle(mCurrentStyle);
         thumbnails.at(i)->setThumbnailSize(mThumbnailSize);
     }
-    updateThumbnailPositions(0, static_cast<int>(thumbnails.count() - 1));
+    updateThumbnailPositions(0, static_cast<int>(thumbnails.count()) - 1);
     fitSceneToContents();
     setCropThumbnails(settings->squareThumbnails());
     // 显式调用当前类的虚函数，避免在构造期间通过虚函数表调用派生类未初始化的实现

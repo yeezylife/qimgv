@@ -1,4 +1,5 @@
 #include "actionbutton.h"
+#include <QMouseEvent>
 
 ActionButton::ActionButton(QWidget *parent)
     : IconButton(parent)
@@ -9,23 +10,24 @@ ActionButton::ActionButton(QWidget *parent)
     setProperty("checked", false);
 }
 
-ActionButton::ActionButton(const QString &_actionName, const QString &_iconPath, QWidget *parent)
+// 接收 QString 值副本。如果是左值则增加一次引用计数，如果是右值则直接移动。
+ActionButton::ActionButton(QString _actionName, QString _iconPath, QWidget *parent)
     : ActionButton(parent)
 {
-    // 既然 setIconPath 和 setAction 的接口是 const &
-    // 这里直接传入即可，Qt 的引用计数机制会高效处理
-    setIconPath(_iconPath);
-    setAction(_actionName);
+    // 使用 std::move 将局部变量的所有权转交给成员/底层函数
+    setAction(std::move(_actionName));
+    setIconPath(std::move(_iconPath));
 }
 
-ActionButton::ActionButton(QString&& _actionName, QString&& _iconPath, int _size, QWidget *parent)
-    :  ActionButton(std::move(_actionName), std::move(_iconPath), parent)
+ActionButton::ActionButton(QString _actionName, QString _iconPath, int _size, QWidget *parent)
+    : ActionButton(std::move(_actionName), std::move(_iconPath), parent)
 {
     if(_size > 0)
         setFixedSize(_size, _size);
 }
 
-void ActionButton::setAction(QString&& _actionName) {
+void ActionButton::setAction(QString _actionName) {
+    // 将传入的副本直接移入成员变量，避免了额外的内存分配
     actionName = std::move(_actionName);
 }
 

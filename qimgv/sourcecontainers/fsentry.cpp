@@ -15,8 +15,8 @@ FSEntry::FSEntry(const QString &filePath) {
             this->size = stdEntry.file_size();
             this->modifyTime = stdEntry.last_write_time();
         }
-    } catch (const std::filesystem::filesystem_error &e [[maybe_unused]]) {
-        // 明确的静默处理，符合现代 C++ 规范
+    } catch (const std::filesystem::filesystem_error &e) {
+        (void)e; // 明确的静默处理，符合现代 C++ 规范
     }
 }
 

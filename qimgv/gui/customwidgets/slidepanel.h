@@ -6,25 +6,22 @@
 #include <QPainter>
 #include <QBoxLayout>
 #include <QTimer>
-#include <QTimeLine>
+#include <QApplication> // 确保 qApp 可用
 #include "floatingwidget.h"
 #include "settings.h"
 #include <memory>
 #include <QDebug>
-#include <ctime>
 
 class SlidePanel : public FloatingWidget {
     Q_OBJECT
 public:
     explicit SlidePanel(FloatingWidgetContainer *parent);
     ~SlidePanel();
+    
     bool hasWidget();
     void setWidget(const std::shared_ptr<QWidget>& w);
-    // Use visibleGeometry instead of geometry() here.
-    // If this is called mid-animation then geometry() will be all wrong.
+    
     QRect triggerRect();
-    // when this is set, the widget will not change geometry by itself
-    // no pos() animations & no recalculateGeometry()
     bool layoutManaged();
     void setLayoutManaged(bool mode);
 
@@ -46,15 +43,23 @@ protected:
     int panelSize, slideAmount;
     std::shared_ptr<QWidget> mWidget;
     QRect mTriggerRect;
+    
     void setAnimationRange(QPoint start, QPoint end);
     void saveStaticGeometry(QRect geometry);
     QRect staticGeometry();
+    
     QTimer timer;
     QTimeLine timeline;
     QEasingCurve outCurve;
     const int ANIMATION_DURATION = 230;
     PanelPosition mPosition;
-    void recalculateGeometry();
+
+    // --- 核心修改：将计算逻辑改为 final 或非虚函数以供构造函数安全调用 ---
+    void recalculateGeometryInternal(); 
+    void updateTriggerRectInternal();
+
+    // 保持虚函数接口，但内部调用私有逻辑
+    virtual void recalculateGeometry();
     virtual void updateTriggerRect();
 
 private:

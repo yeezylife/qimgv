@@ -1,28 +1,28 @@
 #include "slidepanel.h"
 
 SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
-    : FloatingWidget(parent) ,
+    : FloatingWidget(parent),
       panelSize(50),
       slideAmount(40),
-      mWidget(nullptr)
+      mWidget(nullptr),
+      mPosition(PANEL_TOP) // 显式初始化成员
 {
     mLayout.setSpacing(0);
-    mLayout.setContentsMargins(0,0,0,0);
+    mLayout.setContentsMargins(0, 0, 0, 0);
     this->setLayout(&mLayout);
 
-    //fade effect
+    // Fade effect
     fadeEffect = new QGraphicsOpacityEffect(this);
     this->setGraphicsEffect(fadeEffect);
 
     startPosition = geometry().topLeft();
-
     outCurve.setType(QEasingCurve::OutQuart);
 
     timeline.setDuration(ANIMATION_DURATION);
     timeline.setEasingCurve(QEasingCurve::Linear);
     timeline.setStartFrame(0);
     timeline.setEndFrame(ANIMATION_DURATION);
-    // For some reason 16 feels janky on windows. Linux is fine.
+
 #ifdef _WIN32
     timeline.setUpdateInterval(8);
 #else
@@ -35,21 +35,15 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
     this->setAttribute(Qt::WA_NoMousePropagation, true);
     this->setFocusPolicy(Qt::NoFocus);
 
-    // 使用 QMetaObject::invokeMethod 延迟调用 setPosition，避免在构造函数中调用虚函数
-    QMetaObject::invokeMethod(
-        this,
-        [this]{
-            setPosition(PANEL_TOP);
-        },
-        Qt::QueuedConnection
-    );
+    // 方案改进：直接调用内部非虚逻辑，彻底消除 VirtualCall 警告
+    // 构造函数逻辑中不需要 invokeMethod，除非你需要等待父窗口布局完成
+    mLayout.setDirection(QBoxLayout::LeftToRight);
+    recalculateGeometryInternal();
 
     QWidget::hide();
 }
 
-SlidePanel::~SlidePanel() {
-
-}
+SlidePanel::~SlidePanel() {}
 
 void SlidePanel::hide() {
     timeline.stop();
@@ -57,9 +51,9 @@ void SlidePanel::hide() {
 }
 
 void SlidePanel::hideAnimated() {
-    if(layoutManaged())
+    if (layoutManaged())
         hide();
-    else if(!this->isHidden() && timeline.state() != QTimeLine::Running)
+    else if (!this->isHidden() && timeline.state() != QTimeLine::Running)
         timeline.start();
 }
 
@@ -69,14 +63,15 @@ bool SlidePanel::layoutManaged() {
 
 void SlidePanel::setLayoutManaged(bool mode) {
     mLayoutManaged = mode;
-    if(!mode)
-        recalculateGeometry();
+    if (!mode)
+        recalculateGeometryInternal(); // 改用内部版本
 }
 
+// 优化：使用常量引用传递 shared_ptr
 void SlidePanel::setWidget(const std::shared_ptr<QWidget>& w) {
-    if(!w)
+    if (!w)
         return;
-    if(hasWidget())
+    if (hasWidget())
         layout()->removeWidget(mWidget.get());
     mWidget = w;
     mWidget->setParent(this);
@@ -88,7 +83,7 @@ bool SlidePanel::hasWidget() {
 }
 
 void SlidePanel::show() {
-    if(hasWidget()) {
+    if (hasWidget()) {
         timeline.stop();
         fadeEffect->setOpacity(panelVisibleOpacity);
         setProperty("pos", startPosition);
@@ -99,7 +94,6 @@ void SlidePanel::show() {
     }
 }
 
-// save current geometry so it is accessible during "pos" animation
 void SlidePanel::saveStaticGeometry(QRect geometry) {
     mStaticGeometry = geometry;
 }
@@ -109,15 +103,12 @@ QRect SlidePanel::staticGeometry() {
 }
 
 void SlidePanel::animationUpdate(int frame) {
-    // Calculate local cursor position; correct for the current pos() animation
     QPoint adjustedPos = mapFromGlobal(QCursor::pos()) + this->pos();
-    if(triggerRect().contains(adjustedPos, true)) {
-        // Cancel the animation if cursor is back at the panel
+    if (triggerRect().contains(adjustedPos, true)) {
         timeline.stop();
         fadeEffect->setOpacity(panelVisibleOpacity);
         setProperty("pos", startPosition);
     } else {
-        // Apply the animation frame
         qreal value = outCurve.valueForProgress(static_cast<qreal>(frame) / ANIMATION_DURATION);
         QPoint newPosOffset = QPoint(static_cast<int>((endPosition.x() - startPosition.x()) * value),
                                      static_cast<int>((endPosition.y() - startPosition.y()) * value));
@@ -143,34 +134,40 @@ QRect SlidePanel::triggerRect() {
 }
 
 void SlidePanel::setPosition(PanelPosition p) {
-    if(p == PANEL_TOP || p == PANEL_BOTTOM)
+    if (p == PANEL_TOP || p == PANEL_BOTTOM)
         mLayout.setDirection(QBoxLayout::LeftToRight);
     else
         mLayout.setDirection(QBoxLayout::BottomToTop);
     mPosition = p;
-    recalculateGeometry();
+    recalculateGeometryInternal(); // 改用内部版本
 }
 
 PanelPosition SlidePanel::position() {
     return mPosition;
 }
 
+// 虚函数实现：简单封装内部逻辑
 void SlidePanel::recalculateGeometry() {
-    if(layoutManaged())
+    recalculateGeometryInternal();
+}
+
+// 核心计算逻辑：非虚函数，构造函数中可以安全调用
+void SlidePanel::recalculateGeometryInternal() {
+    if (layoutManaged())
         return;
-    if(mPosition == PANEL_TOP) {
-        setAnimationRange(QPoint(0,0), QPoint(0,0) - QPoint(0, slideAmount));
+
+    if (mPosition == PANEL_TOP) {
+        setAnimationRange(QPoint(0, 0), QPoint(0, 0) - QPoint(0, slideAmount));
         saveStaticGeometry(QRect(QPoint(0, 0),
                                  QPoint(containerSize().width() - 1, height() - 1)));
-    } else if(mPosition == PANEL_BOTTOM) {
+    } else if (mPosition == PANEL_BOTTOM) {
         setAnimationRange(QPoint(0, containerSize().height() - height()),
                           QPoint(0, containerSize().height() - height() + slideAmount));
         saveStaticGeometry(QRect(QPoint(0, containerSize().height() - height()),
                                  QPoint(containerSize().width() - 1, containerSize().height())));
-    } else if(mPosition == PANEL_LEFT) {
-        setAnimationRange(QPoint(0,0), QPoint(0,0) - QPoint(slideAmount, 0));
+    } else if (mPosition == PANEL_LEFT) {
+        setAnimationRange(QPoint(0, 0), QPoint(0, 0) - QPoint(slideAmount, 0));
         saveStaticGeometry(QRect(0, 0, width(), containerSize().height()));
-
     } else { // right
         setAnimationRange(QPoint(containerSize().width() - width(), 0),
                           QPoint(containerSize().width() - width(), 0) + QPoint(slideAmount, 0));
@@ -178,13 +175,17 @@ void SlidePanel::recalculateGeometry() {
                                  containerSize().width(), containerSize().height()));
     }
     this->setGeometry(staticGeometry());
-    updateTriggerRect();
+    updateTriggerRectInternal();
 }
 
 void SlidePanel::updateTriggerRect() {
+    updateTriggerRectInternal();
+}
+
+void SlidePanel::updateTriggerRectInternal() {
     mTriggerRect = staticGeometry();
 }
 
 void SlidePanel::setOrientation() {
-
+    // 留空或实现
 }

@@ -83,24 +83,17 @@ void DirectoryManager::stopFileWatcher() {
     if(!watcher)
         return;
 
-    // 先断开所有信号连接，防止在停止过程中收到事件
     disconnect(watcher, &DirectoryWatcher::fileCreated,  this, &DirectoryManager::onFileAddedExternal);
     disconnect(watcher, &DirectoryWatcher::fileDeleted,  this, &DirectoryManager::onFileRemovedExternal);
     disconnect(watcher, &DirectoryWatcher::fileModified, this, &DirectoryManager::onFileModifiedExternal);
     disconnect(watcher, &DirectoryWatcher::fileRenamed,  this, &DirectoryManager::onFileRenamedExternal);
 
-    // 停止文件监视
     watcher->stopObserving();
     
-    // 确保监视器完全停止
     if (watcher->isObserving()) {
         qDebug() << "[DirectoryManager] Warning: File watcher did not stop properly";
     }
 }
-
-// ##############################################################
-// ####################### PUBLIC METHODS #######################
-// ##############################################################
 
 void DirectoryManager::readSettings() {
     regex.setPattern(settings->supportedFormatsRegex());
@@ -221,7 +214,7 @@ const QString &DirectoryManager::nextOfFile(const QString &filePath) const {
     static const QString emptyString;
     int currentIndex = indexOfFile(filePath);
     return (currentIndex >= 0 && currentIndex < static_cast<int>(fileEntryVec.size()) - 1) 
-           ? fileEntryVec.at(currentIndex + 1).path : emptyString;
+            ? fileEntryVec.at(currentIndex + 1).path : emptyString;
 }
 
 const QString &DirectoryManager::prevOfDir(const QString &dirPath) const {
@@ -234,7 +227,7 @@ const QString &DirectoryManager::nextOfDir(const QString &dirPath) const {
     static const QString emptyString;
     int currentIndex = indexOfDir(dirPath);
     return (currentIndex >= 0 && currentIndex < static_cast<int>(dirEntryVec.size()) - 1) 
-           ? dirEntryVec.at(currentIndex + 1).path : emptyString;
+            ? dirEntryVec.at(currentIndex + 1).path : emptyString;
 }
 
 bool DirectoryManager::checkFileRange(int index) const {
@@ -271,7 +264,6 @@ QDateTime DirectoryManager::lastModified(const QString &filePath) const {
     return info.lastModified();
 }
 
-// TODO: what about symlinks?
 inline
 bool DirectoryManager::isSupportedFile(const QString &path) const {
     return ( isFile(path) && regex.match(path).hasMatch() );
@@ -307,51 +299,36 @@ bool DirectoryManager::containsDir(const QString &dirPath) const {
     return (std::find(dirEntryVec.begin(), dirEntryVec.end(), dirPath) != dirEntryVec.end());
 }
 
-// ##############################################################
-// ###################### PRIVATE METHODS #######################
-// ##############################################################
 void DirectoryManager::loadEntryList(const QString &directoryPath, bool recursive) {
     dirEntryVec.clear();
     fileEntryVec.clear();
-    if(recursive) { // load files only
+    if(recursive) {
         addEntriesFromDirectoryRecursive(fileEntryVec, directoryPath);
-    } else { // load dirs & files
+    } else {
         addEntriesFromDirectory(fileEntryVec, directoryPath);
     }
 }
 
-// both directories & files - 优化版本，使用 Qt 的 QDir 提高性能
 void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, const QString &directoryPath) {
     QRegularExpressionMatch match;
-    
-    // 使用 Qt 的 QDir 进行文件系统操作，提高跨平台性能
     QDir dir(directoryPath);
     if (!dir.exists()) {
         return;
     }
     
-    // 设置过滤器，只获取文件和目录
-    // 注意：默认情况下 filters 不包含 QDir::Hidden，因此不会显示隐藏文件
     QDir::Filters filters = QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot;
-    
-    // 修正逻辑：如果设置要求显示隐藏文件，则添加 Hidden 标志
     if (settings->showHiddenFiles()) {
         filters |= QDir::Hidden;
     }
-    // 如果不显示隐藏文件，不需要做任何操作，因为默认就不包含 Hidden
     
-    // 设置排序方式，提高后续排序效率
     QDir::SortFlags sortFlags = QDir::Name | QDir::IgnoreCase;
-    
     QFileInfoList entries = dir.entryInfoList(filters, sortFlags);
     
     for (const QFileInfo &fileInfo : entries) {
         QString name = fileInfo.fileName();
         QString path = fileInfo.absoluteFilePath();
-
         
         if (fileInfo.isDir()) {
-            // 处理目录
             FSEntry newEntry;
             try {
                 newEntry.name = name;
@@ -363,7 +340,6 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, c
                 continue;
             }
         } else {
-            // 处理文件
             match = regex.match(name);
             if (match.hasMatch()) {
                 FSEntry newEntry;
@@ -387,7 +363,6 @@ void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &en
     QRegularExpressionMatch match;
     std::filesystem::path pathObj(directoryPath.toStdWString());
     for(const auto & entry : fs::recursive_directory_iterator(pathObj)) {
-        // 使用宽字符接口避免日文编码问题
         QString name = QString::fromStdWString(entry.path().filename().wstring());
         QString path = QString::fromStdWString(entry.path().wstring());
         match = regex.match(name);
@@ -415,41 +390,30 @@ void DirectoryManager::sortEntryLists() {
 
 void DirectoryManager::sortFileEntryListsIncremental() {
     CompareFunction currentCompareFn = compareFunction();
-    
-    // 如果比较函数没有改变且文件已经排序，则跳过排序
     if (mLastCompareFunction == currentCompareFn && mFilesSorted && fileEntryVec.size() > 1) {
         return;
     }
-    
-    // 如果是名称排序且文件数量较少，使用快速排序
     if ((mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC) && fileEntryVec.size() < 100) {
         std::sort(fileEntryVec.begin(), fileEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
     } else {
-        // 对于其他排序或大量文件，使用部分排序优化
         if (fileEntryVec.size() > 1) {
             std::sort(fileEntryVec.begin(), fileEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
         }
     }
-    
     mLastCompareFunction = currentCompareFn;
     mFilesSorted = true;
 }
 
 void DirectoryManager::sortDirEntryListsIncremental() {
     CompareFunction currentCompareFn = compareFunction();
-    
-    // 如果比较函数没有改变且目录已经排序，则跳过排序
     if (mLastCompareFunction == currentCompareFn && mDirsSorted && dirEntryVec.size() > 1) {
         return;
     }
-    
-    // 目录排序通常较少，直接使用标准排序
     if (settings->sortFolders()) {
         std::sort(dirEntryVec.begin(), dirEntryVec.end(), std::bind(currentCompareFn, this, std::placeholders::_1, std::placeholders::_2));
     } else {
         std::sort(dirEntryVec.begin(), dirEntryVec.end(), std::bind(&DirectoryManager::path_entry_compare, this, std::placeholders::_1, std::placeholders::_2));
     }
-    
     mLastCompareFunction = currentCompareFn;
     mDirsSorted = true;
 }
@@ -468,24 +432,23 @@ SortingMode DirectoryManager::sortingMode() const {
     return mSortingMode;
 }
 
-// Entry management
-
 bool DirectoryManager::insertFileEntry(const QString &filePath) {
     if(!isSupportedFile(filePath))
         return false;
     return forceInsertFileEntry(filePath);
 }
 
-// skips filename regex check
 bool DirectoryManager::forceInsertFileEntry(const QString &filePath) {
     if(!this->isFile(filePath) || containsFile(filePath))
         return false;
     std::filesystem::path pathObj(filePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
-    // 使用宽字符接口避免日文编码问题
     QString fileName = QString::fromStdWString(stdEntry.path().filename().wstring());
+    
+    // 使用包装类构造
     FSEntry entry(FilePath{filePath}, FileName{fileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, entry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    
     if(!directoryPath().isEmpty()) {
         qDebug() << "fileIns" << filePath << directoryPath();
         emit fileAdded(filePath);
@@ -514,45 +477,46 @@ void DirectoryManager::updateFileEntry(const QString &filePath) {
 }
 
 void DirectoryManager::renameFileEntry(FilePath oldFilePath, FileName newFileName) {
-    // oldFilePath: 完整的旧文件路径，newFileName: 新的文件名（不包含路径）
+    // 显式使用 .value
     QFileInfo fi(oldFilePath.value);
     QString newFilePath = fi.absolutePath() + "/" + newFileName.value;
-    if(!containsFile(oldFilePath)) {
+    
+    if(!containsFile(oldFilePath.value)) {
         if(containsFile(newFilePath))
             updateFileEntry(newFilePath);
         else
             insertFileEntry(newFilePath);
         return;
     }
+    
     if(!isSupportedFile(newFilePath)) {
-        removeFileEntry(oldFilePath);
+        removeFileEntry(oldFilePath.value);
         return;
     }
+    
     if(containsFile(newFilePath)) {
         int replaceIndex = indexOfFile(newFilePath);
         fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
         emit fileRemoved(newFilePath, replaceIndex);
     }
-    // remove the old one
-    int oldIndex = indexOfFile(oldFilePath);
+    
+    int oldIndex = indexOfFile(oldFilePath.value);
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
-    // insert
+    
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry(FilePath{newFilePath}, FileName{newFileName}, stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
     insert_sorted(fileEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
-    qDebug() << "fileRen" << oldFilePath << newFilePath;
-    emit fileRenamed(oldFilePath, oldIndex, newFilePath, indexOfFile(newFilePath));
+    
+    qDebug() << "fileRen" << oldFilePath.value << newFilePath;
+    emit fileRenamed(oldFilePath.value, oldIndex, newFilePath, indexOfFile(newFilePath));
 }
-
-// ---- dir entries
 
 bool DirectoryManager::insertDirEntry(const QString &dirPath) {
     if(containsDir(dirPath))
         return false;
     std::filesystem::path pathObj(dirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
-    // 使用宽字符接口避免日文编码问题
     QString dirName = QString::fromStdWString(stdEntry.path().filename().wstring());
     FSEntry newEntry;
     newEntry.name = dirName;
@@ -574,15 +538,13 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
 }
 
 void DirectoryManager::renameDirEntry(DirPath oldDirPath, DirName newDirName) {
-    // oldDirPath: 完整的旧目录路径，newDirName: 新的目录名（不包含路径）
     if(!containsDir(oldDirPath.value))
         return;
     QFileInfo fi(oldDirPath.value);
     QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
-    // remove the old one
     int oldIndex = indexOfDir(oldDirPath.value);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
-    // insert
+    
     std::filesystem::path pathObj(newDirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry;
@@ -590,10 +552,10 @@ void DirectoryManager::renameDirEntry(DirPath oldDirPath, DirName newDirName) {
     newEntry.path = newDirPath;
     newEntry.isDirectory = true;
     insert_sorted(dirEntryVec, newEntry, std::bind(compareFunction(), this, std::placeholders::_1, std::placeholders::_2));
+    
     qDebug() << "dirRen" << oldDirPath.value << newDirPath;
     emit dirRenamed(oldDirPath.value, oldIndex, newDirPath, indexOfDir(newDirPath));
 }
-
 
 FileListSource DirectoryManager::source() const {
     return mListSource;
@@ -612,9 +574,6 @@ bool DirectoryManager::fileWatcherActive() {
     return watcher->isObserving();
 }
 
-//----------------------------------------------------------------------------
-// fs watcher events  ( onFile___External() )
-// these take file NAMES, not paths
 void DirectoryManager::onFileRemovedExternal(const QString &fileName) {
     QString fullPath = watcher->watchPath() + "/" + fileName;
     removeDirEntry(fullPath);
@@ -633,9 +592,9 @@ void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QStri
     QString oldPath = watcher->watchPath() + "/" + oldName;
     QString newPath = watcher->watchPath() + "/" + newName;
     if(isDir(newPath))
-        renameDirEntry(oldPath, newName);
+        renameDirEntry(oldPath, newName); // 利用隐式构造
     else
-        renameFileEntry(oldPath, newName);
+        renameFileEntry(oldPath, newName); // 利用隐式构造
 }
 
 void DirectoryManager::onFileModifiedExternal(const QString &fileName) {

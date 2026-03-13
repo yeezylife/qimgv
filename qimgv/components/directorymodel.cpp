@@ -134,15 +134,21 @@ void DirectoryModel::removeFile(const QString &filePath, bool trash, FileOpResul
 void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName, bool force, FileOpResult &result) {
     bool isDir = dirManager.isDir(oldPath);
     FileOperations::rename(oldPath, newName, force, result);
+
     // chew through watcher events so they wont be processed out of order
     qApp->processEvents();
+
     if(result != FileOpResult::SUCCESS)
         return;
-    if(isDir)
-        dirManager.renameDirEntry(DirPath{oldPath}, DirName{newName}); 
-    else
-        dirManager.renameFileEntry(FilePath{oldPath}, FileName{newName});
-}
+
+    if (isDir) {
+        dirManager.renameDirEntry(DirectoryManager::DirPath{oldPath}, 
+                                  DirectoryManager::DirName{newName});
+    } else {
+        dirManager.renameFileEntry(DirectoryManager::FilePath{oldPath}, 
+                                   DirectoryManager::FileName{newName});
+    } 
+} 
 
 void DirectoryModel::removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result) {
     if(trash) {

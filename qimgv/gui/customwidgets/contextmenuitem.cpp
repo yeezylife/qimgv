@@ -10,7 +10,7 @@ ContextMenuItem::~ContextMenuItem() {
 }
 
 void ContextMenuItem::setAction(QString text) {
-    mAction = text;
+    mAction = std::move(text);
     setShortcutText(actionManager->shortcutForAction(mAction));
 }
 

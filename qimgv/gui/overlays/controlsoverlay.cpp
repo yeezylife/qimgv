@@ -22,7 +22,10 @@ ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     layout.addWidget(settingsButton);
     layout.addWidget(closeButton);
     setLayout(&layout);
-    fitToContents();
+    
+    // 构造函数中直接设置大小和几何，避免调用虚函数
+    this->setFixedSize(contentsSize());
+    recalculateGeometryInternal();
 
     setMouseTracking(true);
 
@@ -58,8 +61,12 @@ void ControlsOverlay::fitToContents() {
     recalculateGeometry();
 }
 
-void ControlsOverlay::recalculateGeometry() {
+void ControlsOverlay::recalculateGeometryInternal() {
     setGeometry(containerSize().width() - width(), 0, width(), height());
+}
+
+void ControlsOverlay::recalculateGeometry() {
+    recalculateGeometryInternal();
 }
 
 #if QT_VERSION > QT_VERSION_CHECK(6,0,0)

@@ -23,6 +23,7 @@ private:
     QPropertyAnimation *fadeAnimation;
     QSize contentsSize();
     void fitToContents();
+    void recalculateGeometryInternal();
 
 protected:
     virtual void recalculateGeometry();

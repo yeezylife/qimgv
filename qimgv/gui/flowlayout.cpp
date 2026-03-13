@@ -52,6 +52,8 @@
 
 #include <qmath.h>
 #include <QWidget>
+// 引入 qRound 所需的头文件 (通常在 QtGlobal 中，Qt 基础头文件已包含，但加上更保险)
+#include <QtGlobal> 
 
 FlowLayout::FlowLayout()
 {
@@ -65,7 +67,8 @@ FlowLayout::FlowLayout()
 }
 
 int FlowLayout::itemAbove(int index) {
-    if(index >= m_items.count() || index < 0)
+    // 修复: qsizetype -> int
+    if(index >= static_cast<int>(m_items.count()) || index < 0)
         return -1;
 
     int indexAbove = index - m_columns;
@@ -76,17 +79,21 @@ int FlowLayout::itemAbove(int index) {
 }
 
 int FlowLayout::itemBelow(int index) {
-    if(index >= m_items.count() || index < 0)
+    // 修复: qsizetype -> int
+    if(index >= static_cast<int>(m_items.count()) || index < 0)
         return -1;
 
-    if(sameRow(index, m_items.count() - 1))
+    // 修复: qsizetype -> int
+    if(sameRow(index, static_cast<int>(m_items.count()) - 1))
         return index;
 
     int indexBelow = index + m_columns;
-    if(indexBelow < m_items.count())
+    // 修复: qsizetype -> int
+    if(indexBelow < static_cast<int>(m_items.count()))
         return indexBelow;
     else
-        return m_items.count() - 1;
+        // 修复: qsizetype -> int
+        return static_cast<int>(m_items.count()) - 1;
 }
 
 bool FlowLayout::sameRow(int one, int two) {
@@ -94,7 +101,8 @@ bool FlowLayout::sameRow(int one, int two) {
 }
 
 int FlowLayout::columnOf(int index) {
-    if(index >= m_items.count() || index < 0)
+    // 修复: qsizetype -> int
+    if(index >= static_cast<int>(m_items.count()) || index < 0)
         return -1;
 
     int col = index % m_columns;
@@ -111,15 +119,18 @@ int FlowLayout::columns() {
 
 void FlowLayout::insertItem(int index, QGraphicsLayoutItem *item) {
     item->setParentLayoutItem(this);
-    if(uint(index) > uint(m_items.count()))
-        index = m_items.count();
+    // 修复: qsizetype -> int
+    if(uint(index) > uint(static_cast<int>(m_items.count())))
+        // 修复: qsizetype -> int
+        index = static_cast<int>(m_items.count());
     m_items.insert(index, item);
     invalidate();
 }
 
 int FlowLayout::count() const
 {
-    return m_items.count();
+    // 修复: qsizetype -> int
+    return static_cast<int>(m_items.count());
 }
 
 QGraphicsLayoutItem *FlowLayout::itemAt(int index) const
@@ -173,19 +184,21 @@ GridInfo FlowLayout::doLayout(const QRectF &geom, bool applyNewGeometry) const {
 
     QSizeF itemSize;
 
-    int columns = m_items.count();
+    // 修复: qsizetype -> int
+    int columns = static_cast<int>(m_items.count());
     int rows = columns ? 1 : 0;
 
     if (!m_items.isEmpty()) {
         // calculate offset for centering
         const qreal itemWidth = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize).width();
         int maxCols = static_cast<int>(maxRowWidth / itemWidth);
-        if (m_items.count() >= maxCols)
+        // 修复: qsizetype -> int
+        if (static_cast<int>(m_items.count()) >= maxCols)
             centerOffset = static_cast<int>(fmod(maxRowWidth, itemWidth) / 2);
         itemSize = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize);
     }
 
-    for (int i = 0; i < m_items.count(); ++i) {
+    for (int i = 0; i < static_cast<int>(m_items.count()); ++i) {
         qreal next_x = x + itemSize.width();
         if (next_x > maxRowWidth) {
             if (x == 0) {
@@ -219,7 +232,9 @@ QSizeF FlowLayout::minSize(const QSizeF &constraint) const
     QSizeF size(0, 0);
     for (auto item : m_items)
         size = size.expandedTo(item->effectiveSizeHint(Qt::MinimumSize));
-    size += QSize(left + right, top + bottom);
+    
+    // 修复: qreal -> int (使用 qRound 进行四舍五入)
+    size += QSize(qRound(left + right), qRound(top + bottom));
     return size;
 }
 

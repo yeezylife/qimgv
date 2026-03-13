@@ -383,11 +383,12 @@ void ImageViewerV2::closeImage() {
     reset();
 }
 
-void ImageViewerV2::setScaledPixmap(QPixmap newFrame) {
+void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame) {
+    // 修复：改为常引用，避免不必要的值拷贝构造
     if(!movie && newFrame.size() != scaledSizeR() * dpr)
         return;
     
-    pixmapScaled = newFrame;
+    pixmapScaled = newFrame; // 这里会自动处理引用计数，非常高效
     pixmapScaled.setDevicePixelRatio(dpr);
     pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();

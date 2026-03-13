@@ -1,7 +1,6 @@
 #include "thumbnailstrip.h"
 
 // TODO: move item highlight logic to base class
-
 ThumbnailStrip::ThumbnailStrip(QWidget *parent) : ThumbnailView(Qt::Horizontal, parent) {
     this->setAttribute(Qt::WA_NoMousePropagation, true);
     this->setFocusPolicy(Qt::NoFocus);
@@ -14,13 +13,13 @@ void ThumbnailStrip::updateScrollbarIndicator() {
         return;
     qreal itemCenter = (qreal)(lastSelected() + 0.5) / itemCount();
     if(scrollBar->orientation() == Qt::Horizontal)
-        indicator = QRect(scrollBar->width() * itemCenter - indicatorSize, 2, indicatorSize, scrollBar->height() - 4);
+        indicator = QRect(qRound(scrollBar->width() * itemCenter - indicatorSize), 2, indicatorSize, scrollBar->height() - 4);
     else
-        indicator = QRect(2, scrollBar->height() * itemCenter - indicatorSize, scrollBar->width() - 4, indicatorSize);
+        indicator = QRect(2, qRound(scrollBar->height() * itemCenter - indicatorSize), scrollBar->width() - 4, indicatorSize);
 }
 
-//  no layout; manual item positioning
-//  graphical issues otherwise
+// no layout; manual item positioning
+// graphical issues otherwise
 void ThumbnailStrip::setupLayout() {
     this->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 }
@@ -36,7 +35,7 @@ ThumbnailWidget* ThumbnailStrip::createThumbnailWidget() {
 
 void ThumbnailStrip::addItemToLayout(ThumbnailWidget* widget, int pos) {
     scene.addItem(widget);
-    updateThumbnailPositions(pos, thumbnails.count() - 1);
+    updateThumbnailPositions(pos, static_cast<int>(thumbnails.count() - 1));
 }
 
 void ThumbnailStrip::removeItemFromLayout(int pos) {
@@ -65,17 +64,15 @@ void ThumbnailStrip::removeAll() {
 }
 
 void ThumbnailStrip::updateThumbnailPositions() {
-    updateThumbnailPositions(0, thumbnails.count() - 1);
+    updateThumbnailPositions(0, static_cast<int>(thumbnails.count() - 1));
 }
 
 void ThumbnailStrip::updateThumbnailPositions(int start, int end) {
     if(start > end || !checkRange(start) || !checkRange(end))
         return;
-    
     // 缓存缩略图尺寸以避免重复计算
     const ThumbnailWidget *firstWidget = thumbnails.at(start);
     const QRectF firstRect = firstWidget->boundingRect();
-    
     if(orientation() == Qt::Horizontal) {
         const int thumbWidth = static_cast<int>(firstRect.width());
         for(int i = start; i <= end; i++) {
@@ -99,12 +96,12 @@ void ThumbnailStrip::focusOn(int index) {
         // partially show the next thumb if possible
         if(orientation() == Qt::Vertical) {
             if(height() > th->height() * 2)
-                ensureVisible(th, 0, th->height()/2);
+                ensureVisible(th, 0, static_cast<int>(th->height()/2));
             else
                 ensureVisible(th, 0, 0);
         } else {
             if(width() > th->width() * 2)
-                ensureVisible(th, th->width() / 2, 0);
+                ensureVisible(th, static_cast<int>(th->width() / 2), 0);
             else
                 ensureVisible(th, 0, 0);
         }
@@ -123,9 +120,7 @@ void ThumbnailStrip::readSettings() {
         mCurrentStyle = THUMB_SIMPLE;
     else
         mCurrentStyle = THUMB_NORMAL_CENTERED;
-
     mThumbnailSize = qBound(20, settings->panelPreviewsSize(), 300);
-
     if(settings->panelPosition() == PANEL_TOP || settings->panelPosition() == PANEL_BOTTOM) {
         ThumbnailView::setOrientation(Qt::Horizontal);
         thumbMarginX = 2;
@@ -135,7 +130,6 @@ void ThumbnailStrip::readSettings() {
         thumbMarginX = 12;
         thumbMarginY = 2;
     }
-
     // apply style, size & reposition
     for(int i = 0; i < thumbnails.count(); i++) {
         thumbnails.at(i)->setPadding(thumbPadding);
@@ -143,10 +137,11 @@ void ThumbnailStrip::readSettings() {
         thumbnails.at(i)->setThumbStyle(mCurrentStyle);
         thumbnails.at(i)->setThumbnailSize(mThumbnailSize);
     }
-    updateThumbnailPositions(0, thumbnails.count() - 1);
+    updateThumbnailPositions(0, static_cast<int>(thumbnails.count() - 1));
     fitSceneToContents();
     setCropThumbnails(settings->squareThumbnails());
-    focusOn(lastSelected());
+    // 显式调用当前类的虚函数，避免在构造期间通过虚函数表调用派生类未初始化的实现
+    ThumbnailStrip::focusOn(lastSelected());
 }
 
 QSize ThumbnailStrip::itemSize() {

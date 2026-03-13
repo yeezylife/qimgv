@@ -1,5 +1,4 @@
 #include "mainpanel.h"
-#include "gui/settings.h"
 
 MainPanel::MainPanel(FloatingWidgetContainer *parent) : SlidePanel(parent) {
 // buttons stuff
@@ -35,6 +34,7 @@ thumbnailStrip.reset(new ThumbnailStripProxy(this));
 setWidget(thumbnailStrip);
 // 注意：不在构造函数中调用 readSettings()，避免虚函数调用问题
 // readSettings();
+//connect(settings, SIGNAL(settingsChanged()), this, SLOT(readSettings()));
 }
 
 MainPanel::~MainPanel() {
@@ -108,6 +108,7 @@ return QSize(0, 0);
 }
 }
 
+// 注意：实现文件中不要加 override
 QSize MainPanel::sizeHint() const {
 return calculateSizeHint();
 }

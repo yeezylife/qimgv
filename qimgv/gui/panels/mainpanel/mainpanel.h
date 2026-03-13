@@ -1,8 +1,6 @@
 #pragma once
 #include <QWidget>
 #include <QVBoxLayout>
-#include <QPainter>
-#include <QPaintEvent>
 #include "gui/customwidgets/slidepanel.h"
 #include "gui/customwidgets/actionbutton.h"
 #include "gui/panels/mainpanel/thumbnailstripproxy.h"

@@ -40,7 +40,8 @@ QString MenuItem::text() {
     return mTextLabel.text();
 }
 
-void MenuItem::setShortcutText(QString text) {
+// 修复：改为 const QString &
+void MenuItem::setShortcutText(const QString &text) {
     mShortcutLabel.setText(text);
     adjustSize();
 }
@@ -49,7 +50,10 @@ QString MenuItem::shortcut() {
     return mShortcutLabel.text();
 }
 
-void MenuItem::setIconPath(QString path) {
+// 修复：改为 const QString &
+// 提示：虽然编译器建议用 std::move，但在 Qt 这种 setter 模式下，
+// 使用 const & 是最通用且符合 Qt 习惯的修复方案。
+void MenuItem::setIconPath(const QString &path) {
     mIconWidget.setIconPath(path);
 }
 

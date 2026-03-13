@@ -1516,11 +1516,11 @@ void Core::updateInfoString() {
     int index = model->indexOfFile(state.currentFilePath);
     mw->setCurrentInfo(index,
                        model->fileCount(),
-                       std::move(model->filePathAt(index)),
-                       std::move(model->fileNameAt(index)),
+                       model->filePathAt(index), // 直接传递
+                       model->fileNameAt(index), // 直接传递
                        imageSize,
                        fileSize,
-                       slideshow,
-                       shuffle,
-                       edited);
+                       state.slideshowActive,
+                       state.shuffle,
+                       state.isEdited);
 }

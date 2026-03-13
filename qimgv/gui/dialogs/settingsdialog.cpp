@@ -96,6 +96,7 @@ void SettingsDialog::setupColorSchemeConnections() {
             case 1: setColorScheme(ThemeStore::colorScheme(COLORS_DARK));     settings->setColorTid(COLORS_DARK);     break;
             case 2: setColorScheme(ThemeStore::colorScheme(COLORS_DARKBLUE)); settings->setColorTid(COLORS_DARKBLUE); break;
             case 3: setColorScheme(ThemeStore::colorScheme(COLORS_LIGHT));    settings->setColorTid(COLORS_LIGHT);    break;
+            default: break;
         }
     });
 
@@ -257,7 +258,7 @@ void SettingsDialog::readSettings() {
     ui->mouseScrollingSpeedSlider->setValue(static_cast<int>((settings->mouseScrollingSpeed() - 0.5f) / 0.25f));
     onMouseScrollingSpeedSliderChanged(ui->mouseScrollingSpeedSlider->value());
 
-    ui->autoResizeLimitSlider->setValue(static_cast<int>(settings->autoResizeLimit() / 5.f));
+    ui->autoResizeLimitSlider->setValue(static_cast<int>(settings->autoResizeLimit()) / 5);
     onAutoResizeLimitSliderChanged(ui->autoResizeLimitSlider->value());
 
     ui->JPEGQualitySlider->setValue(settings->JPEGSaveQuality());
@@ -406,8 +407,8 @@ void SettingsDialog::saveSettings() {
     settings->setPanelPreviewsSize(ui->panelSizeSlider->value() * 10);
 
     settings->setJPEGSaveQuality(ui->JPEGQualitySlider->value());
-    settings->setZoomStep(static_cast<qreal>(ui->zoomStepSlider->value() / 100.f));
-    settings->setMouseScrollingSpeed(static_cast<qreal>(0.5f + (ui->mouseScrollingSpeedSlider->value() * 0.25f)));
+    settings->setZoomStep(qreal(ui->zoomStepSlider->value()) / qreal(100));
+    settings->setMouseScrollingSpeed(qreal(0.5) + (qreal(ui->mouseScrollingSpeedSlider->value()) * qreal(0.25)));
     settings->setAutoResizeLimit(ui->autoResizeLimitSlider->value() * 5);
     settings->setExpandLimit(ui->expandLimitSlider->value());
     settings->setThumbnailerThreadCount(ui->thumbnailerThreadsSlider->value());
@@ -477,7 +478,7 @@ void SettingsDialog::saveColorScheme() {
 void SettingsDialog::readShortcuts() {
     ui->shortcutsTableWidget->clearContents();
     ui->shortcutsTableWidget->setRowCount(0);
-    const QMap<QString, QString> shortcuts = actionManager->allShortcuts();
+    const QMap<QString, QString> &shortcuts = actionManager->allShortcuts();
     QMapIterator<QString, QString> i(shortcuts);
     while(i.hasNext()) {
         i.next();
@@ -487,7 +488,7 @@ void SettingsDialog::readShortcuts() {
 //------------------------------------------------------------------------------
 void SettingsDialog::readScripts() {
     ui->scriptsListWidget->clear();
-    const QMap<QString, Script> scripts = scriptManager->allScripts();
+    const QMap<QString, Script> &scripts = scriptManager->allScripts();
     QMapIterator<QString, Script> i(scripts);
     while(i.hasNext()) {
         i.next();
@@ -664,11 +665,11 @@ void SettingsDialog::onJPEGQualitySliderChanged(int value) {
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::onZoomStepSliderChanged(int value) {
-    ui->zoomStepLabel->setText(QString::number(value / 100.f, 'f', 2) + "x");
+    ui->zoomStepLabel->setText(QString::number(qreal(value) / qreal(100), 'f', 2) + "x");
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::onMouseScrollingSpeedSliderChanged(int value) {
-    ui->mouseScrollingSpeedLabel->setText(QString::number(0.5f + (value*0.25f), 'f', 2) + "x");
+    ui->mouseScrollingSpeedLabel->setText(QString::number(qreal(0.5) + (qreal(value) * qreal(0.25)), 'f', 2) + "x");
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::onThumbnailerThreadsSliderChanged(int value) {
@@ -680,7 +681,7 @@ void SettingsDialog::onBgOpacitySliderChanged(int value) {
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::onAutoResizeLimitSliderChanged(int value) {
-    ui->autoResizeLimit->setText(QString::number(value * 5.f, 'f', 0) + "%");
+    ui->autoResizeLimit->setText(QString::number(qreal(value) * qreal(5), 'f', 0) + "%");
 }
 //------------------------------------------------------------------------------
 int SettingsDialog::exec() {

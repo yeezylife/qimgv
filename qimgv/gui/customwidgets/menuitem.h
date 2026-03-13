@@ -1,6 +1,3 @@
-// Base class for various menu items.
-// Displays entry name, shortcut and an icon.
-
 #pragma once
 
 #include <QLabel>
@@ -8,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QSpacerItem>
 #include <QPainter>
+#include <utility> // 必须包含此头文件以使用 std::move
 #include "gui/customwidgets/iconbutton.h"
 #include "components/actionmanager/actionmanager.h"
 
@@ -17,14 +15,16 @@ public:
     MenuItem(QWidget *parent = nullptr);
     ~MenuItem();
 
-    // 修复：全部改为 const QString & 以消除 performance-unnecessary-value-param 警告
+    // 修复：改为 const & (针对只读引用的警告)
     void setText(const QString &text);
     QString text();
 
     void setShortcutText(const QString &text);
     QString shortcut();
 
-    void setIconPath(const QString &path);
+    // 修复：按编译器建议使用值传递 + move (针对 Sink 模式的警告)
+    void setIconPath(QString path); 
+
     void setPassthroughClicks(bool mode);
 
 protected:

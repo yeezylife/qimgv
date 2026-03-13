@@ -4,6 +4,7 @@
 #include <QStyleOption>
 #include <QPainter>
 #include <QMouseEvent>
+#include <memory>
 #include "settings.h"
 #include "utils/imagelib.h"
 
@@ -14,17 +15,24 @@ enum IconColorMode {
 };
 
 class IconWidget : public QWidget {
+    Q_OBJECT // 建议加上，虽然当前没用到自定义信号，但有 slots
 public:
     explicit IconWidget(QWidget *parent = nullptr);
-    ~IconWidget();
-    void setIconPath(QString path);
-    void setIconOffset(int x, int y);
-    void setColorMode(IconColorMode _mode);
-    void setColor(QColor _color);
-    QSize minimumSizeHint() const;
+    ~IconWidget() override; // 明确使用 override
+
+    // 修复 performance-unnecessary-value-param
+    void setIconPath(const QString &path);
+    
+    // 修复 bugprone-easily-swappable-parameters (通过重载或统一使用 QPoint)
+    void setIconOffset(const QPoint &offset);
+    void setIconOffset(int x, int y); 
+
+    void setColorMode(IconColorMode mode);
+    void setColor(QColor color);
+    QSize minimumSizeHint() const override;
 
 protected:
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 
 private slots:
     void onSettingsChanged();
@@ -38,6 +46,7 @@ private:
     IconColorMode colorMode = ICON_COLOR_THEME;
     bool hiResPixmap = false;
     QPoint iconOffset;
-    QPixmap *pixmap = nullptr;
-    qreal dpr, pixmapDrawScale;
+    std::unique_ptr<QPixmap> pixmap; // 使用智能指针管理内存
+    qreal dpr = 1.0;
+    qreal pixmapDrawScale = 1.0;
 };

@@ -1,17 +1,14 @@
 #include "iconwidget.h"
 
 IconWidget::IconWidget(QWidget *parent)
-    : QWidget(parent),
-      pixmap(nullptr)
+    : QWidget(parent)
 {
     dpr = devicePixelRatioF();
     color = settings->colorScheme().icons;
     connect(settings, &Settings::settingsChanged, this, &IconWidget::onSettingsChanged);
 }
 
-IconWidget::~IconWidget() {
-    delete pixmap;
-}
+IconWidget::~IconWidget() = default; // std::unique_ptr 会自动释放内存
 
 void IconWidget::onSettingsChanged() {
     if(colorMode == ICON_COLOR_THEME && color != settings->colorScheme().icons) {
@@ -20,7 +17,7 @@ void IconWidget::onSettingsChanged() {
     }
 }
 
-void IconWidget::setIconPath(QString path) {
+void IconWidget::setIconPath(const QString &path) {
     if(iconPath == path)
         return;
     iconPath = path;
@@ -29,13 +26,12 @@ void IconWidget::setIconPath(QString path) {
 
 void IconWidget::loadIcon() {
     auto path = iconPath;
-    delete pixmap;
-    pixmap = nullptr;
+    pixmap.reset(); // 释放旧对象
     
     if(dpr >= (1.0 + 0.001)) {
         path.replace(".", "@2x.");
         hiResPixmap = true;
-        pixmap = new QPixmap(path);
+        pixmap = std::make_unique<QPixmap>(path);
         if(dpr >= (2.0 - 0.001))
             pixmapDrawScale = dpr;
         else
@@ -43,13 +39,12 @@ void IconWidget::loadIcon() {
         pixmap->setDevicePixelRatio(pixmapDrawScale);
     } else {
         hiResPixmap = false;
-        pixmap = new QPixmap(path);
+        pixmap = std::make_unique<QPixmap>(path);
         pixmapDrawScale = dpr;
     }
     
     if(pixmap->isNull()) {
-        delete pixmap;
-        pixmap = nullptr;
+        pixmap.reset();
     } else {
         applyColor();
     }
@@ -59,29 +54,32 @@ void IconWidget::loadIcon() {
 QSize IconWidget::minimumSizeHint() const {
     if(pixmap && !pixmap->isNull())
         return pixmap->size() / dpr;
-    else
-        return QWidget::minimumSizeHint();
+    
+    return QWidget::minimumSizeHint();
 }
 
-void IconWidget::setIconOffset(int x, int y) {
-    iconOffset.setX(x);
-    iconOffset.setY(y);
+void IconWidget::setIconOffset(const QPoint &offset) {
+    iconOffset = offset;
     update();
 }
 
-void IconWidget::setColorMode(IconColorMode _mode) {
-    if(colorMode != _mode && _mode == ICON_COLOR_SOURCE) {
-        colorMode = _mode;
+void IconWidget::setIconOffset(int x, int y) {
+    setIconOffset(QPoint(x, y));
+}
+
+void IconWidget::setColorMode(IconColorMode mode) {
+    if(colorMode != mode && mode == ICON_COLOR_SOURCE) {
+        colorMode = mode;
         loadIcon();
     } else {
-        colorMode = _mode;
+        colorMode = mode;
         applyColor();
     }
 }
 
-void IconWidget::setColor(QColor _color) {
-    colorMode = ICON_COLOR_CUSTOM;
-    color = _color;
+void IconWidget::setColor(QColor color) {
+    this->colorMode = ICON_COLOR_CUSTOM;
+    this->color = color;
     applyColor();
 }
 
@@ -96,18 +94,21 @@ void IconWidget::paintEvent(QPaintEvent *event) {
     QPainter p(this);
     if(!isEnabled())
         p.setOpacity(0.5f);
+
     QStyleOption opt;
     opt.initFrom(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+
     if(pixmap) {
         p.setRenderHint(QPainter::SmoothPixmapTransform);
         QPointF pos;
+        // 修复 bugprone-integer-division：使用 2.0 强制进入浮点运算
         if(hiResPixmap) {
-            pos = QPointF(width()  / 2 - pixmap->width()  / (2 * pixmapDrawScale),
-                          height() / 2 - pixmap->height() / (2 * pixmapDrawScale));
+            pos = QPointF(width() / 2.0 - pixmap->width() / (2.0 * pixmapDrawScale),
+                          height() / 2.0 - pixmap->height() / (2.0 * pixmapDrawScale));
         } else {
-            pos = QPointF(width()  / 2 - pixmap->width()  / 2,
-                          height() / 2 - pixmap->height() / 2);
+            pos = QPointF(width() / 2.0 - pixmap->width() / 2.0,
+                          height() / 2.0 - pixmap->height() / 2.0);
         }
         p.drawPixmap(pos + iconOffset, *pixmap);
     }

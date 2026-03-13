@@ -78,13 +78,19 @@ public:
     bool forceInsertFileEntry(const QString &filePath);
     void removeFileEntry(const QString &filePath);
     void updateFileEntry(const QString &filePath);
-    void renameFileEntry(const QString &oldFilePath, const QString &newName);
+    // 定义强类型别名以消除参数混淆警告
+    using OldFilePath = const QString&;
+    using NewFileName  = const QString&;
+    using OldDirPath   = const QString&;
+    using NewDirName   = const QString&;
+
+    void renameFileEntry(OldFilePath oldFilePath, NewFileName newName);
 
     bool insertDirEntry(const QString &dirPath);
     //bool forceInsertDirEntry(const QString &dirPath);
     void removeDirEntry(const QString &dirPath);
     //void updateDirEntry(const QString &dirPath);
-    void renameDirEntry(const QString &oldDirPath, const QString &newName);
+    void renameDirEntry(OldDirPath oldDirPath, NewDirName newName);
 
     FileListSource source() const;
 

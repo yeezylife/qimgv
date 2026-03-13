@@ -12,7 +12,7 @@ public:
     QString path();
 
 public slots:
-    void setDirectory(QString path);
+    void setDirectory(const QString& path);
 
 protected:
     virtual void onPress() override;

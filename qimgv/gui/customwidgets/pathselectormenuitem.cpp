@@ -29,7 +29,7 @@ QString PathSelectorMenuItem::path() {
     return mPath;
 }
 
-void PathSelectorMenuItem::setDirectory(QString path) {
+void PathSelectorMenuItem::setDirectory(const QString& path) {
     mDirectory = path;
     mPath = path;
     QString stripped;

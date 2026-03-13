@@ -51,7 +51,7 @@ void Randomizer::print() {
     qDebug() << "---vector---";
     std::vector<int>::iterator it;
     for (it = vec.begin(); it != vec.end(); ++it) {
-        std::cout << *it << std::endl;
+        std::cout << *it << '\n';
     }
     qDebug() << "----end----";
 }

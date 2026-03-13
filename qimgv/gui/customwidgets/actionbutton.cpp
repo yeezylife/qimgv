@@ -9,11 +9,13 @@ ActionButton::ActionButton(QWidget *parent)
     setProperty("checked", false);
 }
 
-ActionButton::ActionButton(QString&& _actionName, QString&& _iconPath, QWidget *parent)
-    :  ActionButton(parent)
+ActionButton::ActionButton(const QString &_actionName, const QString &_iconPath, QWidget *parent)
+    : ActionButton(parent)
 {
-    setIconPath(std::move(_iconPath));
-    setAction(std::move(_actionName));
+    // 既然 setIconPath 和 setAction 的接口是 const &
+    // 这里直接传入即可，Qt 的引用计数机制会高效处理
+    setIconPath(_iconPath);
+    setAction(_actionName);
 }
 
 ActionButton::ActionButton(QString&& _actionName, QString&& _iconPath, int _size, QWidget *parent)

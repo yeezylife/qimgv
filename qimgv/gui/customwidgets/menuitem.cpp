@@ -50,10 +50,10 @@ QString MenuItem::shortcut() {
     return mShortcutLabel.text();
 }
 
-// 修复：使用 std::move 消除警告
-// 这样 path 会直接移动到目标位置，避免了额外的引用计数增减
-void MenuItem::setIconPath(QString path) {
-    mIconWidget.setIconPath(std::move(path));
+// 修复：既然 IconButton::setIconPath 接收的是 const &
+// 我们这里也统一使用 const &，不再使用 std::move
+void MenuItem::setIconPath(const QString &path) {
+    mIconWidget.setIconPath(path);
 }
 
 void MenuItem::setPassthroughClicks(bool mode) {

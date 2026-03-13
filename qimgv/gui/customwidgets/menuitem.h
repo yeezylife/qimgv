@@ -23,7 +23,7 @@ public:
     QString shortcut();
 
     // 修复：按编译器建议使用值传递 + move (针对 Sink 模式的警告)
-    void setIconPath(QString path); 
+    void setIconPath(const QString &path);
 
     void setPassthroughClicks(bool mode);
 

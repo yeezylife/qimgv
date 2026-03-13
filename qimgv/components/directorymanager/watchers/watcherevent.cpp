@@ -9,13 +9,14 @@ WatcherEvent::WatcherEvent(const QString &name, qint32 timerId, WatcherEvent::Ty
 {
 }
 
+// 方案 B 实现：通过 .value 访问内部数值
 WatcherEvent::WatcherEvent(const QString &name,
-                           quint32 cookieValue,
-                           qint32 timerIdValue,
+                           Cookie cookie,
+                           TimerId timerId,
                            Type type) noexcept
     : mName(name),
-      mCookie(cookieValue),
-      mTimerId(timerIdValue),
+      mCookie(cookie.value),
+      mTimerId(timerId.value),
       mType(type)
 {
 }

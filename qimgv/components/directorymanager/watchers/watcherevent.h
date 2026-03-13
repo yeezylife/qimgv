@@ -5,6 +5,10 @@
 
 class WatcherEvent {
 public:
+    // 方案 B：强类型定义，防止参数混淆
+    struct Cookie { quint32 value; };
+    struct TimerId { qint32 value; };
+
     enum Type {
         None,
         MovedFrom,
@@ -12,8 +16,9 @@ public:
         Modify
     };
 
+    // 构造函数现在接受强类型包装对象
     WatcherEvent(const QString &name, qint32 timerId, Type type = None) noexcept;
-    WatcherEvent(const QString &name, quint32 cookie, qint32 timerId, Type type = None) noexcept;
+    WatcherEvent(const QString &name, Cookie cookie, TimerId timerId, Type type = None) noexcept;
     ~WatcherEvent() noexcept;
 
     QString name() const noexcept;

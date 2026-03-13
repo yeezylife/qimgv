@@ -592,9 +592,9 @@ void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QStri
     QString oldPath = watcher->watchPath() + "/" + oldName;
     QString newPath = watcher->watchPath() + "/" + newName;
     if(isDir(newPath))
-        renameDirEntry(oldPath, newName); // 利用隐式构造
+        renameDirEntry(DirPath(oldPath), DirName(newName));
     else
-        renameFileEntry(oldPath, newName); // 利用隐式构造
+        renameFileEntry(FilePath(oldPath), FileName(newName));
 }
 
 void DirectoryManager::onFileModifiedExternal(const QString &fileName) {

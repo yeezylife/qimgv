@@ -35,7 +35,10 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
     this->setAttribute(Qt::WA_NoMousePropagation, true);
     this->setFocusPolicy(Qt::NoFocus);
 
-    setPosition(PANEL_TOP);
+    // 使用 QTimer::singleShot 延迟调用 setPosition，避免在构造函数中调用虚函数
+    QTimer::singleShot(0, this, [this]{
+        setPosition(PANEL_TOP);
+    });
 
     QWidget::hide();
 }
@@ -66,7 +69,7 @@ void SlidePanel::setLayoutManaged(bool mode) {
         recalculateGeometry();
 }
 
-void SlidePanel::setWidget(std::shared_ptr<QWidget> w) {
+void SlidePanel::setWidget(const std::shared_ptr<QWidget>& w) {
     if(!w)
         return;
     if(hasWidget())

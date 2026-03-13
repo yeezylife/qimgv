@@ -19,7 +19,7 @@ public:
     explicit SlidePanel(FloatingWidgetContainer *parent);
     ~SlidePanel();
     bool hasWidget();
-    void setWidget(std::shared_ptr<QWidget> w);
+    void setWidget(const std::shared_ptr<QWidget>& w);
     // Use visibleGeometry instead of geometry() here.
     // If this is called mid-animation then geometry() will be all wrong.
     QRect triggerRect();

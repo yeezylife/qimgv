@@ -35,10 +35,14 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
     this->setAttribute(Qt::WA_NoMousePropagation, true);
     this->setFocusPolicy(Qt::NoFocus);
 
-    // 使用 QTimer::singleShot 延迟调用 setPosition，避免在构造函数中调用虚函数
-    QTimer::singleShot(0, this, [this]{
-        setPosition(PANEL_TOP);
-    });
+    // 使用 QMetaObject::invokeMethod 延迟调用 setPosition，避免在构造函数中调用虚函数
+    QMetaObject::invokeMethod(
+        this,
+        [this]{
+            setPosition(PANEL_TOP);
+        },
+        Qt::QueuedConnection
+    );
 
     QWidget::hide();
 }

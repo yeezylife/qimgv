@@ -3,22 +3,43 @@
 #include <filesystem>
 #include <utility>
 
-// 强类型包装
-struct FilePath { QString value; };
-struct FileName { QString value; };
+// 强类型包装 - 统一放在此处作为唯一源头
+struct FilePath { 
+    QString value; 
+    explicit FilePath(QString v) : value(std::move(v)) {}
+    operator const QString&() const { return value; }
+};
+
+struct FileName { 
+    QString value; 
+    explicit FileName(QString v) : value(std::move(v)) {}
+    operator const QString&() const { return value; }
+};
+
+struct DirPath { 
+    QString value; 
+    explicit DirPath(QString v) : value(std::move(v)) {}
+    operator const QString&() const { return value; }
+};
+
+struct DirName { 
+    QString value; 
+    explicit DirName(QString v) : value(std::move(v)) {}
+    operator const QString&() const { return value; }
+};
 
 class FSEntry {
 public:
     FSEntry() noexcept;
-    explicit FSEntry(const QString &filePath); // 建议加上 explicit，防止意外的隐式转换
+    explicit FSEntry(const QString &filePath);
 
-    // 恢复了 const & 修饰符，确保传递大型路径字符串时的性能
-    FSEntry(const FilePath &_path, const FileName &_name, std::uintmax_t _size, 
+    // 性能优化版构造函数：按值传递 + std::move
+    FSEntry(FilePath _path, FileName _name, std::uintmax_t _size, 
             std::filesystem::file_time_type _modifyTime, bool _isDirectory) noexcept;
 
-    FSEntry(const FilePath &_path, const FileName &_name, std::uintmax_t _size, bool _isDirectory) noexcept;
+    FSEntry(FilePath _path, FileName _name, std::uintmax_t _size, bool _isDirectory) noexcept;
 
-    FSEntry(const FilePath &_path, const FileName &_name, bool _isDirectory) noexcept;
+    FSEntry(FilePath _path, FileName _name, bool _isDirectory) noexcept;
 
     bool operator==(const QString &anotherPath) const noexcept;
 

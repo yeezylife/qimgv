@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
     a.setStyle(new ProxyStyle());
 #endif
 
-    QCoreApplication::setOrganizationName(QString("qimgv"));
-    QCoreApplication::setOrganizationDomain(QString("github.com/easymodo/qimgv"));
-    QCoreApplication::setApplicationName(QString("qimgv"));
+    QCoreApplication::setOrganizationName("qimgv");
+    QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
+    QCoreApplication::setApplicationName("qimgv");
     QCoreApplication::setApplicationVersion(appVersion.toString());
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     QGuiApplication::setDesktopFileName(QCoreApplication::applicationName() + ".desktop");

@@ -68,14 +68,14 @@ std::shared_ptr<const QImage> Video::getImage() const {
     return nullptr;
 }
 
-int Video::height() {
+int Video::height() const {
     return static_cast<int>(srcHeight);
 }
 
-int Video::width() {
+int Video::width() const {
     return static_cast<int>(srcWidth);
 }
 
-QSize Video::size() {
+QSize Video::size() const {
     return QSize(static_cast<int>(srcWidth), static_cast<int>(srcHeight));
 }

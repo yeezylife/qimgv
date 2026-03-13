@@ -1516,7 +1516,6 @@ void Core::updateInfoString() {
         auto img = model->getImage(state.currentFilePath);
         imageSize = img->size();
         fileSize  = img->fileSize();
-        edited = img->isEdited();
     }
     int index = model->indexOfFile(state.currentFilePath);
     mw->setCurrentInfo(index,

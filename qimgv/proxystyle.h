@@ -2,8 +2,14 @@
 
 #include <QApplication>
 #include <QProxyStyle>
+#include <QPainter>
 
 class ProxyStyle : public QProxyStyle {
 public:
-    virtual void drawPrimitive(PrimitiveElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = 0) const;
+    ~ProxyStyle() override = default;
+    
+    void drawPrimitive(PrimitiveElement element, 
+                      const QStyleOption *option, 
+                      QPainter *painter, 
+                      const QWidget *widget = nullptr) const override;
 };

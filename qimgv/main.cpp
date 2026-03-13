@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef _WIN32
     // if this is set by other app, platform plugin may fail to load
-    // https://github.com/easymodo/qimgv/issues/410
+    // https://github.com/easymodo/qimgv/issues/410  
     qputenv("QT_PLUGIN_PATH","");
 #endif
 
@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
         a.setStyle(QStyleFactory::create("Fusion"));
 #else
     QApplication a(argc, argv);
+    // Qt 接管 ProxyStyle 所有权，程序退出时自动删除
     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     a.setStyle(new ProxyStyle());
 #endif

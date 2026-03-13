@@ -78,17 +78,38 @@ public:
     bool forceInsertFileEntry(const QString &filePath);
     void removeFileEntry(const QString &filePath);
     void updateFileEntry(const QString &filePath);
-    // 定义强类型别名以消除参数混淆警告
+
+    // --- 强类型系统修复版 ---
+    
+    // 别名保留，用于逻辑区分
     using OldFilePath = const QString&;
     using NewFileName  = const QString&;
     using OldDirPath   = const QString&;
     using NewDirName   = const QString&;
 
-    // 使用结构体包装参数以消除类型混淆警告
-    struct FilePath { const QString& value; };
-    struct FileName { const QString& value; };
-    struct DirPath { const QString& value; };
-    struct DirName { const QString& value; };
+    // 结构体增加构造函数和转换符，实现零拷贝并兼容现有代码
+    struct FilePath { 
+        const QString& value; 
+        FilePath(const QString& v) : value(v) {} 
+        operator const QString&() const { return value; }
+    };
+    struct FileName { 
+        const QString& value; 
+        FileName(const QString& v) : value(v) {} 
+        operator const QString&() const { return value; }
+    };
+    struct DirPath { 
+        const QString& value; 
+        DirPath(const QString& v) : value(v) {} 
+        operator const QString&() const { return value; }
+    };
+    struct DirName { 
+        const QString& value; 
+        DirName(const QString& v) : value(v) {} 
+        operator const QString&() const { return value; }
+    };
+
+    // ----------------------
 
     void renameFileEntry(FilePath oldFilePath, FileName newFileName);
 

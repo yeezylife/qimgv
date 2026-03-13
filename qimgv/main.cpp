@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
     a.setStyle(new ProxyStyle());
 #endif
 
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     QGuiApplication::setDesktopFileName(QCoreApplication::applicationName() + ".desktop");
 

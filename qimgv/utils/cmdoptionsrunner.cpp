@@ -25,7 +25,7 @@ void CmdOptionsRunner::generateThumbs(QString dirPath, int size) {
     qDebug() << "Size limit:" << size << "x" << size << "px";
     qDebug() << "Generating thumbnails...";
 
-    for(auto path : list)
+    for(const auto &path : list)
         th.getThumbnailAsync(path, size, false, false);
 
     th.waitForDone();

@@ -15,7 +15,7 @@ BookmarksWidget::~BookmarksWidget() {
 
 void BookmarksWidget::readSettings() {
     QStringList _paths = settings->bookmarks();
-    for(auto path : _paths)
+    for(const auto &path : _paths)
         addBookmark(path);
     if(_paths.empty())
         addBookmark(QDir::homePath());

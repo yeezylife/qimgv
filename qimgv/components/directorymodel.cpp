@@ -1,4 +1,5 @@
 #include "directorymodel.h"
+#include "sourcecontainers/fsentry.h"
 
 DirectoryModel::DirectoryModel(QObject *parent)
     : QObject(parent), fileListSource(SOURCE_DIRECTORY) {
@@ -142,11 +143,11 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
         return;
 
     if (isDir) {
-        dirManager.renameDirEntry(DirectoryManager::DirPath{oldPath}, 
-                                  DirectoryManager::DirName{newName});
+        dirManager.renameDirEntry(DirPath(oldPath),
+                                  DirName(newName));
     } else {
-        dirManager.renameFileEntry(DirectoryManager::FilePath{oldPath}, 
-                                   DirectoryManager::FileName{newName});
+        dirManager.renameFileEntry(FilePath(oldPath),
+                                   FileName(newName));
     } 
 } 
 

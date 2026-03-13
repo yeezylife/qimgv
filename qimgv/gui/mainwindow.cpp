@@ -220,7 +220,7 @@ void MW::preShowResize(QSize sz) {
     if(this->windowState() != Qt::WindowNoState || !screens.count() || screens.count() <= currentDisplay)
         return;
     int decorationSize = frameGeometry().height() - height();
-    float maxSzMulti = settings->autoResizeLimit() / 100.f;
+    float maxSzMulti = static_cast<float>(settings->autoResizeLimit()) / 100.f;
     QRect availableGeom = screens.at(currentDisplay)->availableGeometry();
     QSize maxSz = availableGeom.size() * maxSzMulti;
     maxSz.setHeight(maxSz.height() - decorationSize);
@@ -409,7 +409,7 @@ void MW::updateCurrentDisplay() {
     currentDisplay = desktopWidget.screenNumber(this);
 #else
     auto screens = qApp->screens();
-    currentDisplay = screens.indexOf(this->window()->screen());
+    currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
 #endif
 }
 
@@ -611,10 +611,11 @@ void MW::showResizeDialog(QSize initialSize) {
 }
 
 DialogResult MW::fileReplaceDialog(QString src, QString dst, FileReplaceMode mode, bool multiple) {
+    // src: 源文件路径, dst: 目标文件路径
     FileReplaceDialog dialog(this);
     dialog.setModal(true);
-    dialog.setSource(src);
-    dialog.setDestination(dst);
+    dialog.setSource(std::move(src));
+    dialog.setDestination(std::move(dst));
     dialog.setMode(mode);
     dialog.setMulti(multiple);
 
@@ -653,7 +654,7 @@ void MW::showFullScreen() {
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     int _currentDisplay = desktopWidget.screenNumber(this);
 #else
-    int _currentDisplay = screens.indexOf(this->window()->screen());
+    int _currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
 #endif
     //move to target screen
     if(screens.count() > currentDisplay && currentDisplay != _currentDisplay) {
@@ -704,7 +705,7 @@ void MW::showChangelogWindow() {
 }
 
 void MW::showChangelogWindow(QString text) {
-    changelogWindow->setText(text);
+    changelogWindow->setText(std::move(text));
     changelogWindow->show();
 }
 
@@ -791,6 +792,7 @@ void MW::closeFullScreenOrExit() {
 
 // todo: this is crap, use shared state object
 void MW::setCurrentInfo(int _index, int _fileCount, const QString& _filePath, const QString& _fileName, QSize _imageSize, qint64 _fileSize, bool slideshow, bool shuffle, bool edited) {
+    // _index: 当前文件索引, _fileCount: 总文件数
     info.index = _index;
     info.fileCount = _fileCount;
     info.fileName = _fileName;
@@ -852,6 +854,7 @@ QString MW::calculateWindowTitle() {
 
 // 计算信息栏内容
 void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
+    // infoText: 信息文本输出, sizeText: 大小文本输出
     QString posString;
     if(info.fileCount)
         posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
@@ -862,10 +865,7 @@ void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
     if(info.fileSize)
         sizeString = this->locale().formattedDataSize(info.fileSize, 1);
 
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW) {
-        infoText = tr("No file opened.");
-        sizeText = "";
-    } else if(info.fileName.isEmpty()) {
+    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW || info.fileName.isEmpty()) {
         infoText = tr("No file opened.");
         sizeText = "";
     } else {
@@ -923,7 +923,7 @@ void MW::onInfoUpdated() {
 // TODO!!! buffer this in mw
 void MW::setExifInfo(QMap<QString, QString> info) {
     if(imageInfoOverlay)
-        imageInfoOverlay->setExifInfo(info);
+    imageInfoOverlay->setExifInfo(std::move(info));
 }
 
 std::shared_ptr<FolderViewProxy> MW::getFolderView() {
@@ -936,7 +936,7 @@ std::shared_ptr<ThumbnailStripProxy> MW::getThumbnailPanel() {
 
 // todo: this is crap
 void MW::showMessageDirectory(QString dirName) {
-    floatingMessage->showMessage(dirName, FloatingMessageIcon::ICON_DIRECTORY, 1700);
+    floatingMessage->showMessage(std::move(dirName), FloatingMessageIcon::ICON_DIRECTORY, 1700);
 }
 
 void MW::showMessageDirectoryEnd() {
@@ -962,26 +962,27 @@ void MW::showMessageFitOriginal() {
 }
 
 void MW::showMessage(QString text) {
-    floatingMessage->showMessage(text,  FloatingMessageIcon::NO_ICON, 1500);
+    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::NO_ICON, 1500);
 }
 
 void MW::showMessage(QString text, int duration) {
-    floatingMessage->showMessage(text, FloatingMessageIcon::NO_ICON, duration);
+    floatingMessage->showMessage(std::move(text), FloatingMessageIcon::NO_ICON, duration);
 }
 
 void MW::showMessageSuccess(QString text) {
-    floatingMessage->showMessage(text,  FloatingMessageIcon::ICON_SUCCESS, 1500);
+    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_SUCCESS, 1500);
 }
 
 void MW::showWarning(QString text) {
-    floatingMessage->showMessage(text,  FloatingMessageIcon::ICON_WARNING, 1500);
+    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_WARNING, 1500);
 }
 
 void MW::showError(QString text) {
-    floatingMessage->showMessage(text,  FloatingMessageIcon::ICON_ERROR, 2800);
+    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_ERROR, 2800);
 }
 
 bool MW::showConfirmation(const QString& title, const QString& msg) {
+    // title: 对话框标题, msg: 确认消息内容
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(title);
     msgBox.setText(msg);

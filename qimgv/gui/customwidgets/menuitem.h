@@ -15,7 +15,7 @@ class MenuItem : public QWidget {
 public:
     MenuItem(QWidget *parent = nullptr);
     ~MenuItem();
-    void setText(QString mTextLabel);
+    void setText(const QString &text);
     QString text();
     void setShortcutText(QString mTextLabel);
     QString shortcut();

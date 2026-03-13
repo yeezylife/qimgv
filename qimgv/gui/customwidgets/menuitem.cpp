@@ -32,7 +32,7 @@ MenuItem::~MenuItem() {
     delete spacer;
 }
 
-void MenuItem::setText(QString text) {
+void MenuItem::setText(const QString &text) {
     mTextLabel.setText(text);
 }
 

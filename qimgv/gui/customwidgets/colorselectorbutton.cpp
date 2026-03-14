@@ -10,7 +10,7 @@ void ColorSelectorButton::setColor(QColor &newColor) {
 }
 
 void ColorSelectorButton::setDescription(QString text) {
-    mDescription = text;
+    mDescription = std::move(text);
 }
 
 QColor ColorSelectorButton::color() {

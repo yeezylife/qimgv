@@ -873,42 +873,34 @@ void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
     }
 }
 
-// todo: nuke and rewrite
+// 移除了缓存机制，直接更新 UI
 void MW::onInfoUpdated() {
     // 更新重命名对话框的名称
     if(renameOverlay)
         renameOverlay->setName(info.fileName);
 
-    // 计算新的窗口标题
-    QString newWindowTitle = calculateWindowTitle();
-    // 只有当标题发生变化时才更新
-    if (newWindowTitle != cachedWindowTitle) {
-        cachedWindowTitle = newWindowTitle;
-        setWindowTitle(newWindowTitle);
-    }
+    // 直接设置窗口标题
+    setWindowTitle(calculateWindowTitle());
 
-    // 计算新的信息栏内容
-    QString newInfoText, newSizeText;
-    calculateInfoBarContent(newInfoText, newSizeText);
+    // 计算信息栏内容
+    QString infoText, sizeText;
+    calculateInfoBarContent(infoText, sizeText);
     
     // 计算 posString（文件位置信息）
     QString posString;
     if(info.fileCount)
         posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
     
-    // 只有当内容发生变化时才更新
-    if (newInfoText != cachedInfoText || newSizeText != cachedSizeText) {
-        cachedInfoText = newInfoText;
-        cachedSizeText = newSizeText;
-        infoBarFullscreen->setInfo(posString, newInfoText, newSizeText);
-        infoBarWindowed->setInfo(posString, newInfoText, newSizeText);
-    }
+    // 直接更新信息栏
+    infoBarFullscreen->setInfo(posString, infoText, sizeText);
+    infoBarWindowed->setInfo(posString, infoText, sizeText);
 }
 
-// TODO!!! buffer this in mw
+// 实现 908 行 TODO：缓冲 EXIF 信息
 void MW::setExifInfo(QMap<QString, QString> info) {
+    m_exifInfo = info;                      // 缓冲到成员变量
     if(imageInfoOverlay)
-    imageInfoOverlay->setExifInfo(std::move(info));
+        imageInfoOverlay->setExifInfo(std::move(info));
 }
 
 std::shared_ptr<FolderViewProxy> MW::getFolderView() {

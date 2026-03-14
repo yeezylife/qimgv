@@ -9,6 +9,7 @@
 #include <QMimeData>
 #include <QImageWriter>
 #include <QWindow>
+#include <QMap>                     // 为 m_exifInfo 添加
 
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
@@ -105,10 +106,8 @@ private:
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
     std::shared_ptr<InfoBarProxy> infoBarWindowed;          // 默认 nullptr
     CurrentInfo info{};                                      // 默认构造（各字段已初始化）
+    QMap<QString, QString> m_exifInfo;                       // 缓冲 EXIF 信息（实现 908 行 TODO）
 
-    QString cachedWindowTitle;
-    QString cachedInfoText;
-    QString cachedSizeText;
     bool fullUiInitialized = false;                         // 延迟初始化标志
 
     void saveWindowGeometry();

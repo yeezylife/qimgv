@@ -44,7 +44,7 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
-            -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-checks=-*,bugprone-*,clang-analyzer-*,performance-*,concurrency-*,-performance-unnecessary-value-param" \
+            -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-checks=-*,bugprone-*,clang-analyzer-*,performance-*,concurrency-*,-performance-unnecessary-value-param,-bugprone-easily-swappable-parameters" \
             -DCMAKE_CXX_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \

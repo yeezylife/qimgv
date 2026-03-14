@@ -23,7 +23,7 @@ ImageInfoOverlay::~ImageInfoOverlay() {
         delete entries.takeAt(i);
 }
 
-void ImageInfoOverlay::setExifInfo(QMap<QString, QString> info) {
+void ImageInfoOverlay::setExifInfo(const QMap<QString, QString>& info) {
     // remove/add entries
     qsizetype entryCount = entries.count();
     if(entryCount > info.count()) {

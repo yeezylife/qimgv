@@ -16,7 +16,7 @@ SSideBar::SSideBar(QWidget *parent) : QWidget{parent} {
 }
 
 void SSideBar::addEntry(QString icon, QString name) {
-    SSideBarItem *entry = new SSideBarItem(icon, name);
+    SSideBarItem *entry = new SSideBarItem(std::move(icon), std::move(name));
     layout->insertWidget(static_cast<int>(entries.count()), entry); // 修复警告：显式转换 qsizetype -> int
     entries.append(entry);
     if(entries.count() == 1)
@@ -69,7 +69,8 @@ void SSideBar::paintEvent(QPaintEvent *event) {
 
 // -------------------------------------------------------------------
 
-SSideBarItem::SSideBarItem(QString icon, QString name, QWidget *parent) : QWidget{parent} {
+SSideBarItem::SSideBarItem(QString icon, QString name, QWidget *parent)
+    : QWidget(parent), m_icon(std::move(icon)), m_name(std::move(name))
     if(palette().base().color().valueF() <= 0.45)
         iconWidget.setColor(QColor(184,184,185));
     else

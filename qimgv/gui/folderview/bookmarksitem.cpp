@@ -1,6 +1,6 @@
 #include "bookmarksitem.h"
 
-BookmarksItem::BookmarksItem(QString _dirName, QString _dirPath, QWidget *parent)
+BookmarksItem::BookmarksItem(QString _dirName, QString _dirPath, QWidget *parent) // NOLINT(bugprone-easily-swappable-parameters)
     : QWidget(parent), dirName(_dirName), dirPath(_dirPath), mHighlighted(false)
 {
     this->setContentsMargins(0,0,0,0);

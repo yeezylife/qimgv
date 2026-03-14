@@ -1,36 +1,51 @@
 #include "mainwindow.h"
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QImageWriter>
-#include <QFileInfo>
-#include <QPainter>
+
+// TODO: nuke this and rewrite
 
 MW::MW(QWidget *parent)
-    : FloatingWidgetContainer(parent)
+    : FloatingWidgetContainer(parent)   // 现在只初始化基类
 {
     setAttribute(Qt::WA_TranslucentBackground, true);
     layout.setContentsMargins(0,0,0,0);
     layout.setSpacing(0);
+
     setMinimumSize(10,10);
+
+    // do not steal focus when clicked
+    // this is just a container. accept key events only
+    // via passthrough from child widgets
     setFocusPolicy(Qt::NoFocus);
+
     this->setLayout(&layout);
+
     setWindowTitle(QCoreApplication::applicationName() + " " +
                    QCoreApplication::applicationVersion());
+
     this->setMouseTracking(true);
     this->setAcceptDrops(true);
     this->setAccessibleName("mainwindow");
     windowGeometryChangeTimer.setSingleShot(true);
     windowGeometryChangeTimer.setInterval(30);
     setupUi();
+
     connect(settings, &Settings::settingsChanged, this, &MW::readSettings);
     connect(&windowGeometryChangeTimer, &QTimer::timeout, this, &MW::onWindowGeometryChanged);
     connect(this, &MW::fullscreenStateChanged, this, &MW::adaptToWindowState);
+
     readSettings();
     currentDisplay = settings->lastDisplay();
     maximized = settings->maximizedWindow();
     restoreWindowGeometry();
 }
 
+/*                                                             |--[ImageViewer]
+ *                        |--[DocumentWidget]--[ViewerWidget]--|
+ * [MW]--[CentralWidget]--|                                    |--[VideoPlayer]
+ *                        |--[FolderView]
+ *
+ *  (not counting floating widgets)
+ *  ViewerWidget exists for input handling reasons (correct overlay hover handling)
+ */
 void MW::setupUi() {
     viewerWidget.reset(new ViewerWidget(this));
     infoBarWindowed.reset(new InfoBarProxy(this));
@@ -41,6 +56,7 @@ void MW::setupUi() {
     connect(folderView.get(), &FolderViewProxy::copyUrlsRequested, this, &MW::copyUrlsRequested);
     connect(folderView.get(), &FolderViewProxy::moveUrlsRequested, this, &MW::moveUrlsRequested);
     connect(folderView.get(), &FolderViewProxy::showFoldersChanged, this, &MW::showFoldersChanged);
+
     centralWidget.reset(new CentralWidget(std::move(docWidget), std::move(folderView), this));
     layout.addWidget(centralWidget.get());
     controlsOverlay = new ControlsOverlay(docWidget.get());
@@ -48,7 +64,7 @@ void MW::setupUi() {
     sidePanel = new SidePanel(this);
     layout.addWidget(sidePanel);
     imageInfoOverlay = new ImageInfoOverlayProxy(viewerWidget.get());
-    floatingMessage = new FloatingMessageProxy(viewerWidget.get());
+    floatingMessage = new FloatingMessageProxy(viewerWidget.get()); // todo: use additional one for folderview?
     connect(viewerWidget.get(), &ViewerWidget::scalingRequested, this, &MW::scalingRequested);
     connect(viewerWidget.get(), &ViewerWidget::draggedOut, this, qOverload<>(&MW::draggedOut));
     connect(viewerWidget.get(), &ViewerWidget::playbackFinished, this, &MW::playbackFinished);
@@ -69,13 +85,13 @@ void MW::setupUi() {
     connect(this, &MW::frameStepBack,  viewerWidget.get(), &ViewerWidget::frameStepBack);
     connect(this, &MW::toggleMute,  viewerWidget.get(), &ViewerWidget::toggleMute);
     connect(this, &MW::volumeUp,  viewerWidget.get(), &ViewerWidget::volumeUp);
-    connect(this, &MW::volumeDown, viewerWidget.get(), &ViewerWidget::volumeDown);
+    connect(this, &MW::volumeDown,  viewerWidget.get(), &ViewerWidget::volumeDown);
     connect(this, &MW::toggleTransparencyGrid, viewerWidget.get(), &ViewerWidget::toggleTransparencyGrid);
     connect(this, &MW::setLoopPlayback,  viewerWidget.get(), &ViewerWidget::setLoopPlayback);
 }
 
 void MW::setupFullUi() {
-    if (fullUiInitialized) return;
+    if (fullUiInitialized) return; // 防止重复初始化
     fullUiInitialized = true;
     setupCropPanel();
     docWidget->allowPanelInit();
@@ -140,6 +156,7 @@ void MW::enableFolderView() {
 }
 
 void MW::enableDocumentView() {
+    // 触发延迟初始化
     setupFullUi();
     centralWidget->showDocumentView();
     onInfoUpdated();
@@ -181,6 +198,8 @@ void MW::fitWindowStretch() {
     }
 }
 
+// switch between 1:1 and Fit All
+// TODO: move to viewerWidget?
 void MW::switchFitMode() {
     if(viewerWidget->fitMode() == FIT_WINDOW)
         viewerWidget->setFitMode(FIT_ORIGINAL);
@@ -194,6 +213,8 @@ void MW::closeImage() {
     viewerWidget->closeImage();
 }
 
+// todo: fix flicker somehow
+// ideally it should change img & resize in one go
 void MW::preShowResize(QSize sz) {
     auto screens = qApp->screens();
     if(this->windowState() != Qt::WindowNoState || !screens.count() || screens.count() <= currentDisplay)
@@ -212,11 +233,12 @@ void MW::preShowResize(QSize sz) {
     QRect newGeom(0,0, sz.width(), sz.height());
     newGeom.moveCenter(availableGeom.center());
     newGeom.translate(0, decorationSize / 2);
+
     if(this->isVisible())
         setGeometry(newGeom);
-    else
+    else // setGeometry wont work on hidden windows, so we just save for it to be restored later
         settings->setWindowGeometry(newGeom);
-    qApp->processEvents();
+    qApp->processEvents(); // not needed anymore with patched qt?
 }
 
 void MW::showImage(std::unique_ptr<QPixmap> pixmap) {
@@ -235,7 +257,7 @@ void MW::showAnimation(const std::shared_ptr<QMovie>& movie) {
 
 void MW::showVideo(QString&& file) {
     if(settings->autoResizeWindow())
-        preShowResize(QSize());
+        preShowResize(QSize()); // tmp. find a way to get this though mpv BEFORE playback
     viewerWidget->showVideo(std::move(file));
 }
 
@@ -258,6 +280,7 @@ void MW::onSortingChanged(SortingMode mode) {
 }
 
 void MW::setDirectoryPath(const QString& path) {
+    //closeImage();
     info.directoryPath = path;
     info.directoryName = path.split("/").last();
     folderView->setDirectoryPath(path);
@@ -317,7 +340,8 @@ void MW::toggleScalingFilter() {
     ScalingFilter configuredFilter = settings->scalingFilter();
     if(viewerWidget->scalingFilter() == configuredFilter) {
         setFilterNearest();
-    } else {
+    }
+    else {
         setFilter(configuredFilter);
     }
 }
@@ -372,6 +396,7 @@ void MW::saveWindowGeometry() {
     settings->setMaximizedWindow(maximized);
 }
 
+// does not apply fullscreen; window size / maximized state only
 void MW::restoreWindowGeometry() {
     this->setGeometry(settings->windowGeometry());
     if(settings->maximizedWindow())
@@ -379,14 +404,9 @@ void MW::restoreWindowGeometry() {
     updateCurrentDisplay();
 }
 
-// 修复：Qt6 使用 QScreen API
 void MW::updateCurrentDisplay() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    currentDisplay = desktopWidget.screenNumber(this);
-#else
     auto screens = qApp->screens();
     currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
-#endif
 }
 
 void MW::onWindowGeometryChanged() {
@@ -394,14 +414,13 @@ void MW::onWindowGeometryChanged() {
     updateCurrentDisplay();
 }
 
-// 修复：Qt6 使用 QScreen API
 void MW::saveCurrentDisplay() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    settings->setLastDisplay(desktopWidget.screenNumber(this));
-#else
     settings->setLastDisplay(qApp->screens().indexOf(this->window()->screen()));
-#endif
 }
+
+//#############################################################
+//######################### EVENTS ############################
+//#############################################################
 
 void MW::mouseMoveEvent(QMouseEvent *event) {
     event->ignore();
@@ -437,16 +456,19 @@ void MW::mouseReleaseEvent(QMouseEvent *event) {
 
 void MW::mouseDoubleClickEvent(QMouseEvent *event) {
     event->accept();
+
+    // Qt6: 使用新的 QMouseEvent 构造函数
     QMouseEvent fakePressEvent(
         QEvent::MouseButtonPress,
-        event->position(),
-        event->scenePosition(),
-        event->globalPosition(),
+        event->position(),              // QPointF
+        event->scenePosition(),         // QPointF
+        event->globalPosition(),        // QPointF
         event->button(),
         event->buttons(),
         event->modifiers(),
         event->source()
     );
+
     actionManager->processEvent(&fakePressEvent);
     actionManager->processEvent(event);
 }
@@ -454,9 +476,6 @@ void MW::mouseDoubleClickEvent(QMouseEvent *event) {
 void MW::close() {
     saveWindowGeometry();
     saveCurrentDisplay();
-#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
-    this->hide();
-#endif
     if(copyOverlay)
         copyOverlay->saveSettings();
     QWidget::close();
@@ -503,15 +522,21 @@ void MW::showSaveDialog(const QString& filePath) {
 QString MW::getSaveFileName(const QString& filePath) {
     docWidget->hideFloatingPanel();
     QStringList filters;
+    // generate filter for writable images
+    // 使用现代 C++ 范围 for 循环和 QStringView 优化性能
     const auto writerFormats = QImageWriter::supportedImageFormats();
+    
+    // 使用 lambda 函数简化重复代码
     auto addFilter = [&](const QByteArray& format, const QString& description) {
         if(writerFormats.contains(format)) {
             filters.append(description);
         }
     };
+    
     addFilter("jpg",  "JPEG (*.jpg *.jpeg *jpe *jfif)");
     addFilter("png",  "PNG (*.png)");
     addFilter("webp", "WebP (*.webp)");
+    // may not work..
     addFilter("jp2",  "JPEG 2000 (*.jp2 *.j2k *.jpf *.jpx *.jpm *.jpgx)");
     addFilter("jxl",  "JPEG-XL (*.jxl)");
     addFilter("avif", "AVIF (*.avif *.avifs)");
@@ -525,17 +550,22 @@ QString MW::getSaveFileName(const QString& filePath) {
     addFilter("xpm",  "XPM (*.xpm)");
     addFilter("dds",  "DDS (*.dds)");
     addFilter("wbmp", "WBMP (*.wbmp)");
+    
+    // 使用现代 C++ 特性添加其他格式
     for (const auto& format : writerFormats) {
         if (filters.join(" ").contains(QString::fromUtf8(format))) {
-            continue;
+            continue; // 已经添加过
         }
         filters.append(QString::fromUtf8(format.toUpper()) + " (*." + QString::fromUtf8(format) + ")");
     }
+    // add everything else from imagewriter
     for(const auto& fmt : writerFormats) {
         if(filters.filter(fmt).isEmpty())
             filters.append(fmt.toUpper() + " (*." + fmt + ")");
     }
     QString filterString = filters.join(";; ");
+
+    // find matching filter for the current image
     QString selectedFilter = "JPEG (*.jpg *.jpeg *jpe *jfif)";
     QFileInfo fi(filePath);
     for(const auto& filter : filters) {
@@ -550,6 +580,7 @@ QString MW::getSaveFileName(const QString& filePath) {
 
 void MW::showOpenDialog(const QString& path) {
     docWidget->hideFloatingPanel();
+
     QFileDialog dialog(this);
     QStringList imageFilter;
     imageFilter.append(settings->supportedFormatsFilter());
@@ -569,13 +600,16 @@ void MW::showResizeDialog(QSize initialSize) {
 }
 
 DialogResult MW::fileReplaceDialog(QString src, QString dst, FileReplaceMode mode, bool multiple) {
+    // src: 源文件路径, dst: 目标文件路径
     FileReplaceDialog dialog(this);
     dialog.setModal(true);
     dialog.setSource(std::move(src));
     dialog.setDestination(std::move(dst));
     dialog.setMode(mode);
     dialog.setMulti(multiple);
+
     dialog.exec();
+
     return dialog.getResult();
 }
 
@@ -600,21 +634,20 @@ void MW::triggerFullScreen() {
     }
 }
 
-// 修复：Qt6 使用 QScreen API
 void MW::showFullScreen() {
+    //do not save immediately on application start
     if(!isHidden())
         saveWindowGeometry();
     auto screens = qApp->screens();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    int _currentDisplay = desktopWidget.screenNumber(this);
-#else
+    // 直接使用 Qt6 方式获取屏幕索引
     int _currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
-#endif
+    //move to target screen
     if(screens.count() > currentDisplay && currentDisplay != _currentDisplay) {
         this->move(screens.at(currentDisplay)->geometry().x(),
                    screens.at(currentDisplay)->geometry().y());
     }
     QWidget::showFullScreen();
+    // try to repaint sooner
     qApp->processEvents();
     emit fullscreenStateChanged(true);
 }
@@ -624,6 +657,7 @@ void MW::showWindowed() {
         QWidget::showNormal();
     restoreWindowGeometry();
     QWidget::show();
+    // try to repaint sooner
     qApp->processEvents();
     emit fullscreenStateChanged(false);
 }
@@ -671,14 +705,17 @@ void MW::triggerCropPanel() {
 void MW::showCropPanel() {
     if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
         return;
+
     if(activeSidePanel != SIDEPANEL_CROP) {
         docWidget->hideFloatingPanel();
         sidePanel->setWidget(cropPanel);
         sidePanel->show();
         cropOverlay->show();
         activeSidePanel = SIDEPANEL_CROP;
+        // reset & lock zoom so CropOverlay won't go crazy
         viewerWidget->fitWindow();
         setInteractionEnabled(false);
+        // feed the panel current image info
         updateCropPanelData();
     }
 }
@@ -702,6 +739,7 @@ void MW::triggerCopyOverlay() {
         return;
     if(!copyOverlay)
         setupCopyOverlay();
+
     if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
         return;
     if(copyOverlay->operationMode() == OVERLAY_COPY) {
@@ -717,6 +755,7 @@ void MW::triggerMoveOverlay() {
         return;
     if(!copyOverlay)
         setupCopyOverlay();
+
     if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
         return;
     if(copyOverlay->operationMode() == OVERLAY_MOVE) {
@@ -727,6 +766,7 @@ void MW::triggerMoveOverlay() {
     }
 }
 
+// quit fullscreen or exit the program
 void MW::closeFullScreenOrExit() {
     if(this->isFullScreen()) {
         this->showWindowed();
@@ -735,73 +775,22 @@ void MW::closeFullScreenOrExit() {
     }
 }
 
-// ============================================================
-// 修复 1: setCurrentInfo - 重命名参数避免相邻同类型 int 参数混淆
-// ============================================================
-void MW::setCurrentInfo(int fileIndex, int totalFileCount, const QString& filePath, 
-                       const QString& fileName, QSize imageSize, qint64 fileSize, 
-                       bool slideshow, bool shuffle, bool edited) {
-    info.index = fileIndex;
-    info.fileCount = totalFileCount;
-    info.fileName = fileName;
-    info.filePath = filePath;
-    info.imageSize = imageSize;
-    info.fileSize = fileSize;
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+void MW::setCurrentInfo(int _index, int _fileCount, const QString& _filePath, const QString& _fileName, QSize _imageSize, qint64 _fileSize, bool slideshow, bool shuffle, bool edited) {
+    // _index: 当前文件索引, _fileCount: 总文件数
+    info.index = _index;
+    info.fileCount = _fileCount;
+    info.fileName = _fileName;
+    info.filePath = _filePath;
+    info.imageSize = _imageSize;
+    info.fileSize = _fileSize;
     info.slideshow = slideshow;
     info.shuffle = shuffle;
     info.edited = edited;
     onInfoUpdated();
 }
 
-// ============================================================
-// 修复 2: calculateInfoBarContent - 重命名参数避免相邻同类型 QString& 参数混淆
-// ============================================================
-void MW::calculateInfoBarContent(QString& outputInfoText, QString& outputSizeText) {
-    QString posString;
-    if(info.fileCount)
-        posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
-    QString resString;
-    if(info.imageSize.width())
-        resString = QString::number(info.imageSize.width()) + " x " + QString::number(info.imageSize.height());
-    QString sizeString;
-    if(info.fileSize)
-        sizeString = this->locale().formattedDataSize(info.fileSize, 1);
-    
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW || info.fileName.isEmpty()) {
-        outputInfoText = tr("No file opened.");
-        outputSizeText = "";
-    } else {
-        outputInfoText = info.fileName + (info.edited ? "  *" : "");
-        outputSizeText = resString + "  " + sizeString;
-        QString states;
-        if(info.slideshow)
-            states.append(" [slideshow]");
-        if(info.shuffle)
-            states.append(" [shuffle]");
-        if(viewerWidget->lockZoomEnabled())
-            states.append(" [zoom lock]");
-        if(viewerWidget->lockViewEnabled())
-            states.append(" [view lock]");
-        if(!settings->infoBarWindowed() && !states.isEmpty())
-            outputSizeText.append(" " + states);
-    }
-}
-
-// ============================================================
-// 修复 3: showConfirmation - 重命名参数避免相邻同类型 QString 参数混淆
-// ============================================================
-bool MW::showConfirmation(const QString& dialogTitle, const QString& messageText) {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle(dialogTitle);
-    msgBox.setText(messageText);
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setStandardButtons(QMessageBox::Yes);
-    msgBox.addButton(QMessageBox::No);
-    msgBox.setDefaultButton(QMessageBox::Yes);
-    msgBox.setModal(true);
-    return (msgBox.exec() == QMessageBox::Yes);
-}
-
+// 计算窗口标题
 QString MW::calculateWindowTitle() {
     QString posString;
     if(info.fileCount)
@@ -812,6 +801,7 @@ QString MW::calculateWindowTitle() {
     QString sizeString;
     if(info.fileSize)
         sizeString = this->locale().formattedDataSize(info.fileSize, 1);
+
     QString windowTitle;
     if(centralWidget->currentViewMode() == MODE_FOLDERVIEW) {
         windowTitle = tr("Folder view");
@@ -826,6 +816,8 @@ QString MW::calculateWindowTitle() {
             if(!sizeString.isEmpty())
                 windowTitle.append("  -  " + sizeString);
         }
+
+        // toggleable states
         QString states;
         if(info.slideshow)
             states.append(" [slideshow]");
@@ -835,27 +827,76 @@ QString MW::calculateWindowTitle() {
             states.append(" [zoom lock]");
         if(viewerWidget->lockViewEnabled())
             states.append(" [view lock]");
+
         if(!settings->infoBarWindowed() && !states.isEmpty())
             windowTitle.append(" -" + states);
         if(info.edited)
             windowTitle.prepend("* ");
     }
+
     return windowTitle;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
+    // infoText: 信息文本输出, sizeText: 大小文本输出
+    QString posString;
+    if(info.fileCount)
+        posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
+    QString resString;
+    if(info.imageSize.width())
+        resString = QString::number(info.imageSize.width()) + " x " + QString::number(info.imageSize.height());
+    QString sizeString;
+    if(info.fileSize)
+        sizeString = this->locale().formattedDataSize(info.fileSize, 1);
+
+    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW || info.fileName.isEmpty()) {
+        infoText = tr("No file opened.");
+        sizeText = "";
+    } else {
+        infoText = info.fileName + (info.edited ? "  *" : "");
+        sizeText = resString + "  " + sizeString;
+
+        // toggleable states
+        QString states;
+        if(info.slideshow)
+            states.append(" [slideshow]");
+        if(info.shuffle)
+            states.append(" [shuffle]");
+        if(viewerWidget->lockZoomEnabled())
+            states.append(" [zoom lock]");
+        if(viewerWidget->lockViewEnabled())
+            states.append(" [view lock]");
+
+        if(!settings->infoBarWindowed() && !states.isEmpty())
+            sizeText.append(" " + states);
+    }
+}
+
+// todo: nuke and rewrite
 void MW::onInfoUpdated() {
+    // 更新重命名对话框的名称
     if(renameOverlay)
         renameOverlay->setName(info.fileName);
+
+    // 计算新的窗口标题
     QString newWindowTitle = calculateWindowTitle();
+    // 只有当标题发生变化时才更新
     if (newWindowTitle != cachedWindowTitle) {
         cachedWindowTitle = newWindowTitle;
         setWindowTitle(newWindowTitle);
     }
+
+    // 计算新的信息栏内容
     QString newInfoText, newSizeText;
     calculateInfoBarContent(newInfoText, newSizeText);
+    
+    // 计算 posString（文件位置信息）
     QString posString;
     if(info.fileCount)
         posString = "[ " + QString::number(info.index + 1) + "/" + QString::number(info.fileCount) + " ]";
+    
+    // 只有当内容发生变化时才更新
     if (newInfoText != cachedInfoText || newSizeText != cachedSizeText) {
         cachedInfoText = newInfoText;
         cachedSizeText = newSizeText;
@@ -864,9 +905,10 @@ void MW::onInfoUpdated() {
     }
 }
 
+// TODO!!! buffer this in mw
 void MW::setExifInfo(QMap<QString, QString> info) {
     if(imageInfoOverlay)
-        imageInfoOverlay->setExifInfo(std::move(info));
+    imageInfoOverlay->setExifInfo(std::move(info));
 }
 
 std::shared_ptr<FolderViewProxy> MW::getFolderView() {
@@ -877,14 +919,19 @@ std::shared_ptr<ThumbnailStripProxy> MW::getThumbnailPanel() {
     return docWidget->thumbPanel();
 }
 
+// todo: this is crap
 void MW::showMessageDirectory(QString dirName) {
     floatingMessage->showMessage(std::move(dirName), FloatingMessageIcon::ICON_DIRECTORY, 1700);
 }
 
 void MW::showMessageDirectoryEnd() {
+    // TODO replace with something nicer (integrate with click overlay?)
+    //floatingMessage->showMessage("", FloatingWidgetPosition::RIGHT, FloatingMessageIcon::ICON_RIGHT_EDGE, 400);
 }
 
 void MW::showMessageDirectoryStart() {
+    // TODO replace with something nicer (integrate with click overlay?)
+    //floatingMessage->showMessage("", FloatingWidgetPosition::LEFT, FloatingMessageIcon::ICON_LEFT_EDGE, 400);
 }
 
 void MW::showMessageFitWindow() {
@@ -919,12 +966,30 @@ void MW::showError(QString text) {
     floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_ERROR, 2800);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+bool MW::showConfirmation(const QString& title, const QString& msg) {
+    // title: 对话框标题, msg: 确认消息内容
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(title);
+    msgBox.setText(msg);
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setStandardButtons(QMessageBox::Yes);
+    msgBox.addButton(QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::Yes);
+    msgBox.setModal(true);
+    if(msgBox.exec() == QMessageBox::Yes)
+        return true;
+    else
+        return false;
+}
+
 void MW::readSettings() {
     showInfoBarFullscreen = settings->infoBarFullscreen();
     showInfoBarWindowed = settings->infoBarWindowed();
     adaptToWindowState();
 }
 
+// todo: remove/rename?
 void MW::applyWindowedBackground() {
 #ifdef USE_KDE_BLUR
     QWindow* window = this->windowHandle();
@@ -945,27 +1010,32 @@ void MW::applyFullscreenBackground() {
 #endif
 }
 
+// changes ui elements according to fullscreen state
 void MW::adaptToWindowState() {
     docWidget->hideFloatingPanel();
-    if(isFullScreen()) {
+    if(isFullScreen()) { //-------------------------------------- fullscreen ---
         applyFullscreenBackground();
         infoBarWindowed->hide();
+
         if(showInfoBarFullscreen)
             infoBarFullscreen->showWhenReady();
         else
-            infoBarFullscreen->hide();
+            infoBarFullscreen->hide();    
+
         auto pos = settings->panelPosition();
         if(!settings->panelEnabled() || pos == PANEL_BOTTOM || pos == PANEL_LEFT)
             controlsOverlay->show();
         else
             controlsOverlay->hide();
-    } else {
+    } else { //------------------------------------------------------ window ---
         applyWindowedBackground();
         infoBarFullscreen->hide();
+
         if(showInfoBarWindowed)
             infoBarWindowed->show();
         else
             infoBarWindowed->hide();
+
         controlsOverlay->hide();
     }
     folderView->onFullscreenModeChanged(isFullScreen());
@@ -983,3 +1053,8 @@ void MW::leaveEvent(QEvent *event) {
     QWidget::leaveEvent(event);
     docWidget->hideFloatingPanel(true);
 }
+
+// block native tab-switching so we can use it in shortcuts
+//bool MW::focusNextPrevChild(bool) {
+//    return false;
+//}

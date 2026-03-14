@@ -69,7 +69,10 @@ void CopyOverlay::removePathWidgets() {
 
 void CopyOverlay::createPathWidgets() {
     removePathWidgets();
-    int count = (paths.length() > maxPathCount) ? maxPathCount : paths.length();
+
+    // 修复 narrowing conversion
+    int count = std::min<int>(paths.length(), maxPathCount);
+
     for(int i = 0; i < count; i++) {
         PathSelectorMenuItem *item = new PathSelectorMenuItem(this);
         item->setDirectory(paths.at(i));

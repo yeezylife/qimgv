@@ -114,13 +114,25 @@ void ClickZoneOverlay::paintEvent(QPaintEvent *event) {
 void ClickZoneOverlay::drawPixmap(QPainter &p, const QPixmap& pixmap, const QRect& rect) {
     p.setOpacity(isPressed ? 0.37f : 0.5f);
     p.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    const qreal halfW = static_cast<qreal>(rect.width()) * 0.5;
+    const qreal halfH = static_cast<qreal>(rect.height()) * 0.5;
+
     QPointF pos;
+
     if (hiResPixmaps) {
-        pos = QPointF(rect.left() + rect.width()  / 2 - pixmap.width()  / (2 * pixmapDrawScale),
-                      rect.top()  + rect.height() / 2 - pixmap.height() / (2 * pixmapDrawScale));
+        const qreal pixHalfW = static_cast<qreal>(pixmap.width())  / (2.0 * pixmapDrawScale);
+        const qreal pixHalfH = static_cast<qreal>(pixmap.height()) / (2.0 * pixmapDrawScale);
+
+        pos = QPointF(rect.left() + halfW - pixHalfW,
+                      rect.top()  + halfH - pixHalfH);
     } else {
-        pos = QPointF(rect.left() + rect.width()  / 2 - pixmap.width()  / 2,
-                      rect.top()  + rect.height() / 2 - pixmap.height() / 2);
+        const qreal pixHalfW = static_cast<qreal>(pixmap.width())  * 0.5;
+        const qreal pixHalfH = static_cast<qreal>(pixmap.height()) * 0.5;
+
+        pos = QPointF(rect.left() + halfW - pixHalfW,
+                      rect.top()  + halfH - pixHalfH);
     }
+
     p.drawPixmap(pos, pixmap);
 }

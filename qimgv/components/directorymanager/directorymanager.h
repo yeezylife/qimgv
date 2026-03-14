@@ -80,13 +80,13 @@ public:
     void updateFileEntry(const QString &filePath);
 
 
-    void renameFileEntry(FilePath oldFilePath, FileName newFileName);
+    void renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName);
 
     bool insertDirEntry(const QString &dirPath);
     //bool forceInsertDirEntry(const QString &dirPath);
     void removeDirEntry(const QString &dirPath);
     //void updateDirEntry(const QString &dirPath);
-    void renameDirEntry(DirPath oldDirPath, DirName newDirName);
+    void renameDirEntry(const DirPath& oldDirPath, const DirName& newDirName);
 
     FileListSource source() const;
 

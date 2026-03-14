@@ -476,7 +476,7 @@ void DirectoryManager::updateFileEntry(const QString &filePath) {
     emit fileModified(filePath);
 }
 
-void DirectoryManager::renameFileEntry(FilePath oldFilePath, FileName newFileName) {
+void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName) {
     // 显式使用 .value
     QFileInfo fi(oldFilePath.value);
     QString newFilePath = fi.absolutePath() + "/" + newFileName.value;
@@ -537,7 +537,7 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
     emit dirRemoved(dirPath, index);
 }
 
-void DirectoryManager::renameDirEntry(DirPath oldDirPath, DirName newDirName) {
+void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& newDirName) {
     if(!containsDir(oldDirPath.value))
         return;
     QFileInfo fi(oldDirPath.value);

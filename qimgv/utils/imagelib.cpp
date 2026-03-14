@@ -24,7 +24,7 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
     return src.transformed(transform, Qt::SmoothTransformation);
 }
 
-QImage ImageLib::rotated(QImage src, int grad) {
+QImage ImageLib::rotated(const QImage &src, int grad) {
     if (src.isNull()) return QImage();
     // 这里 rotatedRaw 接 const QImage&，不涉及 && 优化
     return rotatedRaw(src, grad);
@@ -37,7 +37,7 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
     return QImage();
 }
 
-QImage ImageLib::cropped(QImage src, QRect newRect) {
+QImage ImageLib::cropped(const QImage &src, QRect newRect) {
     if (src.isNull()) return QImage();
     return croppedRaw(src, newRect);
 }
@@ -206,7 +206,7 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     return result;
 }
 
-QImage ImageLib::scaled_Qt(QImage source, QSize destSize, bool smooth) {
+QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
     if (source.isNull()) return QImage();
     
     // Qt 6.10优化：根据缩放方向选择最优方法

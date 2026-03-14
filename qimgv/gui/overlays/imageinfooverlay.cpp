@@ -19,26 +19,26 @@ ImageInfoOverlay::ImageInfoOverlay(FloatingWidgetContainer *parent) :
 
 ImageInfoOverlay::~ImageInfoOverlay() {
     delete ui;
-    for(auto i = entries.count() - 1; i >= 0; i--)
+    for(qsizetype i = entries.count() - 1; i >= 0; i--)
         delete entries.takeAt(i);
 }
 
 void ImageInfoOverlay::setExifInfo(QMap<QString, QString> info) {
     // remove/add entries
-    int entryCount = entries.count();
+    qsizetype entryCount = entries.count();
     if(entryCount > info.count()) {
-        for(auto i = entryCount - 1; i >= info.count(); i--) {
+        for(qsizetype i = entryCount - 1; i >= info.count(); i--) {
             ui->entryLayout->removeWidget(entries.last());
             delete entries.takeLast();
         }
     } else if(entryCount < info.count()) {
-        for(auto i = entryCount; i < info.count(); i++) {
+        for(qsizetype i = entryCount; i < info.count(); i++) {
             entries.append(new EntryInfoItem(this));
             ui->entryLayout->addWidget(entries.last());
         }
     }
     QMap<QString, QString>::const_iterator i = info.constBegin();
-    int entryIdx = 0;
+    qsizetype entryIdx = 0;
     while(i != info.constEnd()) {
         entries.at(entryIdx)->setInfo(i.key(), i.value());
         ++i;

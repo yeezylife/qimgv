@@ -2,10 +2,7 @@
 
 /* This class manages QGraphicsScene, ThumbnailWidget list,
  * scrolling, requesting and setting thumbnails.
- * It doesn't do actual positioning of thumbnails within the scene.
- * (But maybe it should?)
- *
- * Usage: subclass, implement layout-related stuff
+ * In this version, image loading and thumbnail generation are disabled.
  */
 
 #include <QGraphicsView>
@@ -17,6 +14,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QScreen>
+#include <functional>
 
 #include "gui/customwidgets/thumbnailwidget.h"
 #include "gui/idirectoryview.h"
@@ -37,9 +35,9 @@ class ThumbnailView : public QGraphicsView, public IDirectoryView {
     Q_INTERFACES(IDirectoryView)
 public:
     ThumbnailView(Qt::Orientation orient, QWidget *parent = nullptr);
-    virtual void setDirectoryPath(QString path) override;
-    void select(QList<int>) override;
-    void select(int) override;
+    void setDirectoryPath(QString path) override;
+    void select(QList<int> indices) override;
+    void select(int index) override;
     QList<int> selection() override;
     int itemCount();
 
@@ -67,24 +65,25 @@ public slots:
     virtual void setDragHover(int index) override;
 
 signals:
-    void itemActivated(int) override;
-    void thumbnailsRequested(QList<int>, int, bool, bool) override;
+    void itemActivated(int index) override;
+    void thumbnailsRequested(QList<int> indices, int size, bool crop, bool force) override;
     void draggedOut() override;
-    void draggedToBookmarks(QList<int>) override;
-    void draggedOver(int) override;
-    void droppedInto(const QMimeData*, QObject*, int) override;
+    void draggedToBookmarks(QList<int> indices) override;
+    void draggedOver(int index) override;
+    void droppedInto(const QMimeData* data, QObject* source, int index) override;
 
 private:
     QTimer loadTimer;
     bool blockThumbnailLoading = false;
 
-    int mDrawScrollbarIndicator = true, lastScrollFrameTime = 0;
+    bool mDrawScrollbarIndicator = true;
+    int lastScrollFrameTime = 0;
     QList<int> mSelection;
 
-    bool mCropThumbnails = false, mouseReleaseSelect = false;
+    bool mCropThumbnails = false;
+    bool mouseReleaseSelect = false;
     ThumbnailSelectMode selectMode = ACTIVATE_BY_PRESS;
     QPoint dragStartPos;
-    ThumbnailWidget* dragTarget;
 
     void createScrollTimeLine();
     QElapsedTimer scrollFrameTimer;
@@ -95,14 +94,14 @@ private:
 protected:
     QGraphicsScene scene;
     QList<ThumbnailWidget*> thumbnails;
-    QScrollBar *scrollBar;
+    QScrollBar *scrollBar = nullptr;
     QTimeLine *scrollTimeLine = nullptr;
     QPointF viewportCenter;
     int mThumbnailSize = 120;
-    int offscreenPreloadArea = 3000;
+    int offscreenPreloadArea = 0; // Disabled
 
     QList<int> rangeSelectionSnapshot;
-    bool rangeSelection = false; // true if shift is pressed
+    bool rangeSelection = false; 
     bool wayland = false;
 
     QRect indicator;
@@ -133,12 +132,12 @@ protected:
     void setOrientation(Qt::Orientation _orientation);
     Qt::Orientation orientation();
 
-    void setCropThumbnails(bool);
+    void setCropThumbnails(bool mode);
     void setDrawScrollbarIndicator(bool mode);
 
     void addSelectionRange(int indexTo);
 
-    void wheelEvent(QWheelEvent *) override;
+    void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
 
     bool eventFilter(QObject *o, QEvent *ev) override;
@@ -147,8 +146,8 @@ protected:
     void scrollPrecise(int delta);
     void scrollByItem(int delta);
     void scrollSmooth(int delta);
-    void scrollSmooth(int angleDelta, qreal multiplier, qreal acceleration);
-    void scrollSmooth(int angleDelta, qreal multiplier, qreal acceleration, bool additive);
+    void scrollSmooth(int delta, qreal multiplier, qreal acceleration);
+    void scrollSmooth(int delta, qreal multiplier, qreal acceleration, bool additive);
     void unloadAllThumbnails();
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;

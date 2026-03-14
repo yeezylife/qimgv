@@ -28,8 +28,11 @@ enum FileOpResult {
 
 class FileOperations {
 public:
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void copyFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result);
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void moveFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result);
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void rename(const QString &srcFilePath, const QString &newName, bool force, FileOpResult &result);
     static void removeFile(const QString &filePath, FileOpResult &result);
     static void removeDir(const QString &dirPath, bool recursive, FileOpResult &result);

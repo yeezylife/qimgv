@@ -97,6 +97,7 @@ QString FileOperations::decodeResult(const FileOpResult &result) {
     return nullptr;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void FileOperations::copyFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result) {
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
@@ -161,6 +162,7 @@ void FileOperations::copyFileTo(const QString &srcFilePath, const QString &destD
     }
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result) {
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
@@ -236,6 +238,7 @@ void FileOperations::moveFileTo(const QString &srcFilePath, const QString &destD
         QFile::rename(tmpPath, destFile.absoluteFilePath());
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void FileOperations::rename(const QString &srcFilePath, const QString &newName, bool force, FileOpResult &result) {
     QFileInfo srcFile(srcFilePath);
     QString tmpPath;
@@ -372,7 +375,7 @@ bool FileOperations::moveToTrashImpl(const QString &filePath) {
     out << info;
     infoFile.close();
     #else
-    Q_UNUSED( file );
+    Q_UNUSED( filePath );
     qDebug() << "Trash in server-mode not supported";
     #endif
     return true;
@@ -404,6 +407,7 @@ bool FileOperations::moveToTrashImpl(const QString &file) {
 
 #ifdef Q_OS_MAC
 bool FileOperations::moveToTrashImpl(const QString &file) { // todo
+    Q_UNUSED(file);
     return false;
 }
 #endif

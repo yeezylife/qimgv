@@ -34,7 +34,7 @@ jobs:
             mingw-w64-clang-x86_64-libavif
             mingw-w64-clang-x86_64-libheif
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build qimgv (Debug Strict Mode)
         run: |

@@ -35,10 +35,10 @@ void StyledComboBox::paintEvent(QPaintEvent *e) {
 
     if (hiResPixmap) {
         pos = QPointF(width() - 8 - downArrow.width() / pixmapDrawScale,
-                      height() / 2 - downArrow.height() / (2 * pixmapDrawScale));
+                      height() / 2.0 - downArrow.height() / (2.0 * pixmapDrawScale));
     } else {
         pos = QPointF(width() - downArrow.width() - 8,
-                      (height() - downArrow.height()) / 2);
+                      (height() - downArrow.height()) / 2.0);
     }
     p.drawPixmap(pos, downArrow);
 }

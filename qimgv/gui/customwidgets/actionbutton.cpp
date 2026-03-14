@@ -14,7 +14,7 @@ ActionButton::ActionButton(QWidget *parent)
 }
 
 // 接收 QString 值副本。如果是左值则增加一次引用计数，如果是右值则直接移动。
-ActionButton::ActionButton(QString _actionName, QString _iconPath, QWidget *parent)
+ActionButton::ActionButton(QString _actionName, const QString &_iconPath, QWidget *parent)
     : ActionButton(parent)
 {
     // 使用 std::move 将局部变量的所有权转交给成员/底层函数
@@ -22,8 +22,8 @@ ActionButton::ActionButton(QString _actionName, QString _iconPath, QWidget *pare
     setIconPath(_iconPath);
 }
 
-ActionButton::ActionButton(QString _actionName, QString _iconPath, int _size, QWidget *parent)
-    : ActionButton(std::move(_actionName), std::move(_iconPath), parent)
+ActionButton::ActionButton(QString _actionName, const QString &_iconPath, int _size, QWidget *parent)
+    : ActionButton(std::move(_actionName), _iconPath, parent) // 注意：这里不再需要 std::move，因为 _iconPath 是引用
 {
     if(_size > 0)
         setFixedSize(_size, _size);

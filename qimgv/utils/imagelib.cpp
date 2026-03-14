@@ -170,17 +170,20 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     QImage result;
     switch (filter) {
         case QI_FILTER_NEAREST: {
-            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, false);
+            // 移除 std::move，直接传递 scaleTarget
+            QImage tmp = scaled_Qt(scaleTarget, destSize, false);
             if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
         case QI_FILTER_BILINEAR: {
-            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, true);
+            // 移除 std::move
+            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
             if (!tmp.isNull()) result = std::move(tmp);
             break;
         }
 #ifdef USE_OPENCV
         case QI_FILTER_CV_BILINEAR_SHARPEN: {
+            // scaled_CV 仍按值传递，保留 std::move 以利用移动语义
             QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
             if (!tmp.isNull()) result = std::move(tmp);
             break;
@@ -197,7 +200,8 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
         }
 #endif
         default: {
-            QImage tmp = scaled_Qt(std::move(scaleTarget), destSize, true);
+            // 移除 std::move
+            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
             if (!tmp.isNull()) result = std::move(tmp);
             break;
         }

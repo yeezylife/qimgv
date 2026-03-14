@@ -1,10 +1,9 @@
 #pragma once
-
 #include "gui/customwidgets/floatingwidget.h"
-#include <QDebug>
+#include <QWidget>
 #include <QPainter>
-#include <QPaintEvent>
-#include <QColor>
+#include <QMouseEvent>
+#include <QKeyEvent>
 
 enum CursorAction {
     NO_DRAG,          // 0
@@ -42,11 +41,11 @@ signals:
 protected:
     virtual void paintEvent(QPaintEvent *event);
     virtual void mousePressEvent(QMouseEvent *event);
-    virtual void mouseMoveEvent(QMouseEvent* event);
-    virtual void mouseReleaseEvent(QMouseEvent* event);
-
+    virtual void mouseMoveEvent(QMouseEvent *event);
+    virtual void mouseReleaseEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void resizeEvent(QResizeEvent *event);
+
 private:
     QPoint startPos, endPos, moveStartPos, resizeAnchor;
     QRect imageRect, imageDrawRect, imageDrawRectDpi, selectionRect, selectionDrawRect, selectionDrawRectDpi, handles[8];
@@ -59,7 +58,7 @@ private:
     QPen selectionOutlinePen;
     qreal dpr;
     QPointF ar;
-
+    
     QPoint setInsidePoint(QPoint, QRect);
     QRect placeInside(QRect what, QRect where);
     void drawSelection(QPainter*);
@@ -76,6 +75,7 @@ private:
     void setCursorAction(CursorAction action);
     void setResizeAnchor(CursorAction action);
     bool hasSelection();
+
 public slots:
     void hide();
     void onSelectionOutsideChange(QRect selection);

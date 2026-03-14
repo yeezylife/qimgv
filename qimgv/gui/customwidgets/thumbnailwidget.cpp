@@ -90,7 +90,7 @@ QSizeF ThumbnailWidget::effectiveSizeHint(Qt::SizeHint which, const QSizeF &cons
     return sizeHint(which, constraint);
 }
 
-void ThumbnailWidget::setThumbnail(std::shared_ptr<Thumbnail> _thumbnail) {
+void ThumbnailWidget::setThumbnail(const std::shared_ptr<Thumbnail> &_thumbnail) {
     if(_thumbnail) {
         thumbnail = _thumbnail;
         isLoaded = true;
@@ -245,8 +245,7 @@ void ThumbnailWidget::drawLabel(QPainter *painter) {
     }
 }
 
-void ThumbnailWidget::drawSingleLineText(QPainter *painter, QRect rect, QString text, const QColor &color) {
-    QFontMetrics fm(font);
+void ThumbnailWidget::drawSingleLineText(QPainter *painter, QRect rect, const QString &text, const QColor &color) {    QFontMetrics fm(font);
     bool fits = !(fm.horizontalAdvance(text) > rect.width());
     // filename
     int flags;

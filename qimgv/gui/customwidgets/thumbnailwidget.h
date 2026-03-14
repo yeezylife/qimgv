@@ -29,7 +29,7 @@ public:
     int type() const override { return Type; }
 
     bool isLoaded = false;
-    void setThumbnail(std::shared_ptr<Thumbnail> _thumbnail);
+    void setThumbnail(const std::shared_ptr<Thumbnail> &_thumbnail);
 
     void setHighlighted(bool mode);
     bool isHighlighted();
@@ -63,7 +63,7 @@ protected:
     void drawHoverHighlight(QPainter *painter);
     void drawLabel(QPainter *painter);
     void drawDropHover(QPainter *painter);
-    void drawSingleLineText(QPainter *painter, QRect rect, QString text, const QColor &color);
+    void drawSingleLineText(QPainter *painter, QRect rect, const QString &text, const QColor &color);
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget) override;

@@ -78,17 +78,17 @@ QSize ResizeDialog::newSize() {
 
 void ResizeDialog::widthChanged(int newWidth) {
     // 始终按原始比例计算高度
-    float factor = static_cast<float>(newWidth) / originalSize.width();
+    float factor = static_cast<float>(newWidth) / static_cast<float>(originalSize.width());
     targetSize.setWidth(newWidth);
-    targetSize.setHeight(static_cast<int>(originalSize.height() * factor));
+    targetSize.setHeight(static_cast<int>(static_cast<float>(originalSize.height()) * factor));
     updateToTargetValues();
 }
 
 void ResizeDialog::heightChanged(int newHeight) {
     // 始终按原始比例计算宽度
-    float factor = static_cast<float>(newHeight) / originalSize.height();
+    float factor = static_cast<float>(newHeight) / static_cast<float>(originalSize.height());
     targetSize.setHeight(newHeight);
-    targetSize.setWidth(static_cast<int>(originalSize.width() * factor));
+    targetSize.setWidth(static_cast<int>(static_cast<float>(originalSize.width()) * factor));
     updateToTargetValues();
 }
 
@@ -154,8 +154,8 @@ void ResizeDialog::resetResCheckBox() {
 
 void ResizeDialog::percentChanged(double newPercent) {
     double scale = newPercent / 100.;
-    targetSize.setWidth(originalSize.width() * scale);
-    targetSize.setHeight(originalSize.height() * scale);
+    targetSize.setWidth(static_cast<int>(static_cast<double>(originalSize.width()) * scale));
+    targetSize.setHeight(static_cast<int>(static_cast<double>(originalSize.height()) * scale));
     updateToTargetValues();
 }
 

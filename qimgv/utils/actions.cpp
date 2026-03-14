@@ -58,7 +58,6 @@ void Actions::init() {
         {"exit", QVersionNumber(0,6,2)},
         {"flipH", QVersionNumber(0,6,3)},
         {"flipV", QVersionNumber(0,6,3)},
-        {"folderView", QVersionNumber(0,6,85)},
         {"pauseVideo", QVersionNumber(0,6,85)},
         {"frameStep", QVersionNumber(0,6,85)},
         {"frameStepBack", QVersionNumber(0,6,85)},

@@ -499,9 +499,6 @@
           <widget class="ContextMenuItem" name="open" native="true"/>
          </item>
          <item>
-          <widget class="ContextMenuItem" name="folderView" native="true"/>
-         </item>
-         <item>
           <widget class="ContextMenuItem" name="settings" native="true"/>
          </item>
          <item>

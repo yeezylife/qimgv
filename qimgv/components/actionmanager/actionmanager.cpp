@@ -68,8 +68,6 @@ void ActionManager::initDefaults() {
     defaults.insert(InputMap::keyNameCtrl() + "+Left", "seekVideoBackward");
     defaults.insert(",", "frameStepBack");
     defaults.insert(".", "frameStep");
-    defaults.insert("Enter", "folderView");
-    defaults.insert("Backspace", "folderView");
     defaults.insert("F5", "reloadImage");
     defaults.insert(InputMap::keyNameCtrl() + "+C", "copyFileClipboard");
     defaults.insert(InputMap::keyNameCtrl() + "+" + InputMap::keyNameShift() + "+C", "copyPathClipboard");

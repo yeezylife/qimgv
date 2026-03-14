@@ -123,11 +123,6 @@ void ContextMenu::initActions()
     ui->open->setIconPath(":/res/icons/common/menuitem/open16.png");
     ui->open->setShortcutText("");
 
-    ui->folderView->setAction("folderView");
-    ui->folderView->setText(tr("Folder View"));
-    ui->folderView->setIconPath(":/res/icons/common/menuitem/folderview16.png");
-    ui->folderView->setShortcutText("");
-
     ui->settings->setAction("openSettings");
     ui->settings->setText(tr("Settings"));
     ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");

@@ -8,7 +8,7 @@ public:
     MapOverlayPrivate(MapOverlay *qq);
     ~MapOverlayPrivate();
     void moveInnerWidget(float x, float y);
-    void moveMainImage(float xDist, float yDist);
+    void moveMainImage(float xPos, float yPos);
 
     QPen outlinePen;
     float xSpeedDiff, ySpeedDiff;
@@ -34,14 +34,14 @@ MapOverlay::MapOverlayPrivate::MapOverlayPrivate(MapOverlay *qq)
 MapOverlay::MapOverlayPrivate::~MapOverlayPrivate() = default;
 
 void MapOverlay::MapOverlayPrivate::moveInnerWidget(float x, float y) {
-    if(x + innerRect.width() > outerRect.right())
-        x = outerRect.right() - innerRect.width();
+    if(x + static_cast<float>(innerRect.width()) > static_cast<float>(outerRect.right()))
+        x = static_cast<float>(outerRect.right() - innerRect.width());
 
     if(x < 0)
         x = 0;
 
-    if(y + innerRect.height() > outerRect.bottom())
-        y = outerRect.bottom() - innerRect.height();
+    if(y + static_cast<float>(innerRect.height()) > static_cast<float>(outerRect.bottom()))
+        y = static_cast<float>(outerRect.bottom() - innerRect.height());
 
     if(y < 0)
         y = 0;
@@ -51,8 +51,8 @@ void MapOverlay::MapOverlayPrivate::moveInnerWidget(float x, float y) {
 }
 
 void MapOverlay::MapOverlayPrivate::moveMainImage(float xPos, float yPos) {
-    float x = xPos - (innerRect.width() / 2);
-    float y = yPos - (innerRect.height() / 2);
+    float x = static_cast<float>(xPos - (innerRect.width() / 2.0));
+    float y = static_cast<float>(yPos - (innerRect.height() / 2.0));
 
     moveInnerWidget(x, y);
 
@@ -60,8 +60,8 @@ void MapOverlay::MapOverlayPrivate::moveMainImage(float xPos, float yPos) {
     y /= -ySpeedDiff;
 
     // Check limits;
-    float invisibleX = windowRect.width() - drawingRect.width();
-    float invisibleY = windowRect.height() - drawingRect.height();
+    float invisibleX = static_cast<float>(windowRect.width() - drawingRect.width());
+    float invisibleY = static_cast<float>(windowRect.height() - drawingRect.height());
 
     if(x < invisibleX) x = invisibleX;
     if(x > 0) x = 0;
@@ -113,7 +113,7 @@ void MapOverlay::setOpacity(float opacity) {
 void MapOverlay::animateVisible(bool isVisible) {
     if(isVisible) this->setOpacity(1.0f);
     else {
-        d->opacityAnimation->setEndValue(1.0f * isVisible);
+        d->opacityAnimation->setEndValue(isVisible ? 1.0f : 0.0f);
 
         switch(location()) {
             case MapOverlay::LeftTop:
@@ -129,7 +129,7 @@ void MapOverlay::animateVisible(bool isVisible) {
             case MapOverlay::RightBottom:
             case MapOverlay::LeftBottom:
                 int h = parentWidget()->height();
-                int offset = d->outerRect.height() + margin();
+                int offset = static_cast<int>(d->outerRect.height() + margin());
 
                 if(isVisible) {
                     d->transitionAnimation->setStartValue(h);
@@ -187,16 +187,16 @@ void MapOverlay::updatePosition() {
             y = parentRect.top() + margin();
             break;
         case MapOverlay::RightTop:
-            x = parentRect.right() - (margin() + d->outerRect.width());
+            x = static_cast<int>(parentRect.right() - (margin() + d->outerRect.width()));
             y = parentRect.top() + margin();
             break;
         case MapOverlay::RightBottom:
-            x = parentRect.right() - (margin() + d->outerRect.width());
-            y = parentRect.bottom() - (margin() + d->outerRect.height());
+            x = static_cast<int>(parentRect.right() - (margin() + d->outerRect.width()));
+            y = static_cast<int>(parentRect.bottom() - (margin() + d->outerRect.height()));
             break;
         case MapOverlay::LeftBottom:
             x = parentRect.left() + margin();
-            y = parentRect.bottom() - (margin() + d->outerRect.height());
+            y = static_cast<int>(parentRect.bottom() - (margin() + d->outerRect.height()));
             break;
     }
 
@@ -230,22 +230,22 @@ void MapOverlay::updateMap(const QRectF &drawingRect) {
     d->windowRect = windowRect;
     d->drawingRect = drawingRect;
 
-    float aspect = outerSz.width() / drawingRect.width();
+    float aspect = static_cast<float>(outerSz.width() / drawingRect.width());
 
-    float innerWidth = std::min((float) windowRect.width() * aspect,
-                                (float) outerSz.width());
+    float innerWidth = std::min(static_cast<float>(windowRect.width()) * aspect,
+                                static_cast<float>(outerSz.width()));
 
-    float innerHeight = std::min((float) windowRect.height() * aspect,
-                                 (float) outerSz.height());
+    float innerHeight = std::min(static_cast<float>(windowRect.height()) * aspect,
+                                 static_cast<float>(outerSz.height()));
 
     QSizeF innerSz(innerWidth, innerHeight);
     d->innerRect.setSize(innerSz);
 
-    d->xSpeedDiff = innerSz.width() / windowRect.width();
-    d->ySpeedDiff = innerSz.height() / windowRect.height();
+    d->xSpeedDiff = static_cast<float>(innerSz.width() / windowRect.width());
+    d->ySpeedDiff = static_cast<float>(innerSz.height() / windowRect.height());
 
-    float x = (float) - drawingRect.left() * d->xSpeedDiff;
-    float y = (float) - drawingRect.top() * d->ySpeedDiff;
+    float x = static_cast<float>(-drawingRect.left() * d->xSpeedDiff);
+    float y = static_cast<float>(-drawingRect.top() * d->ySpeedDiff);
 
     d->moveInnerWidget(x, y);
     update();
@@ -254,7 +254,8 @@ void MapOverlay::updateMap(const QRectF &drawingRect) {
 void MapOverlay::mousePressEvent(QMouseEvent *event) {
     QWidget::mousePressEvent(event);
     setCursor(Qt::ClosedHandCursor);
-    d->moveMainImage(event->position().x(), event->position().y());
+    d->moveMainImage(static_cast<float>(event->position().x()),
+                     static_cast<float>(event->position().y()));
     event->accept();
 }
 
@@ -262,7 +263,8 @@ void MapOverlay::mouseMoveEvent(QMouseEvent *event) {
     QWidget::mouseMoveEvent(event);
 
     if(event->buttons() & Qt::LeftButton) {
-        d->moveMainImage(event->position().x(), event->position().y());
+        d->moveMainImage(static_cast<float>(event->position().x()),
+                         static_cast<float>(event->position().y()));
     }
     event->accept();
 }

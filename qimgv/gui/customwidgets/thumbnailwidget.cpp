@@ -1,4 +1,5 @@
 #include "thumbnailwidget.h"
+#include <QtMath>  // for qRound
 
 ThumbnailWidget::ThumbnailWidget(QGraphicsItem *parent) :
     QGraphicsWidget(parent),
@@ -186,30 +187,17 @@ void ThumbnailWidget::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
     if(isHighlighted())
         drawHighlight(painter);
 
-    if(!thumbnail) { // not loaded
-        // todo: recolor once in shrRes
-        QPixmap loadingIcon(shrRes.getPixmap(ShrIcon::SHR_ICON_LOADING, dpr));
-        if(isHighlighted())
-            ImageLib::recolor(loadingIcon, settings->colorScheme().accent);
-        else
-            ImageLib::recolor(loadingIcon, settings->colorScheme().folderview_hc2);
-        drawIcon(painter, &loadingIcon);
-    } else {
-        if(!thumbnail->pixmap() || thumbnail->pixmap().get()->width() == 0) { // invalid thumb
-            QPixmap errorIcon(shrRes.getPixmap(ShrIcon::SHR_ICON_ERROR, dpr));
-            if(isHighlighted())
-                ImageLib::recolor(errorIcon, settings->colorScheme().accent);
-            else
-                ImageLib::recolor(errorIcon, settings->colorScheme().folderview_hc2);
-            drawIcon(painter, &errorIcon);
-        } else {
-            drawThumbnail(painter, thumbnail->pixmap().get());
-            if(isHovered())
-                drawHoverHighlight(painter);
-        }
-        if(thumbStyle != THUMB_SIMPLE)
-            drawLabel(painter);
+    // Draw thumbnail only if a valid pixmap exists
+    if (thumbnail && thumbnail->pixmap() && thumbnail->pixmap()->width() > 0) {
+        drawThumbnail(painter, thumbnail->pixmap().get());
+        if(isHovered())
+            drawHoverHighlight(painter);
     }
+    // Otherwise, skip drawing any icon (no loading/error placeholders)
+
+    if(thumbStyle != THUMB_SIMPLE)
+        drawLabel(painter);
+
     if(isDropHovered())
         drawDropHover(painter);
 }
@@ -269,7 +257,7 @@ void ThumbnailWidget::drawSingleLineText(QPainter *painter, QRect rect, QString 
         painter->drawText(rect, flags, text);
     } else {
         // fancy variant with text fade effect - uses temporary surface to paint; slow
-        QPixmap textLayer(rect.width() * dpr, rect.height() * dpr);
+        QPixmap textLayer(qRound(rect.width() * dpr), qRound(rect.height() * dpr));
         textLayer.fill(Qt::transparent);
         textLayer.setDevicePixelRatio(dpr);
         QPainter textPainter(&textLayer);
@@ -349,21 +337,28 @@ bool ThumbnailWidget::isHovered() {
 }
 
 void ThumbnailWidget::updateThumbnailDrawPosition() {
-    if(thumbnail && thumbnail->pixmap()) {
-        QPoint topLeft;
-        QSize pixmapSize; // dpr-adjusted size
-        if(isLoaded)
+    QSize pixmapSize;
+    if (thumbnail && thumbnail->pixmap() && thumbnail->pixmap()->width() > 0) {
+        if (isLoaded)
             pixmapSize = thumbnail->pixmap()->size() / qApp->devicePixelRatio();
         else
             pixmapSize = thumbnail->pixmap()->size().scaled(mThumbnailSize, mThumbnailSize, Qt::KeepAspectRatio);
-        bool verticalFit = (pixmapSize.height() >= pixmapSize.width());
-        topLeft.setX((width()  - pixmapSize.width())  / 2.0);
-        if(thumbStyle == THUMB_SIMPLE)
-            topLeft.setY((height() - pixmapSize.height()) / 2.0);
-        else if(thumbStyle == THUMB_NORMAL_CENTERED && !verticalFit)
-            topLeft.setY((height() - pixmapSize.height()) / 2.0 - textHeight);
-        else // THUMB_NORMAL - snap thumbnail to the filename label
-            topLeft.setY(padding + marginY + mThumbnailSize - pixmapSize.height());
-        drawRectCentered = QRect(topLeft, pixmapSize);
+    } else {
+        // No valid pixmap: use a placeholder size
+        pixmapSize = QSize(mThumbnailSize, mThumbnailSize);
     }
+
+    bool verticalFit = (pixmapSize.height() >= pixmapSize.width());
+    QPoint topLeft;
+    topLeft.setX(qRound((width() - pixmapSize.width()) / 2.0));
+
+    if (thumbStyle == THUMB_SIMPLE) {
+        topLeft.setY(qRound((height() - pixmapSize.height()) / 2.0));
+    } else if (thumbStyle == THUMB_NORMAL_CENTERED && !verticalFit) {
+        topLeft.setY(qRound((height() - pixmapSize.height()) / 2.0 - textHeight));
+    } else { // THUMB_NORMAL - snap thumbnail to the filename label
+        topLeft.setY(padding + marginY + mThumbnailSize - pixmapSize.height());
+    }
+
+    drawRectCentered = QRect(topLeft, pixmapSize);
 }

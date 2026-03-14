@@ -9,13 +9,13 @@ public:
             m_blocked = m_obj->blockSignals(true);
         }
     }
-    
+
     ~SignalBlocker() {
         if (m_obj) {
             m_obj->blockSignals(m_blocked);
         }
     }
-    
+
 private:
     QObject* m_obj;
     bool m_blocked;
@@ -77,9 +77,8 @@ void CropPanel::setImageRealSize(QSize sz) {
     ui->width->setMaximum(sz.width());
     ui->height->setMaximum(sz.height());
     realSize = sz;
-    // reset to free mode on image change
+
     ui->ARcomboBox->setCurrentIndex(0);
-    // update aspect ratio in input fields
 
     onAspectRatioSelected();
 }
@@ -94,6 +93,7 @@ void CropPanel::doCropDefaultAction() {
 void CropPanel::doCrop() {
     QRect target(ui->posX->value(), ui->posY->value(),
                  ui->width->value(), ui->height->value());
+
     if(target.width() > 0 && target.height() > 0 && target.size() != realSize)
         emit crop(target);
     else
@@ -103,13 +103,13 @@ void CropPanel::doCrop() {
 void CropPanel::doCropSave() {
     QRect target(ui->posX->value(), ui->posY->value(),
                  ui->width->value(), ui->height->value());
+
     if(target.width() > 0 && target.height() > 0 && target.size() != realSize)
         emit cropAndSave(target);
     else
         emit cancel();
 }
 
-// on user input
 void CropPanel::onSelectionChange() {
     emit selectionChanged(QRect(ui->posX->value(),
                                 ui->posY->value(),
@@ -119,15 +119,11 @@ void CropPanel::onSelectionChange() {
 
 void CropPanel::onAspectRatioChange() {
     ui->ARcomboBox->setCurrentIndex(1); // "Custom"
-    if(ui->ARX->value() && ui->ARY->value())
+
+    if(ui->ARX->value() != 0.0 && ui->ARY->value() != 0.0)
         emit aspectRatioChanged(QPointF(ui->ARX->value(), ui->ARY->value()));
 }
 
-// 0 == free
-// 1 == custom (from input fields)
-// 2 == current image
-// 3 == current screen
-// 4 ...
 void CropPanel::onAspectRatioSelected() {
     QPointF newAR(1, 1);
 
@@ -164,29 +160,19 @@ void CropPanel::onAspectRatioSelected() {
         break;
     }
     case 4:
-    {
         newAR = QPointF(1.0, 1.0);
         break;
-    }
     case 5:
-    {
         newAR = QPointF(4.0, 3.0);
         break;
-    }
     case 6:
-    {
         newAR = QPointF(16.0, 9.0);
         break;
-    }
     case 7:
-    {
         newAR = QPointF(16.0, 10.0);
         break;
-    }
-    default: // apply aspect ratio; update input fields
-    {
+    default:
         break;
-    }
     }
 
     ui->ARX->blockSignals(true);
@@ -195,6 +181,7 @@ void CropPanel::onAspectRatioSelected() {
     ui->ARY->setValue(newAR.y());
     ui->ARX->blockSignals(false);
     ui->ARY->blockSignals(false);
+
     if(index)
         overlay->setAspectRatio(newAR);
 }
@@ -211,7 +198,6 @@ void CropPanel::setFocusCropSaveBtn() {
     ui->cropButton->setHighlighted(false);
 }
 
-// update input box values
 void CropPanel::onSelectionOutsideChange(QRect rect) {
     SignalBlocker widthBlocker(ui->width);
     SignalBlocker heightBlocker(ui->height);
@@ -233,7 +219,6 @@ void CropPanel::paintEvent(QPaintEvent *) {
 
 void CropPanel::show() {
     QWidget::show();
-    // stackoverflow sorcery
     QTimer::singleShot(0,ui->width,SLOT(setFocus()));
 }
 

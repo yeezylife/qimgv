@@ -58,7 +58,8 @@ private:
     QPen selectionOutlinePen;
     qreal dpr;
     QPointF ar;
-    
+    QPointF m_accumulatedDelta; // Sub-pixel accumulation for fractional scaling
+
     QPoint setInsidePoint(QPoint, QRect);
     QRect placeInside(QRect what, QRect where);
     void drawSelection(QPainter*);

@@ -7,7 +7,8 @@ imageDrawRect(QRect(0, 0, 0, 0)),
 selectionRect(QRect(0, 0, 0, 0)),
 lockAspectRatio(false),
 scale(1.0f),
-cursorAction(NO_DRAG)
+cursorAction(NO_DRAG),
+m_accumulatedDelta(0, 0)
 {
     setMouseTracking(true);
     dpr = devicePixelRatioF();
@@ -499,6 +500,7 @@ void CropOverlay::mousePressEvent(QMouseEvent *event) {
         setCursorAction(cursorAction);
         setResizeAnchor(cursorAction);
         moveStartPos = event->position().toPoint();
+        m_accumulatedDelta = QPointF(0, 0); // Reset accumulator
         // Start selection!
         if(!hasSelection()) {
             cursorAction = SELECTION_START;
@@ -514,9 +516,6 @@ void CropOverlay::mousePressEvent(QMouseEvent *event) {
 }
 
 //------------------------------------------------------------------------------
-// Accumulated sub-pixel delta for fractional scaling precision
-static QPointF g_accumulatedDelta;
-
 void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
     if(event->buttons() & Qt::LeftButton) {
         if(cursorAction == SELECTION_START) {
@@ -542,14 +541,15 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         
         // Calculate delta with sub-pixel precision for fractional scaling
         QPointF rawDelta = (event->position() - moveStartPos) * dpr;
-        g_accumulatedDelta += rawDelta;
-        QPoint pixelDelta = qRound(g_accumulatedDelta.x() / scale), qRound(g_accumulatedDelta.y() / scale);
-        g_accumulatedDelta -= QPointF(pixelDelta.x() * scale, pixelDelta.y() * scale);
+        m_accumulatedDelta += rawDelta;
+        QPoint pixelDelta(qRound(m_accumulatedDelta.x() / scale), 
+                          qRound(m_accumulatedDelta.y() / scale));
+        m_accumulatedDelta -= QPointF(pixelDelta.x() * scale, pixelDelta.y() * scale);
         
         if(cursorAction == DRAG_MOVE) { // Moving selection
             setCursor(Qt::ClosedHandCursor);
             moveStartPos = event->position().toPoint();
-            g_accumulatedDelta = QPointF(0, 0); // Reset accumulator on move
+            m_accumulatedDelta = QPointF(0, 0); // Reset accumulator on move
             selectionRect.translate(pixelDelta);
             if(!imageRect.contains(selectionRect)) {
                 selectionRect = placeInside(selectionRect, imageRect);
@@ -577,7 +577,7 @@ void CropOverlay::mouseReleaseEvent(QMouseEvent *event) {
     if(cursorAction == SELECTION_START)
         clearSelection();
     cursorAction = NO_DRAG;
-    g_accumulatedDelta = QPointF(0, 0); // Reset accumulator
+    m_accumulatedDelta = QPointF(0, 0); // Reset accumulator
     setCursorAction(hoverTarget(event->position().toPoint() * dpr));
     update();
 }

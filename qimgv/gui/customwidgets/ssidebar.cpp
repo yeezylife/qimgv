@@ -17,7 +17,7 @@ SSideBar::SSideBar(QWidget *parent) : QWidget{parent} {
 
 void SSideBar::addEntry(QString icon, QString name) {
     SSideBarItem *entry = new SSideBarItem(icon, name);
-    layout->insertWidget(entries.count(), entry);
+    layout->insertWidget(static_cast<int>(entries.count()), entry); // 修复警告：显式转换 qsizetype -> int
     entries.append(entry);
     if(entries.count() == 1)
         selectEntry(0);

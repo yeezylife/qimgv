@@ -28,19 +28,23 @@ void BookmarksWidget::saveBookmarks() {
 void BookmarksWidget::addBookmark(QString dirPath) {
     if(paths.contains(dirPath))
         return;
+
     paths.push_back(dirPath);
+
     QUrl url(dirPath);
     BookmarksItem *item = new BookmarksItem(url.fileName(), dirPath);
     layout.addWidget(item);
-    
-    // 使用 lambda 表达式简化信号连接
+
     connect(item, &BookmarksItem::clicked, this, [this, dirPath]() {
         emit bookmarkClicked(dirPath);
     });
+
     connect(item, &BookmarksItem::removeClicked, this, [this, dirPath]() {
         removeBookmark(dirPath);
     });
+
     connect(item, &BookmarksItem::droppedIn, this, &BookmarksWidget::droppedIn);
+
     saveBookmarks();
 }
 
@@ -50,11 +54,15 @@ void BookmarksWidget::removeBookmark(QString dirPath) {
         if(w && w->path() == dirPath) {
             if(highlightedPath == dirPath)
                 highlightedPath = "";
+
             layout.removeWidget(w);
+
             disconnect(w, &BookmarksItem::clicked, this, &BookmarksWidget::bookmarkClicked);
             disconnect(w, &BookmarksItem::removeClicked, this, &BookmarksWidget::removeBookmark);
             disconnect(w, &BookmarksItem::droppedIn, this, &BookmarksWidget::droppedIn);
+
             w->deleteLater();
+
             paths.removeAll(dirPath);
             saveBookmarks();
             break;
@@ -65,16 +73,20 @@ void BookmarksWidget::removeBookmark(QString dirPath) {
 void BookmarksWidget::onPathChanged(QString path) {
     if(highlightedPath == path)
         return;
+
     if(paths.contains(highlightedPath)) {
-        int currentIndex = paths.indexOf(highlightedPath);
-        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(currentIndex)->widget());
-        w->setHighlighted(false);
+        qsizetype currentIndex = paths.indexOf(highlightedPath);
+        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(static_cast<int>(currentIndex))->widget());
+        if(w)
+            w->setHighlighted(false);
         highlightedPath = "";
     }
+
     if(paths.contains(path)) {
-        int newIndex = paths.indexOf(path);
-        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(newIndex)->widget());
-        w->setHighlighted(true);
+        qsizetype newIndex = paths.indexOf(path);
+        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(static_cast<int>(newIndex))->widget());
+        if(w)
+            w->setHighlighted(true);
         highlightedPath = path;
     }
 }

@@ -176,7 +176,6 @@ void Core::initActions() {
     connect(actionManager, &ActionManager::seekVideoBackward, mw, &MW::seekVideoBackward);
     connect(actionManager, &ActionManager::frameStep, mw, &MW::frameStep);
     connect(actionManager, &ActionManager::frameStepBack, mw, &MW::frameStepBack);
-    connect(actionManager, &ActionManager::folderView, this, &Core::enableFolderView);
     connect(actionManager, &ActionManager::documentView, this, &Core::enableDocumentView);
     connect(actionManager, &ActionManager::toggleFolderView, this, &Core::toggleFolderView);
     connect(actionManager, &ActionManager::reloadImage, this, qOverload<>(&Core::reloadImage));

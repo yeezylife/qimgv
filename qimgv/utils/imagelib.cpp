@@ -241,7 +241,8 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
     int actualSharpen = sharpen;
 
     if (destSize.width() < source.width()) {
-        float scale = static_cast<float>(destSize.width()) / source.width();
+        float scale = static_cast<float>(destSize.width()) /
+              static_cast<float>(source.width());
         if (scale < 0.5f && filter != cv::INTER_NEAREST) {
             actualFilter = cv::INTER_AREA;
             if (filter == cv::INTER_CUBIC) {

@@ -43,7 +43,7 @@ jobs:
             mingw-w64-clang-x86_64-libheif
             python3
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

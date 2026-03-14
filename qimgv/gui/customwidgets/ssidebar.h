@@ -35,7 +35,7 @@ protected:
 class SSideBarItem : public QWidget {
     Q_OBJECT
 public:
-    explicit SSideBarItem(QString icon, QString name, QWidget *parent = nullptr);
+    explicit SSideBarItem(const QString& icon, const QString& name, QWidget *parent = nullptr);
     void setHighlighted(bool mode);
     bool highlighted() const;
 

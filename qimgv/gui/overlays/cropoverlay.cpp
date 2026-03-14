@@ -544,7 +544,9 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         m_accumulatedDelta += rawDelta;
         QPoint pixelDelta(qRound(m_accumulatedDelta.x() / scale), 
                           qRound(m_accumulatedDelta.y() / scale));
-        m_accumulatedDelta -= QPointF(pixelDelta.x() * scale, pixelDelta.y() * scale);
+        // Fix: explicit cast to qreal to avoid narrowing conversion warning
+        m_accumulatedDelta -= QPointF(static_cast<qreal>(pixelDelta.x()) * scale, 
+                                      static_cast<qreal>(pixelDelta.y()) * scale);
         
         if(cursorAction == DRAG_MOVE) { // Moving selection
             setCursor(Qt::ClosedHandCursor);

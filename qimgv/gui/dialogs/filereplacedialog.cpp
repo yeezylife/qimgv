@@ -17,11 +17,11 @@ void FileReplaceDialog::initializeDialog() {
     connect(ui->cancelButton, &QPushButton::clicked, this, &FileReplaceDialog::onCancelClicked);
 }
 
-void FileReplaceDialog::setSource(QString src) {
+void FileReplaceDialog::setSource(const QString& src) {
     ui->srcLabel->setText(src);
 }
 
-void FileReplaceDialog::setDestination(QString dst) {
+void FileReplaceDialog::setDestination(const QString& dst) {
     ui->dstLabel->setText(dst);
 }
 

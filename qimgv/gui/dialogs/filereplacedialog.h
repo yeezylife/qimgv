@@ -36,8 +36,8 @@ public:
     void setMulti(bool multi);
     DialogResult getResult();
 
-    void setSource(QString src);
-    void setDestination(QString dst);
+    void setSource(const QString& src);
+    void setDestination(const QString& dst);
     
 private slots:
     void onYesClicked();

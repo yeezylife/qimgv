@@ -15,7 +15,7 @@ SSideBar::SSideBar(QWidget *parent) : QWidget{parent} {
     addEntry(":res/icons/common/settings/about32.png",      tr("About"));
 }
 
-void SSideBar::addEntry(QString icon, QString name) {
+void SSideBar::addEntry(const QString &icon, const QString &name) {
     SSideBarItem *entry = new SSideBarItem(icon, name);
     layout->insertWidget(static_cast<int>(entries.count()), entry); // 修复警告：显式转换 qsizetype -> int
     entries.append(entry);

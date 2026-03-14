@@ -14,7 +14,7 @@ class SSideBar : public QWidget {
     Q_OBJECT
 public:
     explicit SSideBar(QWidget *parent = nullptr);
-    void addEntry(QString icon, QString name);
+    void addEntry(const QString &icon, const QString &name);
     void selectEntry(int idx);
 
 private:

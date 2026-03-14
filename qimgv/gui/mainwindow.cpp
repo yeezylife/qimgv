@@ -57,7 +57,7 @@ void MW::setupUi() {
     connect(folderView.get(), &FolderViewProxy::moveUrlsRequested, this, &MW::moveUrlsRequested);
     connect(folderView.get(), &FolderViewProxy::showFoldersChanged, this, &MW::showFoldersChanged);
 
-    centralWidget.reset(new CentralWidget(std::move(docWidget), std::move(folderView), this));
+    centralWidget.reset(new CentralWidget(docWidget, folderView, this));  // 移除了 std::move
     layout.addWidget(centralWidget.get());
     controlsOverlay = new ControlsOverlay(docWidget.get());
     infoBarFullscreen = new FullscreenInfoOverlayProxy(viewerWidget.get());

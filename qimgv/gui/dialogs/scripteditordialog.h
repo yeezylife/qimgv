@@ -18,18 +18,19 @@ class ScriptEditorDialog : public QDialog
 
 public:
     explicit ScriptEditorDialog(QWidget *parent = nullptr);
-    explicit ScriptEditorDialog(QString name, Script script, QWidget *parent = nullptr);
+    // --- 修改这里：添加 const & ---
+    explicit ScriptEditorDialog(const QString &name, const Script &script, QWidget *parent = nullptr);
     ~ScriptEditorDialog();
     QString scriptName();
     Script script();
 
 private slots:
-    void onNameChanged(QString name);
+    void onNameChanged(const QString &name);
 
     void selectScriptPath();
 private:
     void initializeDialog();
-    void initializeEditMode(QString name, Script script);
+    void initializeEditMode(const QString &name, const Script &script);
     
     Ui::ScriptEditorDialog *ui;
     bool editMode;

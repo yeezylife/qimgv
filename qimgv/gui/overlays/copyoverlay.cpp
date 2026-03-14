@@ -71,7 +71,7 @@ void CopyOverlay::createPathWidgets() {
     removePathWidgets();
 
     // 修复 narrowing conversion
-    int count = std::min<int>(paths.length(), maxPathCount);
+    int count = std::min(static_cast<int>(paths.length()), maxPathCount);
 
     for(int i = 0; i < count; i++) {
         PathSelectorMenuItem *item = new PathSelectorMenuItem(this);

@@ -2,7 +2,6 @@
 #include <QWidget>
 #include <QHBoxLayout>
 #include <QTimer>
-#include <QDesktopWidget>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QCloseEvent>
@@ -12,7 +11,7 @@
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QEvent>
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QDesktopWidget>
 #endif
 #include "gui/customwidgets/floatingwidgetcontainer.h"
@@ -72,7 +71,7 @@ public:
     void showAnimation(const std::shared_ptr<QMovie>& movie);
     void showVideo(QString&& file);
     
-    // 修复：重命名参数以区分相邻同类型参数
+    // 修复：重命名参数避免相邻同类型参数警告
     void setCurrentInfo(int fileIndex, int totalFileCount, const QString& filePath, 
                        const QString& fileName, QSize imageSize, qint64 fileSize, 
                        bool slideshow, bool shuffle, bool edited);
@@ -82,7 +81,7 @@ public:
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
     ViewMode currentViewMode();
     
-    // 修复：重命名参数以区分相邻同类型参数
+    // 修复：重命名参数避免相邻同类型参数警告
     bool showConfirmation(const QString& dialogTitle, const QString& messageText);
     
     DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
@@ -112,7 +111,7 @@ private:
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
     std::shared_ptr<InfoBarProxy> infoBarWindowed;
     CurrentInfo info{};
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QDesktopWidget desktopWidget;
 #endif
     QString cachedWindowTitle;
@@ -136,7 +135,7 @@ private:
     
     // 辅助方法
     QString calculateWindowTitle();
-    // 修复：重命名参数以区分相邻同类型参数
+    // 修复：重命名参数避免相邻同类型参数警告
     void calculateInfoBarContent(QString& outputInfoText, QString& outputSizeText);
 
 private slots:

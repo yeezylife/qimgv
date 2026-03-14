@@ -379,8 +379,9 @@ void MW::restoreWindowGeometry() {
     updateCurrentDisplay();
 }
 
+// 修复：Qt6 使用 QScreen API
 void MW::updateCurrentDisplay() {
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     currentDisplay = desktopWidget.screenNumber(this);
 #else
     auto screens = qApp->screens();
@@ -393,8 +394,9 @@ void MW::onWindowGeometryChanged() {
     updateCurrentDisplay();
 }
 
+// 修复：Qt6 使用 QScreen API
 void MW::saveCurrentDisplay() {
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     settings->setLastDisplay(desktopWidget.screenNumber(this));
 #else
     settings->setLastDisplay(qApp->screens().indexOf(this->window()->screen()));
@@ -598,11 +600,12 @@ void MW::triggerFullScreen() {
     }
 }
 
+// 修复：Qt6 使用 QScreen API
 void MW::showFullScreen() {
     if(!isHidden())
         saveWindowGeometry();
     auto screens = qApp->screens();
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     int _currentDisplay = desktopWidget.screenNumber(this);
 #else
     int _currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));

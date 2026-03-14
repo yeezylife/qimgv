@@ -32,7 +32,7 @@ void FolderGridView::dropEvent(QDropEvent *event) {
     ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->position().toPoint()));
     int index = -1;
     if(item) {
-        index = thumbnails.indexOf(item);
+        index = static_cast<int>(thumbnails.indexOf(item));
         item->setDropHovered(false);
     }
     emit droppedInto(event->mimeData(), event->source(), index);
@@ -47,7 +47,7 @@ void FolderGridView::dragMoveEvent(QDragMoveEvent *event) {
     ThumbnailWidget *item = dynamic_cast<ThumbnailWidget*>(itemAt(event->position().toPoint()));
     int index = -1;
     if(item)
-        index = thumbnails.indexOf(item);
+        index = static_cast<int>(thumbnails.indexOf(item));
     // unselect previous
     if(index != lastDragTarget && checkRange(lastDragTarget))
         thumbnails.at(lastDragTarget)->setDropHovered(false);
@@ -78,7 +78,8 @@ void FolderGridView::updateScrollbarIndicator() {
         return;
     ThumbnailWidget *thumb = thumbnails.at(lastSelected());
     qreal itemCenter = (thumb->pos().y() + (thumb->height() / 2)) / scene.height();
-    indicator = QRect(2, scrollBar->height() * itemCenter - indicatorSize, scrollBar->width() - 4, indicatorSize);
+    int yPos = qRound(scrollBar->height() * itemCenter - indicatorSize);
+    indicator = QRect(2, yPos, scrollBar->width() - 4, indicatorSize);
 }
 
 // probably unneeded
@@ -112,7 +113,7 @@ void FolderGridView::focusOnSelection() {
 void FolderGridView::selectAll() {
     // 使用QBitArray高效实现全选
     selectionBits.fill(true, thumbnails.count());
-    lastSelectedIndex = thumbnails.count() - 1;
+    lastSelectedIndex = static_cast<int>(thumbnails.count() - 1);
     updateSelectionVisuals();
 }
 
@@ -136,12 +137,12 @@ void FolderGridView::selectAbove() {
 }
 
 void FolderGridView::selectBelow() {
-    if(!thumbnails.count() || lastSelected() == -1 || flowLayout->sameRow(lastSelected(), thumbnails.count() - 1))
+    if(!thumbnails.count() || lastSelected() == -1 || flowLayout->sameRow(lastSelected(), static_cast<int>(thumbnails.count() - 1)))
         return;
     shiftedCol = -1;
     int newIndex = flowLayout->itemBelow(lastSelected());
     if(!checkRange(newIndex))
-        newIndex = thumbnails.count() - 1;
+        newIndex = static_cast<int>(thumbnails.count() - 1);
     if(flowLayout->columnOf(newIndex) != flowLayout->columnOf(lastSelected()))
         shiftedCol = flowLayout->columnOf(lastSelected());
     if(rangeSelection)
@@ -161,7 +162,7 @@ void FolderGridView::selectNext() {
     shiftedCol = -1;
     int newIndex = lastSelected() + 1;
     if(!checkRange(newIndex))
-        newIndex = thumbnails.count() - 1;
+        newIndex = static_cast<int>(thumbnails.count() - 1);
     if(rangeSelection)
         addSelectionRange(newIndex);
     else
@@ -207,7 +208,7 @@ void FolderGridView::pageUp() {
 }
 
 void FolderGridView::pageDown() {
-    if(!thumbnails.count() || lastSelected() == -1 || flowLayout->sameRow(lastSelected(), thumbnails.count() - 1))
+    if(!thumbnails.count() || lastSelected() == -1 || flowLayout->sameRow(lastSelected(), static_cast<int>(thumbnails.count() - 1)))
         return;
     shiftedCol = -1;
     int newIndex = lastSelected();
@@ -243,9 +244,9 @@ void FolderGridView::selectLast() {
         return;
     shiftedCol = -1;
     if(rangeSelection)
-        addSelectionRange(thumbnails.count() - 1);
+        addSelectionRange(static_cast<int>(thumbnails.count() - 1));
     else
-        select(thumbnails.count() - 1);
+        select(static_cast<int>(thumbnails.count() - 1));
     scrollToCurrent();
 }
 
@@ -446,7 +447,7 @@ int FolderGridView::lastSelected() {
         return -1;
     }
     // 找到最后设置的位（与selection().last()行为一致）
-    for (int i = selectionBits.size() - 1; i >= 0; --i) {
+    for (int i = static_cast<int>(selectionBits.size()) - 1; i >= 0; --i) {
         if (selectionBits.testBit(i)) {
             return i;
         }

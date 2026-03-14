@@ -58,10 +58,10 @@ void RenameOverlay::recalculateGeometry() {
 }
 
 void RenameOverlay::selectName() {
-    int end = ui->fileName->text().lastIndexOf(".");
+    qsizetype end = ui->fileName->text().lastIndexOf(".");
     if(end < 0)
         end = ui->fileName->text().size();
-    ui->fileName->setSelection(0, end);
+    ui->fileName->setSelection(0, static_cast<int>(end));
 }
 
 void RenameOverlay::rename() {

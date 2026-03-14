@@ -25,7 +25,7 @@ void SSideBar::addEntry(QString icon, QString name) {
 
 void SSideBar::selectEntry(int idx) {
     if(idx >= 0 && idx < entries.count()) {
-        foreach(auto entry, entries)
+        for(auto *entry : entries)
             entry->setHighlighted(false);
         entries[idx]->setHighlighted(true);
         emit entrySelected(idx);
@@ -34,7 +34,7 @@ void SSideBar::selectEntry(int idx) {
 
 void SSideBar::mousePressEvent(QMouseEvent *event) {
     event->accept();
-    if(!(event->buttons() & Qt::LeftButton))
+    if(!(event->buttons() & Qt::MouseButton::LeftButton))
         return;
     selectEntryAt(event->position().toPoint());
 
@@ -42,7 +42,7 @@ void SSideBar::mousePressEvent(QMouseEvent *event) {
 
 void SSideBar::mouseMoveEvent(QMouseEvent *event) {
     event->accept();
-    if(!(event->buttons() & Qt::LeftButton))
+    if(!(event->buttons() & Qt::MouseButton::LeftButton))
         return;
     selectEntryAt(event->position().toPoint());
 }
@@ -64,14 +64,13 @@ void SSideBar::paintEvent(QPaintEvent *event) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
-    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+    style()->drawPrimitive(QStyle::PrimitiveElement::PE_Widget, &opt, &p, this);
 }
 
 // -------------------------------------------------------------------
 
 SSideBarItem::SSideBarItem(QString icon, QString name, QWidget *parent) : QWidget{parent} {
-    QPalette p;
-    if(p.base().color().valueF() <= 0.45f)
+    if(palette().base().color().valueF() <= 0.45)
         iconWidget.setColor(QColor(184,184,185));
     else
         iconWidget.setColor(QColor(70,70,70));
@@ -94,7 +93,7 @@ void SSideBarItem::setHighlighted(bool mode) {
     style()->polish(this);
 }
 
-bool SSideBarItem::highlighted() {
+bool SSideBarItem::highlighted() const {
     return mHighlighted;
 }
 
@@ -103,5 +102,5 @@ void SSideBarItem::paintEvent(QPaintEvent *event) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
-    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+    style()->drawPrimitive(QStyle::PrimitiveElement::PE_Widget, &opt, &p, this);
 }

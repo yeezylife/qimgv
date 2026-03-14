@@ -20,17 +20,16 @@ public:
 private:
     QBoxLayout *layout;
     QList<SSideBarItem *> entries;
-    Qt::Orientation orientation = Qt::Vertical;
     void selectEntryAt(QPoint pos);
 
 signals:
     void entrySelected(int);
 
 protected:
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
 
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 };
 
 class SSideBarItem : public QWidget {
@@ -38,7 +37,7 @@ class SSideBarItem : public QWidget {
 public:
     explicit SSideBarItem(QString icon, QString name, QWidget *parent = nullptr);
     void setHighlighted(bool mode);
-    bool highlighted();
+    bool highlighted() const;
 
 private:
     QBoxLayout *layout;
@@ -47,7 +46,7 @@ private:
     bool mHighlighted = false;
 
 protected:
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
 };
 
 #endif // SSIDEBAR_H

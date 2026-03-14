@@ -362,7 +362,7 @@ void ImageViewerV2::updatePixmap(std::unique_ptr<QPixmap> newPixmap) {
     pixmapItem.update();
 }
 
-void ImageViewerV2::showAnimation(std::shared_ptr<QMovie> _movie) {
+void ImageViewerV2::showAnimation(const std::shared_ptr<QMovie>& _movie) {
     if(!_movie || !_movie->isValid())
         return;
     

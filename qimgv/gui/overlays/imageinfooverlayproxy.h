@@ -14,7 +14,7 @@ public:
     void show();
     void hide();
 
-    void setExifInfo(QMap<QString, QString> info);
+    void setExifInfo(const QMap<QString, QString>& _info);
     bool isHidden();
 private:
     FloatingWidgetContainer *container;

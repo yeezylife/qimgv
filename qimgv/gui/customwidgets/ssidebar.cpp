@@ -71,12 +71,16 @@ void SSideBar::paintEvent(QPaintEvent *event) {
 
 SSideBarItem::SSideBarItem(QString icon, QString name, QWidget *parent)
     : QWidget(parent), m_icon(std::move(icon)), m_name(std::move(name))
+{
     if(palette().base().color().valueF() <= 0.45)
         iconWidget.setColor(QColor(184,184,185));
     else
         iconWidget.setColor(QColor(70,70,70));
-    iconWidget.setIconPath(icon);
-    textLabel.setText(name);
+
+    // 使用成员变量，而不是已移动的参数
+    iconWidget.setIconPath(m_icon);
+    textLabel.setText(m_name);
+
     layout = new QBoxLayout(QBoxLayout::LeftToRight);
     layout->setContentsMargins(6,4,6,4);
     layout->setSpacing(7);

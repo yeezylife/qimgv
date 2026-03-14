@@ -27,12 +27,11 @@ void ColorSelectorButton::showColorSelector() {
 
 void ColorSelectorButton::paintEvent(QPaintEvent *e) {
     Q_UNUSED(e)
-
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     if(!isEnabled())
         p.setOpacity(0.5f);
     p.setPen(QColor(40,40,40));
-    p.drawRect(QRectF(0.5f, 0.5f, width() - 1.0f, height() - 1.0f));
+    p.drawRect(QRectF(0.5f, 0.5f, static_cast<float>(width()) - 1.0f, static_cast<float>(height()) - 1.0f));
     p.fillRect(rect().adjusted(2,2,-2,-2), mColor);
 }

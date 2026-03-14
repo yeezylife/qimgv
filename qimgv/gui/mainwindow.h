@@ -1,19 +1,20 @@
 #pragma once
-
-#include <QApplication>
-#include <QObject>
 #include <QWidget>
 #include <QHBoxLayout>
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QMimeData>
-#include <QImageWriter>
-#include <QWindow>
-
+#include <QTimer>
+#include <QDesktopWidget>
+#include <QMouseEvent>
+#include <QPaintEvent>
+#include <QCloseEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QResizeEvent>
+#include <QKeyEvent>
+#include <QWheelEvent>
+#include <QEvent>
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
 #include <QDesktopWidget>
 #endif
-
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
 #include "gui/overlays/controlsoverlay.h"
@@ -37,7 +38,6 @@
 #include "gui/viewers/documentwidget.h"
 #include "gui/folderview/folderviewproxy.h"
 #include "gui/panels/infobar/infobarproxy.h"
-
 #ifdef USE_KDE_BLUR
 #include <KWindowEffects>
 #endif
@@ -71,28 +71,33 @@ public:
     void showImage(std::unique_ptr<QPixmap> pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& movie);
     void showVideo(QString&& file);
-
-    void setCurrentInfo(int fileIndex, int fileCount, const QString& filePath, const QString& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
+    
+    // 修复：重命名参数以区分相邻同类型参数
+    void setCurrentInfo(int fileIndex, int totalFileCount, const QString& filePath, 
+                       const QString& fileName, QSize imageSize, qint64 fileSize, 
+                       bool slideshow, bool shuffle, bool edited);
+    
     void setExifInfo(QMap<QString, QString> info);
     std::shared_ptr<FolderViewProxy> getFolderView();
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
-
     ViewMode currentViewMode();
-
-    bool showConfirmation(const QString& title, const QString& msg);
+    
+    // 修复：重命名参数以区分相邻同类型参数
+    bool showConfirmation(const QString& dialogTitle, const QString& messageText);
+    
     DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
 
 private:
-    std::shared_ptr<ViewerWidget> viewerWidget;            // 默认 nullptr
-    QHBoxLayout layout;                                     // 默认构造
-    QTimer windowGeometryChangeTimer;                       // 默认构造
+    std::shared_ptr<ViewerWidget> viewerWidget;
+    QHBoxLayout layout;
+    QTimer windowGeometryChangeTimer;
     int currentDisplay = 0;
     bool showInfoBarFullscreen = false;
     bool showInfoBarWindowed = false;
     bool maximized = false;
-    std::shared_ptr<DocumentWidget> docWidget;              // 默认 nullptr
-    std::shared_ptr<FolderViewProxy> folderView;            // 默认 nullptr
-    std::shared_ptr<CentralWidget> centralWidget;           // 默认 nullptr
+    std::shared_ptr<DocumentWidget> docWidget;
+    std::shared_ptr<FolderViewProxy> folderView;
+    std::shared_ptr<CentralWidget> centralWidget;
     ActiveSidePanel activeSidePanel = SIDEPANEL_NONE;
     SidePanel *sidePanel = nullptr;
     CopyOverlay *copyOverlay = nullptr;
@@ -105,36 +110,34 @@ private:
     ImageInfoOverlayProxy *imageInfoOverlay = nullptr;
     ControlsOverlay *controlsOverlay = nullptr;
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
-    std::shared_ptr<InfoBarProxy> infoBarWindowed;          // 默认 nullptr
-    CurrentInfo info{};                                      // 默认构造（各字段已初始化）
+    std::shared_ptr<InfoBarProxy> infoBarWindowed;
+    CurrentInfo info{};
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QDesktopWidget desktopWidget;
 #endif
-
     QString cachedWindowTitle;
     QString cachedInfoText;
     QString cachedSizeText;
-    bool fullUiInitialized = false;                         // 延迟初始化标志
+    bool fullUiInitialized = false;
 
     void saveWindowGeometry();
     void restoreWindowGeometry();
     void saveCurrentDisplay();
     void setupUi();
-
     void applyWindowedBackground();
     void applyFullscreenBackground();
     void mouseDoubleClickEvent(QMouseEvent *event) override;
-
     void setupCropPanel();
     void setupCopyOverlay();
     void setupSaveOverlay();
     void setupRenameOverlay();
     void preShowResize(QSize sz);
     void setInteractionEnabled(bool mode);
-
+    
     // 辅助方法
     QString calculateWindowTitle();
-    void calculateInfoBarContent(QString& infoText, QString& sizeText);
+    // 修复：重命名参数以区分相邻同类型参数
+    void calculateInfoBarContent(QString& outputInfoText, QString& outputSizeText);
 
 private slots:
     void updateCurrentDisplay();
@@ -152,19 +155,19 @@ protected:
     void dragEnterEvent(QDragEnterEvent *e) override;
     void dropEvent(QDropEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
-
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void leaveEvent(QEvent *event) override;
+
 signals:
     void opened(QString);
     void fullscreenStateChanged(bool);
     void copyRequested(QString);
     void moveRequested(QString);
-    void copyUrlsRequested(QList<QString>, QString);
-    void moveUrlsRequested(QList<QString>, QString);
+    void copyUrlsRequested(QList<QUrl>, QString);
+    void moveUrlsRequested(QList<QUrl>, QString);
     void showFoldersChanged(bool);
     void resizeRequested(QSize);
     void renameRequested(QString);
@@ -175,8 +178,6 @@ signals:
     void saveRequested();
     void saveAsRequested(QString);
     void sortingSelected(SortingMode);
-
-    // viewerWidget
     void scalingRequested(QSize, ScalingFilter);
     void zoomIn();
     void zoomOut();

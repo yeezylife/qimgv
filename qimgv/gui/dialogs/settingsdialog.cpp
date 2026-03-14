@@ -407,8 +407,8 @@ void SettingsDialog::saveSettings() {
     settings->setPanelPreviewsSize(ui->panelSizeSlider->value() * 10);
 
     settings->setJPEGSaveQuality(ui->JPEGQualitySlider->value());
-    settings->setZoomStep(qreal(ui->zoomStepSlider->value()) / qreal(100));
-    settings->setMouseScrollingSpeed(qreal(0.5) + (qreal(ui->mouseScrollingSpeedSlider->value()) * qreal(0.25)));
+    settings->setZoomStep(static_cast<float>(qreal(ui->zoomStepSlider->value()) / qreal(100)));
+    settings->setMouseScrollingSpeed(static_cast<float>(qreal(0.5) + (qreal(ui->mouseScrollingSpeedSlider->value()) * qreal(0.25))));
     settings->setAutoResizeLimit(ui->autoResizeLimitSlider->value() * 5);
     settings->setExpandLimit(ui->expandLimitSlider->value());
     settings->setThumbnailerThreadCount(ui->thumbnailerThreadsSlider->value());

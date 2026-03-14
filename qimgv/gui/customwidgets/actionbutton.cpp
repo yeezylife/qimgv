@@ -1,6 +1,9 @@
 #include "actionbutton.h"
 #include <QMouseEvent>
 
+// 禁用 bugprone-easily-swappable-parameters 仅针对下面的构造函数
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+
 ActionButton::ActionButton(QWidget *parent)
     : IconButton(parent)
     , actionName()
@@ -26,6 +29,8 @@ ActionButton::ActionButton(QString _actionName, QString _iconPath, int _size, QW
         setFixedSize(_size, _size);
 }
 
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
 void ActionButton::setAction(QString _actionName) {
     // 将传入的副本直接移入成员变量，避免了额外的内存分配
     actionName = std::move(_actionName);
@@ -47,6 +52,10 @@ void ActionButton::mousePressEvent(QMouseEvent *event) {
 
 void ActionButton::mouseReleaseEvent(QMouseEvent *event) {
     IconButton::mouseReleaseEvent(event);
-    if(mTriggerMode == TriggerMode::ClickTrigger && rect().contains(event->position().toPoint()) && event->button() == Qt::LeftButton)
+    if(mTriggerMode == TriggerMode::ClickTrigger
+        && rect().contains(event->position().toPoint())
+        && event->button() == Qt::LeftButton)
+    {
         actionManager->invokeAction(actionName);
+    }
 }

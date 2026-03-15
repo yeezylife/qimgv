@@ -160,19 +160,12 @@ void MW::enableDocumentView() {
     centralWidget->showDocumentView();
     onInfoUpdated();
 
-    // 强制焦点链修复
-    if (this->isVisible()) {
-        this->activateWindow();
-        this->raise();
-
-        // 先给 MW 一个焦点（避免焦点落在 sidePanel）
-        this->setFocus(Qt::OtherFocusReason);
-
-        // 再把焦点交给真正处理键盘事件的 ViewerWidget
-        if (viewerWidget) {
+    // 最优雅、最轻量的焦点修复
+    QMetaObject::invokeMethod(this, [this] {
+        if (viewerWidget && viewerWidget->isVisible()) {
             viewerWidget->setFocus(Qt::OtherFocusReason);
         }
-    }
+    }, Qt::QueuedConnection);
 }
 
 ViewMode MW::currentViewMode() {

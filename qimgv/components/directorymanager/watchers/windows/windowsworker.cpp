@@ -1,7 +1,7 @@
 #include "windowsworker.h"
 #include "windowswatcher_p.h"
 
-WindowsWorker::WindowsWorker() : WatcherWorker() {
+WindowsWorker::WindowsWorker() {
     // 预分配缓冲区，避免每次重新分配
     buffer.resize(65536);  // 64KB 缓冲区
 }

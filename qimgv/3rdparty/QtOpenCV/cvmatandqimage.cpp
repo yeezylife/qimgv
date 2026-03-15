@@ -260,10 +260,11 @@ QImage mat2Image(const cv::Mat &mat, MatColorOrder order, QImage::Format formatH
 
     //Should we convert the image to the format specified by formatHint?
     QImage image = mat2Image_shared(mat_adjustDepth, format);
+    
     if (format == formatHint || formatHint == QImage::Format_Invalid)
         return image.copy();
-    else
-        return image.convertToFormat(formatHint);
+    
+    return image.convertToFormat(formatHint);
 }
 
 /* Convert QImage to cv::Mat without data copy

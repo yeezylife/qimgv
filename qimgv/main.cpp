@@ -142,7 +142,8 @@ int main(int argc, char *argv[]) {
         auto r = std::make_unique<CmdOptionsRunner>();
         QTimer::singleShot(0, r.get(), &CmdOptionsRunner::showBuildOptions);
         return a.exec();
-    } else if(parser.isSet("gen-thumbs")) {
+    }
+    if(parser.isSet("gen-thumbs")) {
         int size = settings->folderViewIconSize();
         if(parser.isSet("gen-thumbs-size"))
             size = parser.value("gen-thumbs-size").toInt();

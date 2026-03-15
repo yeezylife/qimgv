@@ -551,13 +551,14 @@ PanelPosition Settings::panelPosition() {
     QString posString = settings->settingsConf->value("panelPosition", "top").toString();
     if(posString == "top") {
         return PanelPosition::PANEL_TOP;
-    } else if(posString == "bottom") {
-        return PanelPosition::PANEL_BOTTOM;
-    } else if(posString == "left") {
-        return PanelPosition::PANEL_LEFT;
-    } else {
-        return PanelPosition::PANEL_RIGHT;
     }
+    if(posString == "bottom") {
+        return PanelPosition::PANEL_BOTTOM;
+    }
+    if(posString == "left") {
+        return PanelPosition::PANEL_LEFT;
+    }
+    return PanelPosition::PANEL_RIGHT;
 }
 
 void Settings::setPanelPosition(PanelPosition pos) {

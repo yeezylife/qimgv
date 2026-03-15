@@ -214,7 +214,8 @@ bool ActionManager::invokeAction(const QString &actionName) {
         QByteArray actionBytes = actionName.toUtf8();
         QMetaObject::invokeMethod(this, actionBytes.constData(), Qt::DirectConnection);
         return true;
-    } else if(type == ActionType::ACTION_SCRIPT) {
+    }
+    if(type == ActionType::ACTION_SCRIPT) {
         QString scriptName = actionName;
         scriptName.remove(0, 2);
         emit runScript(scriptName);

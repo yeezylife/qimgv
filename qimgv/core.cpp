@@ -427,6 +427,7 @@ void Core::enableFolderView() {
         return;
     stopSlideshow();
     mw->enableFolderView();
+    return true;
 }
 
 void Core::enableDocumentView() {
@@ -1070,19 +1071,17 @@ void Core::discardEdits() {
 QString Core::selectedPath() {
     if(!model)
         return "";
-    else if(mw->currentViewMode() == MODE_FOLDERVIEW)
+    if(mw->currentViewMode() == MODE_FOLDERVIEW)
         return folderViewPresenter.selectedPaths().last();
-    else
-        return state.currentFilePath;
+    return state.currentFilePath;
 }
 
 QList<QString> Core::currentSelection() {
     if(!model)
         return QList<QString>();
-    else if(mw->currentViewMode() == MODE_FOLDERVIEW)
+    if(mw->currentViewMode() == MODE_FOLDERVIEW)
         return folderViewPresenter.selectedPaths();
-    else
-        return QList<QString>() << state.currentFilePath;
+    return QList<QString>() << state.currentFilePath;
 }
 
 //------------------------

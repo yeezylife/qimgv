@@ -44,14 +44,14 @@ void FloatingMessage::readSettings() {
     */
 }
 
-void FloatingMessage::showMessage(QString text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration) {
+void FloatingMessage::showMessage(const QString &text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration) {
     setPosition(position);
-    doShowMessage(std::move(text), icon, duration);   // 修改此行
+    doShowMessage(text, icon, duration);   // 直接传递const引用
 }
 
-void FloatingMessage::showMessage(QString text, FloatingMessageIcon icon, int duration) {
+void FloatingMessage::showMessage(const QString &text, FloatingMessageIcon icon, int duration) {
     setPosition(preferredPosition);
-    doShowMessage(std::move(text), icon, duration);   // 修改此行
+    doShowMessage(text, icon, duration);   // 直接传递const引用
 }
 
 void FloatingMessage::doShowMessage(const QString &text, FloatingMessageIcon icon, int duration) {

@@ -24,8 +24,8 @@ class FloatingMessage : public OverlayWidget {
 public:
     FloatingMessage(FloatingWidgetContainer *parent);
     ~FloatingMessage();
-    void showMessage(QString text, FloatingMessageIcon icon, int fadeDuration);
-    void showMessage(QString text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration);
+    void showMessage(const QString &text, FloatingMessageIcon icon, int fadeDuration);
+    void showMessage(const QString &text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration);
 
 public slots:
     void show();

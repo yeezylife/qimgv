@@ -1,0 +1,140 @@
+name: Ctidy-auto-fix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4   # v6 目前還沒正式出來，改回 v4 較穩定
+        with:
+          fetch-depth: 0          # 完整歷史，方便 git diff / merge-base
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: true
+          install: >-
+            git
+            mingw-w64-clang-x86_64-gcc
+            mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja
+            mingw-w64-clang-x86_64-ntldd
+            mingw-w64-clang-x86_64-pkgconf
+            mingw-w64-clang-x86_64-kwindowsystem
+            mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-clang-tools-extra
+            mingw-w64-clang-x86_64-qt6-svg
+            mingw-w64-clang-x86_64-qt6-imageformats
+            mingw-w64-clang-x86_64-qt6-tools
+            mingw-w64-clang-x86_64-kimageformats
+            mingw-w64-clang-x86_64-libjxl
+            mingw-w64-clang-x86_64-libraw
+            mingw-w64-clang-x86_64-opencv
+            mingw-w64-clang-x86_64-mpv
+            mingw-w64-clang-x86_64-lcms2
+            mingw-w64-clang-x86_64-libavif
+            mingw-w64-clang-x86_64-libheif
+
+      - name: Configure CMake (normal build, no clang-tidy)
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DUSE_QT5=OFF \
+            -DVIDEO_SUPPORT=ON \
+            -DOPENCV_SUPPORT=ON \
+            -DCMAKE_PREFIX_PATH=/clang64 \
+            -DCMAKE_CXX_FLAGS="\
+              -O0 -g3 -fno-omit-frame-pointer \
+              -march=x86-64-v3 \
+              -Wall -Wextra -Werror \
+              -Wconversion \
+              -Wsign-conversion \
+              -Wsign-compare \
+              -Wnarrowing \
+              -Wold-style-cast \
+              -Wcast-qual \
+              -Wcast-align \
+              -pedantic -Wpedantic \
+              -Wzero-as-null-pointer-constant \
+              -Wnon-virtual-dtor \
+              -Woverloaded-virtual \
+              -Wsuggest-override \
+              -Wmissing-declarations \
+              -Wredundant-decls \
+              -Wshadow \
+              -Wundef \
+              -Wdouble-promotion \
+              -Wformat=2 \
+              -Wmisleading-indentation \
+              -Wlogical-op-parentheses \
+              -Wno-unused-parameter \
+              -Wdocumentation \
+              -Wimplicit-fallthrough \
+              -Wunused-macros \
+              -Wdisabled-optimization \
+              -Wpadded \
+              -Wweak-vtables \
+              -Wexit-time-destructors \
+              -Wglobal-constructors \
+              -Wswitch \
+              -Wfloat-conversion \
+              -Wshorten-64-to-32 \
+              -Wnull-dereference \
+              -Wself-assign \
+              -Wself-assign-field \
+              -Wtautological-compare \
+              -Wunused-private-field \
+              -Wunused-lambda-capture \
+              -Wrange-loop-analysis \
+              -Wunreachable-code \
+              -Wunused-template \
+              -fsanitize=address,undefined" \
+            -DCMAKE_C_FLAGS="..."   # 同上，保持你的 C flags
+
+      - name: Build qimgv (Debug)
+        run: cmake --build build --config Debug --parallel
+
+      - name: Run clang-tidy on changed files only + export fixes
+        run: |
+          # 先找出 PR 變更的 .cpp / .h / .cc / .cxx 檔案
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep -E '\.(cpp|cxx|cc|c|h|hh|hxx)$' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No source files changed in this PR."
+            exit 0
+          fi
+
+          # 切換到 build 目錄，因為 compile_commands.json 在那裡
+          cd build
+
+          # 執行 clang-tidy，只對變更檔案跑，並輸出 fixes yaml
+          clang-tidy \
+            -p . \
+            --export-fixes=../clang-tidy-fixes.yaml \
+            --checks=-*,bugprone-*,clang-analyzer-*,performance-*,concurrency-*,modernize-use-transparent-functors,modernize-use-nullptr,modernize-use-equals-default,modernize-use-equals-delete,modernize-deprecated-headers,readability-container-size-empty,readability-string-compare,readability-redundant-member-init,readability-redundant-declaration,readability-redundant-access-specifiers,readability-redundant-string-cstr,misc-unused-using-decls,readability-else-after-return,-bugprone-easily-swappable-parameters \
+            $CHANGED_FILES
+
+          # 把 yaml 移回根目錄方便後續 action 讀取
+          mv ../clang-tidy-fixes.yaml ../
+
+      - name: Upload clang-tidy fixes artifact (optional, debug用)
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-fixes
+          path: clang-tidy-fixes.yaml
+
+      - name: Create PR review comments from clang-tidy fixes
+        uses: ZedThree/clang-tidy-review@v0.23.1   # 目前最新版（2026年1月發布）
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}        # 必填，用來發 PR comment
+          path: clang-tidy-fixes.yaml               # 剛剛輸出的 yaml 檔
+          build_dir: build                          # compile_commands.json 所在目錄
+          # 可選參數（依需求開啟）
+          # max_comments: 20
+          # lgtm_comment_body: ""                   # 如果沒問題不要發 "LGTM"
+          # fail_on_warnings: false                 # 不讓 workflow fail

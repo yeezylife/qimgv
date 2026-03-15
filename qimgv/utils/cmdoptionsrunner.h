@@ -9,6 +9,7 @@
 class CmdOptionsRunner : public QObject {
     Q_OBJECT
 public slots:
-    void generateThumbs(QString dirPath, int size);
+    // 修改为常引用以优化性能
+    void generateThumbs(const QString &dirPath, int size);
     void showBuildOptions();
 };

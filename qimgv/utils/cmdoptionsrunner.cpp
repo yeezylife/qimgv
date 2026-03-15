@@ -1,7 +1,7 @@
 #include "cmdoptionsrunner.h"
 #include <QStringBuilder>
 
-void CmdOptionsRunner::generateThumbs(QString dirPath, int size) {
+void CmdOptionsRunner::generateThumbs(const QString &dirPath, int size) {
     if(size <= 50 || size > 400) {
         qDebug() << "Error: Invalid thumbnail size.";
         qDebug() << "Please specify a value between [50, 400].";

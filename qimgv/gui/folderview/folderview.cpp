@@ -157,7 +157,7 @@ void FolderView::onTreeViewTabOut() {
 
 // TODO: ask what to do
 void FolderView::onDroppedInByIndex(QList<QString> paths, QModelIndex index) {
-    emit moveUrlsRequested(paths, dirModel->filePath(index));
+    emit moveUrlsRequested(std::move(paths), dirModel->filePath(index));
 }
 
 void FolderView::onOptionsPopupButtonToggled(bool mode) {
@@ -317,7 +317,7 @@ void FolderView::onTreeViewClicked(QModelIndex index) {
 }
 
 void FolderView::onBookmarkClicked(QString dirPath) {
-    emit directorySelected(dirPath);
+    emit directorySelected(std::move(dirPath));
 }
 
 void FolderView::newBookmark() {

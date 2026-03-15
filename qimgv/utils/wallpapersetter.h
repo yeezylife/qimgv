@@ -13,5 +13,6 @@ class WallpaperSetter
 public:
     WallpaperSetter();
 
-    static void setWallpaper(QString path);
+    // 修改为常引用，避免在静态方法调用时产生不必要的引用计数增减
+    static void setWallpaper(const QString &path);
 };

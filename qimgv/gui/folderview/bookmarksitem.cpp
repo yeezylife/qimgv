@@ -1,7 +1,7 @@
 #include "bookmarksitem.h"
 
 BookmarksItem::BookmarksItem(QString _dirName, QString _dirPath, QWidget *parent) // NOLINT(bugprone-easily-swappable-parameters)
-    : QWidget(parent), dirName(_dirName), dirPath(_dirPath), mHighlighted(false)
+    : QWidget(parent), dirName(std::move(_dirName)), dirPath(std::move(_dirPath)), mHighlighted(false)
 {
     this->setContentsMargins(0,0,0,0);
     layout.setContentsMargins(10,6,10,6);

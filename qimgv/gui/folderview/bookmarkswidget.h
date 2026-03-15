@@ -16,10 +16,10 @@ public:
     ~BookmarksWidget();
 
 public slots:
-    void addBookmark(QString directoryPath);
+    void addBookmark(const QString &dirPath);
 
-    void removeBookmark(QString dirPath);
-    void onPathChanged(QString path);
+    void removeBookmark(const QString &dirPath);
+    void onPathChanged(const QString &path);
 private slots:
     void readSettings();
 

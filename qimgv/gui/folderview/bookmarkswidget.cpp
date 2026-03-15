@@ -25,7 +25,7 @@ void BookmarksWidget::saveBookmarks() {
     settings->setBookmarks(paths);
 }
 
-void BookmarksWidget::addBookmark(QString dirPath) {
+void BookmarksWidget::addBookmark(const QString &dirPath) {
     if(paths.contains(dirPath))
         return;
 
@@ -48,7 +48,7 @@ void BookmarksWidget::addBookmark(QString dirPath) {
     saveBookmarks();
 }
 
-void BookmarksWidget::removeBookmark(QString dirPath) {
+void BookmarksWidget::removeBookmark(const QString &dirPath) {
     for(int i = 0; i < layout.count(); i++) {
         auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(i)->widget());
         if(w && w->path() == dirPath) {
@@ -70,7 +70,7 @@ void BookmarksWidget::removeBookmark(QString dirPath) {
     }
 }
 
-void BookmarksWidget::onPathChanged(QString path) {
+void BookmarksWidget::onPathChanged(const QString &path) {
     if(highlightedPath == path)
         return;
 

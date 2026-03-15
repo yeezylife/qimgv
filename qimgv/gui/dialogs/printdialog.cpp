@@ -70,7 +70,7 @@ void PrintDialog::setupConnections() {
 }
 
 void PrintDialog::setImage(std::shared_ptr<const QImage> _img) {
-    img = _img;
+    img = std::move(_img);
     updatePreview();
 }
 
@@ -148,7 +148,7 @@ void PrintDialog::setLandscape(bool mode) {
     updatePreview();
 }
 
-void PrintDialog::onPrinterSelected(QString name) {
+void PrintDialog::onPrinterSelected(const QString &name) { 
     if(printer)
         delete printer;
     printer = new QPrinter(QPrinterInfo::printerInfo(name));

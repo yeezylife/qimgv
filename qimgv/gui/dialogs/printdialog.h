@@ -29,7 +29,7 @@ private slots:
     void exportPdf();
     void updatePreview();
     void setLandscape(bool mode);
-    void onPrinterSelected(QString name);
+    void onPrinterSelected(const QString &name);
 
 private:
     void initializePrinters();

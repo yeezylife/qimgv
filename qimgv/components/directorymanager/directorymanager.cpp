@@ -152,8 +152,7 @@ bool DirectoryManager::setDirectoryRecursive(const QString &dirPath) {
 QString DirectoryManager::directoryPath() const {
     if(mListSource == SOURCE_DIRECTORY || mListSource == SOURCE_DIRECTORY_RECURSIVE)
         return mDirectoryPath;
-    else
-        return "";
+    return "";
 }
 
 int DirectoryManager::indexOfFile(const QString &filePath) const {
@@ -253,8 +252,7 @@ unsigned long DirectoryManager::dirCount() const {
 const FSEntry &DirectoryManager::fileEntryAt(int index) const {
     if(checkFileRange(index))
         return fileEntryVec.at(index);
-    else
-        return defaultEntry;
+    return defaultEntry;
 }
 
 QDateTime DirectoryManager::lastModified(const QString &filePath) const {

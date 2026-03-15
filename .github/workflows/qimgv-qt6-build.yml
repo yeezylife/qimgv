@@ -76,9 +76,6 @@ jobs:
               -fvisibility-inlines-hidden \
               -ffunction-sections \
               -fdata-sections \
-              -fdevirtualize-speculatively \
-              -fno-plt \
-              -fno-semantic-interposition \
             " \
             -DCMAKE_C_FLAGS="\
               -DNDEBUG \
@@ -87,10 +84,9 @@ jobs:
               -march=x86-64-v3 \
               -flto=thin \
               -fstrict-aliasing \
+              -fvisibility=hidden \
               -ffunction-sections \
               -fdata-sections \
-              -fno-plt \
-              -fno-semantic-interposition \
             " \
             -DCMAKE_EXE_LINKER_FLAGS="\
               -flto=thin \
@@ -99,8 +95,6 @@ jobs:
               -Wl,--as-needed \
               -Wl,--strip-all \
               -Wl,--icf=all \
-              -Wl,-z,relro \
-              -Wl,-z,now \
             " \
             -DCMAKE_SHARED_LINKER_FLAGS="\
               -flto=thin \
@@ -109,8 +103,6 @@ jobs:
               -Wl,--as-needed \
               -Wl,--strip-all \
               -Wl,--icf=all \
-              -Wl,-z,relro \
-              -Wl,-z,now \
             "
           cmake --build build --config Release
 

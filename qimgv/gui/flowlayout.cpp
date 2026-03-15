@@ -241,7 +241,7 @@ QSizeF FlowLayout::minSize(const QSizeF &constraint) const
 QSizeF FlowLayout::prefSize() const
 {
     qreal left, right;
-    getContentsMargins(&left, 0, &right, 0);
+    getContentsMargins(&left, nullptr, &right, nullptr);
 
     qreal maxh = 0;
     qreal totalWidth = 0;

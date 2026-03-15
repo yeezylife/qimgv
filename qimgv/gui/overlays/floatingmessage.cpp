@@ -54,10 +54,10 @@ void FloatingMessage::showMessage(QString text, FloatingMessageIcon icon, int du
     doShowMessage(std::move(text), icon, duration);   // 修改此行
 }
 
-void FloatingMessage::doShowMessage(QString text, FloatingMessageIcon icon, int duration) {
+void FloatingMessage::doShowMessage(const QString &text, FloatingMessageIcon icon, int duration) {
     hideDelay = duration;
     setIcon(icon);
-    setText(std::move(text));   // 使用移动避免拷贝
+    setText(text);   // 直接传递const引用，避免不必要的拷贝和移动
     show();
 }
 

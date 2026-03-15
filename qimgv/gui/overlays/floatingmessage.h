@@ -36,7 +36,7 @@ private:
     int hideDelay;
     FloatingWidgetPosition preferredPosition;
     Ui::FloatingMessage *ui;
-    void doShowMessage(QString text, FloatingMessageIcon icon, int duration);
+    void doShowMessage(const QString &text, FloatingMessageIcon icon, int duration);
     void setIcon(FloatingMessageIcon icon);
 
 protected:

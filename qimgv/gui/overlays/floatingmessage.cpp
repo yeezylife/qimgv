@@ -57,11 +57,11 @@ void FloatingMessage::showMessage(QString text, FloatingMessageIcon icon, int du
 void FloatingMessage::doShowMessage(QString text, FloatingMessageIcon icon, int duration) {
     hideDelay = duration;
     setIcon(icon);
-    setText(text);
+    setText(std::move(text));   // 使用移动避免拷贝
     show();
 }
 
-void FloatingMessage::setText(QString text) {
+void FloatingMessage::setText(const QString &text) {
     ui->textLabel->setText(text);
     text.isEmpty()?ui->textLabel->hide():ui->textLabel->show();
     recalculateGeometry();

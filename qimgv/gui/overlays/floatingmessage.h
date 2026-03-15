@@ -29,7 +29,7 @@ public:
 
 public slots:
     void show();
-    void setText(QString text);
+    void setText(const QString &text);
 
 private:
     QTimer visibilityTimer;

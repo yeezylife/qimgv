@@ -71,7 +71,7 @@ public:
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     void setCurrentInfo(int fileIndex, int fileCount, const QString& filePath, const QString& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
-    void setExifInfo(QMap<QString, QString> info);
+    void setExifInfo(const QMap<QString, QString> &info);
     std::shared_ptr<FolderViewProxy> getFolderView();
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
 
@@ -79,7 +79,7 @@ public:
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     bool showConfirmation(const QString& title, const QString& msg);
-    DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
+    DialogResult fileReplaceDialog(const QString &source, const QString &target, FileReplaceMode mode, bool multiple);
 
 private:
     std::shared_ptr<ViewerWidget> viewerWidget;            // 默认 nullptr
@@ -232,7 +232,7 @@ public slots:
     void showSaveOverlay();
     void hideSaveOverlay();
     void showChangelogWindow();
-    void showChangelogWindow(QString text);
+    void showChangelogWindow(const QString &text);
     void fitWindow();
     void fitWidth();
     void fitOriginal();

@@ -599,17 +599,16 @@ void MW::showResizeDialog(QSize initialSize) {
     dialog.exec();
 }
 
-DialogResult MW::fileReplaceDialog(QString src, QString dst, FileReplaceMode mode, bool multiple) {
-    // src: 源文件路径, dst: 目标文件路径
+DialogResult MW::fileReplaceDialog(const QString &source, const QString &target, FileReplaceMode mode, bool multiple) {
+    // src: 源文件路径，dst: 目标文件路径
     FileReplaceDialog dialog(this);
     dialog.setModal(true);
-    dialog.setSource(std::move(src));
-    dialog.setDestination(std::move(dst));
+    // 移除 std::move，因为 setSource 接受的是 const&，move 无效且产生警告
+    dialog.setSource(src);
+    dialog.setDestination(dst);
     dialog.setMode(mode);
     dialog.setMulti(multiple);
-
     dialog.exec();
-
     return dialog.getResult();
 }
 
@@ -689,8 +688,8 @@ void MW::showChangelogWindow() {
     changelogWindow->show();
 }
 
-void MW::showChangelogWindow(QString text) {
-    changelogWindow->setText(std::move(text));
+void MW::showChangelogWindow(const QString &text) {
+    changelogWindow->setText(text);  // 移除 std::move
     changelogWindow->show();
 }
 
@@ -897,10 +896,11 @@ void MW::onInfoUpdated() {
 }
 
 // 实现 908 行 TODO：缓冲 EXIF 信息
-void MW::setExifInfo(QMap<QString, QString> info) {
-    m_exifInfo = info;                      // 缓冲到成员变量
+void MW::setExifInfo(const QMap<QString, QString> &info) {
+    m_exifInfo = info;                      // 缓冲到成员变量（此处会发生拷贝，符合预期）
     if(imageInfoOverlay)
-        imageInfoOverlay->setExifInfo(std::move(info));
+        // 移除 std::move，因为 setExifInfo 接受的是 const&
+        imageInfoOverlay->setExifInfo(info);
 }
 
 std::shared_ptr<FolderViewProxy> MW::getFolderView() {

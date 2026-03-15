@@ -24,7 +24,7 @@ ChangelogWindow::~ChangelogWindow() {
     delete ui;
 }
 
-void ChangelogWindow::setText(QString text) {
+void ChangelogWindow::setText(const QString &text) {
     ui->textBrowser->setText(text);
 }
 

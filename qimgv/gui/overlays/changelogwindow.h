@@ -19,7 +19,7 @@ class ChangelogWindow : public OverlayWidget {
 public:
     explicit ChangelogWindow(FloatingWidgetContainer *parent);
     ~ChangelogWindow();
-    void setText(QString text);
+    void setText(const QString &text);
 
 public slots:
     void show();

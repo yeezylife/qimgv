@@ -160,8 +160,9 @@ void MW::enableDocumentView() {
     centralWidget->showDocumentView();
     onInfoUpdated();
 
-    // 最优雅、最轻量的焦点修复
+    // 修复窗口激活 + 焦点链
     QMetaObject::invokeMethod(this, [this] {
+        this->activateWindow();  // 必须：让窗口成为活动窗口
         if (viewerWidget && viewerWidget->isVisible()) {
             viewerWidget->setFocus(Qt::OtherFocusReason);
         }

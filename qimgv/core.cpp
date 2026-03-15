@@ -12,8 +12,7 @@
 #endif
 
 Core::Core()
-        : QObject(),
-            loopSlideshow(false),
+        : loopSlideshow(false),
             shuffle(false),
             slideshow(false),
             folderEndAction(FOLDER_END_NO_ACTION),
@@ -427,7 +426,6 @@ void Core::enableFolderView() {
         return;
     stopSlideshow();
     mw->enableFolderView();
-    return true;
 }
 
 void Core::enableDocumentView() {

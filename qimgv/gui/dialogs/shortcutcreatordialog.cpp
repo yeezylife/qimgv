@@ -9,34 +9,38 @@ ShortcutCreatorDialog::ShortcutCreatorDialog(QWidget *parent) :
     initializeDialog();
 }
 
-ShortcutCreatorDialog::~ShortcutCreatorDialog() {
+ShortcutCreatorDialog::~ShortcutCreatorDialog()
+{
     delete ui;
 }
+
 //------------------------------------------------------------------------------
-void ShortcutCreatorDialog::initializeDialog() {
+void ShortcutCreatorDialog::initializeDialog()
+{
     setWindowTitle("Add shortcut");
     actionList = appActions->getList();
     scriptList = scriptManager->scriptNames();
-
     ui->actionsComboBox->addItems(actionList);
     ui->actionsComboBox->setCurrentIndex(0);
-
     ui->scriptsComboBox->addItems(scriptList);
     ui->scriptsComboBox->setCurrentIndex(0);
 }
 
-QString ShortcutCreatorDialog::selectedAction() {
+QString ShortcutCreatorDialog::selectedAction()
+{
     if(ui->actionsRadioButton->isChecked())
         return ui->actionsComboBox->currentText();
     else
         return "s:"+ui->scriptsComboBox->currentText();
 }
 
-QString ShortcutCreatorDialog::selectedShortcut() {
+QString ShortcutCreatorDialog::selectedShortcut()
+{
     return ui->sequenceEdit->sequence();
 }
 
-void ShortcutCreatorDialog::onShortcutEdited() {
+void ShortcutCreatorDialog::onShortcutEdited()
+{
     QString action = actionManager->actionForShortcut(ui->sequenceEdit->sequence());
     if(!action.isEmpty())
         ui->warningLabel->setText("This shortcut is used for action: " + action + ". Replace?");
@@ -44,7 +48,8 @@ void ShortcutCreatorDialog::onShortcutEdited() {
         ui->warningLabel->setText("");
 }
 
-void ShortcutCreatorDialog::setAction(QString action) {
+void ShortcutCreatorDialog::setAction(QString action)
+{
     auto cbox = ui->actionsComboBox;
     if(action.startsWith("s:")) {
         action = action.remove(0,2);
@@ -53,9 +58,11 @@ void ShortcutCreatorDialog::setAction(QString action) {
     }
     int index = cbox->findText(action);
     if(index != -1)
-       cbox->setCurrentIndex(index);
+        cbox->setCurrentIndex(index);
 }
 
-void ShortcutCreatorDialog::setShortcut(QString shortcut) {
+// 修复警告：将参数改为 const 引用传递
+void ShortcutCreatorDialog::setShortcut(const QString &shortcut)
+{
     ui->sequenceEdit->setText(shortcut);
 }

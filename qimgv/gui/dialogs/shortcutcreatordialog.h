@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QDialog>
 #include <QComboBox>
 #include <QRadioButton>
@@ -7,6 +6,7 @@
 #include "utils/actions.h"
 #include "components/actionmanager/actionmanager.h"
 #include "components/scriptmanager/scriptmanager.h"
+
 // TODO: separate gui from components
 // OR move script & action stuff to project root?
 
@@ -21,17 +21,17 @@ class ShortcutCreatorDialog : public QDialog
 public:
     explicit ShortcutCreatorDialog(QWidget *parent = nullptr);
     ~ShortcutCreatorDialog();
+
     QString selectedAction();
     QString selectedShortcut();
     void setAction(QString);
-    void setShortcut(QString);
+    void setShortcut(const QString &);
 
 private slots:
     void onShortcutEdited();
 
 private:
     void initializeDialog();
-    
     Ui::ShortcutCreatorDialog *ui;
     QList<QString> actionList, scriptList;
 };

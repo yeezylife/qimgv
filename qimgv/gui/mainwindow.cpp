@@ -156,10 +156,23 @@ void MW::enableFolderView() {
 }
 
 void MW::enableDocumentView() {
-    // 触发延迟初始化
     setupFullUi();
     centralWidget->showDocumentView();
     onInfoUpdated();
+
+    // 强制焦点链修复
+    if (this->isVisible()) {
+        this->activateWindow();
+        this->raise();
+
+        // 先给 MW 一个焦点（避免焦点落在 sidePanel）
+        this->setFocus(Qt::OtherFocusReason);
+
+        // 再把焦点交给真正处理键盘事件的 ViewerWidget
+        if (viewerWidget) {
+            viewerWidget->setFocus(Qt::OtherFocusReason);
+        }
+    }
 }
 
 ViewMode MW::currentViewMode() {

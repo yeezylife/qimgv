@@ -1236,7 +1236,7 @@ bool Core::loadPath(const QString& path) {
         }
         mw->enableDocumentView();
         return loadFileIndex(index, false, settings->usePreloader());
-    } else {
+    }
         mw->enableFolderView();
         return true;
     }

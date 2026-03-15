@@ -37,7 +37,7 @@ void RenameOverlay::hide() {
     OverlayWidget::hide();
 }
 
-void RenameOverlay::setName(QString name) {
+void RenameOverlay::setName(const QString &name) {
     ui->fileName->setText(name);
     origName = name;
     selectName();

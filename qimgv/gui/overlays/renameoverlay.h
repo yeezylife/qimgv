@@ -22,7 +22,7 @@ public:
     ~RenameOverlay();
 
 public slots:
-    void setName(QString name);
+    void setName(const QString &name);
     void setBackdropEnabled(bool mode);
     void show();
     void hide();

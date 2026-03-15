@@ -29,7 +29,7 @@ void FullscreenInfoOverlayProxy::hide() {
         infoOverlay->hide();
 }
 
-void FullscreenInfoOverlayProxy::setInfo(QString _position, QString _fileName, QString _info) {
+void FullscreenInfoOverlayProxy::setInfo(const QString &_position, const QString &_fileName, const QString &_info) {
     if(infoOverlay) {
         infoOverlay->setInfo(_position, _fileName, _info);
     } else {

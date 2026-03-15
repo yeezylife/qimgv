@@ -18,7 +18,7 @@ FullscreenInfoOverlay::~FullscreenInfoOverlay() {
     delete ui;
 }
 
-void FullscreenInfoOverlay::setInfo(QString pos, QString fileName, QString info) {
+void FullscreenInfoOverlay::setInfo(const QString &pos, const QString &fileName, const QString &info) {
     ui->posLabel->setText(pos);
     ui->nameLabel->setText(fileName);
     ui->infoLabel->setText(info);

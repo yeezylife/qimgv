@@ -152,9 +152,8 @@ QSize ThumbnailStrip::itemSize() {
         w.setThumbStyle(mCurrentStyle);
         w.setThumbnailSize(mThumbnailSize);
         return w.boundingRect().size().toSize();
-    } else {
-        return thumbnails.at(0)->boundingRect().size().toSize();
     }
+    return thumbnails.at(0)->boundingRect().size().toSize();
 }
 
 void ThumbnailStrip::resizeEvent(QResizeEvent *event) {

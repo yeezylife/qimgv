@@ -68,22 +68,19 @@ ViewerWidget::ViewerWidget(QWidget *parent)
 QRect ViewerWidget::imageRect() {
     if(imageViewer && currentWidget == IMAGEVIEWER)
         return imageViewer->scaledRectR();
-    else
-        return QRect(0,0,0,0);
+    return QRect(0,0,0,0);
 }
 
 float ViewerWidget::currentScale() {
     if(currentWidget == IMAGEVIEWER)
         return imageViewer->currentScale();
-    else
-        return 1.0f;
+    return 1.0f;
 }
 
 QSize ViewerWidget::sourceSize() {
     if(currentWidget == IMAGEVIEWER)
         return imageViewer->sourceSize();
-    else
-        return QSize(0,0);
+    return QSize(0,0);
 }
 
 // hide videoPlayer, show imageViewer
@@ -511,10 +508,9 @@ bool ViewerWidget::eventFilter(QObject *object, QEvent *event) {
             clickZoneOverlay->highlightRight();
             setCursor(Qt::PointingHandCursor);
             return true;
-        } else {
-            clickZoneOverlay->disableHighlight();
-            setCursor(Qt::ArrowCursor);
         }
+        clickZoneOverlay->disableHighlight();
+        setCursor(Qt::ArrowCursor);
     }
 
     if(event->type() == QEvent::Leave) {

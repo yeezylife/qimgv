@@ -79,9 +79,8 @@ void ThumbnailStripProxy::select(int index) {
 QList<int> ThumbnailStripProxy::selection() {
     if(thumbnailStrip) {
         return thumbnailStrip->selection();
-    } else {
-        return stateBuf.selection;
     }
+    return stateBuf.selection;
 }
 
 void ThumbnailStripProxy::focusOn(int index) {

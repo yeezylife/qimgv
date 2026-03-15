@@ -37,10 +37,7 @@ setWidget(thumbnailStrip);
 //connect(settings, SIGNAL(settingsChanged()), this, SLOT(readSettings()));
 }
 
-MainPanel::~MainPanel() {
-// 按钮对象会自动被父对象删除，无需手动删除
-// 这里保持空实现以维持接口兼容性
-}
+MainPanel::~MainPanel() = default;
 
 void MainPanel::onPinClicked() {
 bool mode = !settings->panelPinned();

@@ -10,8 +10,7 @@ BookmarksWidget::BookmarksWidget(QWidget *parent) : QWidget(parent), highlighted
     readSettings();
 }
 
-BookmarksWidget::~BookmarksWidget() {
-}
+BookmarksWidget::~BookmarksWidget() = default;
 
 void BookmarksWidget::readSettings() {
     QStringList _paths = settings->bookmarks();

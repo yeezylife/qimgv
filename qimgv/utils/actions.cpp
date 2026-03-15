@@ -3,9 +3,7 @@
 
 Actions *appActions = nullptr;
 
-Actions::Actions() {
-    init();
-}
+Actions::Actions() = default;
 
 Actions *Actions::getInstance() {
     if(!appActions)

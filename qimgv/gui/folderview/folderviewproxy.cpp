@@ -83,9 +83,8 @@ void FolderViewProxy::select(int index) {
 QList<int> FolderViewProxy::selection() {
     if(folderView) {
         return folderView->selection();
-    } else {
-        return stateBuf.selection;
     }
+    return stateBuf.selection;
 }
 
 void FolderViewProxy::focusOn(int index) {

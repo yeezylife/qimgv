@@ -1116,10 +1116,10 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
         }
         return;
     } 
-    else if(event->buttons() & Qt::RightButton) {
+    if(event->buttons() & Qt::RightButton) {
         if(mouseInteraction == MOUSE_ZOOM || 
-           static_cast<float>(std::abs(mousePressPos.y() - event->pos().y())) >
-               static_cast<float>(zoomThreshold) / dpr) 
+            static_cast<float>(std::abs(mousePressPos.y() - event->pos().y())) >
+                static_cast<float>(zoomThreshold) / dpr) 
         {
             if(cursor().shape() != Qt::SizeVerCursor)
                 setCursor(Qt::SizeVerCursor);

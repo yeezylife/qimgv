@@ -47,16 +47,14 @@ bool ImageAnimated::save(QString destPath) {
         if (!file.copy(destPath)) {
             qDebug() << "Unable to save file.";
             return false;
-        } else {
-            if (destPath == this->filePath()) {
-                mDocInfo->refresh();
-            }
-            return true;
         }
-    } else {
-        qDebug() << "Unable to save file. Perhaps the source file was deleted?";
-        return false;
+        if (destPath == this->filePath()) {
+            mDocInfo->refresh();
+        }
+        return true;
     }
+    qDebug() << "Unable to save file. Perhaps the source file was deleted?";
+    return false;
 }
 
 bool ImageAnimated::save() {

@@ -74,8 +74,7 @@ int FlowLayout::itemAbove(int index) {
     int indexAbove = index - m_columns;
     if(indexAbove >= 0)
         return indexAbove;
-    else
-        return index;
+    return index;
 }
 
 int FlowLayout::itemBelow(int index) {
@@ -91,9 +90,8 @@ int FlowLayout::itemBelow(int index) {
     // 修复: qsizetype -> int
     if(indexBelow < static_cast<int>(m_items.count()))
         return indexBelow;
-    else
-        // 修复: qsizetype -> int
-        return static_cast<int>(m_items.count()) - 1;
+    // 修复: qsizetype -> int
+    return static_cast<int>(m_items.count()) - 1;
 }
 
 bool FlowLayout::sameRow(int one, int two) {

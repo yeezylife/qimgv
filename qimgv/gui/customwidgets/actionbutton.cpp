@@ -6,7 +6,6 @@
 
 ActionButton::ActionButton(QWidget *parent)
     : IconButton(parent)
-    , actionName()
     , mTriggerMode(ClickTrigger)
 {
     setFocusPolicy(Qt::NoFocus);

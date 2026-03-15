@@ -2,7 +2,6 @@
 
 FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent)
     : QWidget(parent)
-    , container()
     , mAcceptKeyboardFocus(false)
 {
     setAccessibleName("OverlayWidget");

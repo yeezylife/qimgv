@@ -1,7 +1,6 @@
 #include "clickablelabel.h"
 
-ClickableLabel::ClickableLabel() {
-}
+ClickableLabel::ClickableLabel() = default;
 
 ClickableLabel::ClickableLabel(QWidget *parent) : QLabel(parent) {
 }

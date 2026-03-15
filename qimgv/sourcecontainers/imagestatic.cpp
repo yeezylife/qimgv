@@ -200,18 +200,17 @@ bool ImageStatic::save(QString destPath) {
         }
         
         return true;
-    } else {
-        // 保存失败，回滚
-        saveFile.cancelWriting();
-        qWarning() << "ImageStatic::save() - Write failed:" << writer.errorString();
-        
-        if(originalExists && !backupPath.isEmpty()) {
-            QFile::remove(destPath);
-            QFile::copy(backupPath, destPath);
-            QFile::remove(backupPath);
-        }
-        return false;
     }
+    // 保存失败，回滚
+    saveFile.cancelWriting();
+    qWarning() << "ImageStatic::save() - Write failed:" << writer.errorString();
+    
+    if(originalExists && !backupPath.isEmpty()) {
+        QFile::remove(destPath);
+        QFile::copy(backupPath, destPath);
+        QFile::remove(backupPath);
+    }
+    return false;
 }
 
 bool ImageStatic::save() {

@@ -1,4 +1,4 @@
 #include "idirectoryview.h"
 
-IDirectoryView::~IDirectoryView() {}
+IDirectoryView::~IDirectoryView() = default;
 

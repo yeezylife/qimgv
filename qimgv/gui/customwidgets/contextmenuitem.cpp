@@ -6,8 +6,7 @@ ContextMenuItem::ContextMenuItem(QWidget *parent)
 {
 }
 
-ContextMenuItem::~ContextMenuItem() {
-}
+ContextMenuItem::~ContextMenuItem() = default;
 
 void ContextMenuItem::setAction(QString text) {
     mAction = std::move(text);

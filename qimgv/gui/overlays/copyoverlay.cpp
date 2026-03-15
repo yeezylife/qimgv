@@ -136,27 +136,25 @@ void CopyOverlay::createDefaultPaths() {
             }
             if(mfi.isFile()) {
                 continue;
-            } 
-            else {
-                if(mfi.fileName() == "."  
-                || mfi.fileName() ==  ".."
-                // hide directory
-                || mfi.fileName()[0] ==  '.' 
-                // windows system directory
-                || mfi.fileName() ==  "3D Objects"
-                || mfi.fileName() ==  "Contacts"
-                || mfi.fileName() ==  "Favorites"
-                || mfi.fileName() ==  "Links"
-                || mfi.fileName() ==  "Saved Games"
-                || mfi.fileName() ==  "Searches"
-                ) {
-                    continue;
-                }
-                QString qpath(home + "/" + mfi.fileName());
-                QFileInfo qinfo(qpath);
-                if (qinfo.permission(QFile::WriteUser | QFile::ReadGroup)) {
-                    paths << qpath;
-                }
+            }
+            if(mfi.fileName() == "."  
+            || mfi.fileName() ==  ".."
+            // hide directory
+            || mfi.fileName()[0] ==  '.' 
+            // windows system directory
+            || mfi.fileName() ==  "3D Objects"
+            || mfi.fileName() ==  "Contacts"
+            || mfi.fileName() ==  "Favorites"
+            || mfi.fileName() ==  "Links"
+            || mfi.fileName() ==  "Saved Games"
+            || mfi.fileName() ==  "Searches"
+            ) {
+                continue;
+            }
+            QString qpath(home + "/" + mfi.fileName());
+            QFileInfo qinfo(qpath);
+            if (qinfo.permission(QFile::WriteUser | QFile::ReadGroup)) {
+                paths << qpath;
             }
         }
     }

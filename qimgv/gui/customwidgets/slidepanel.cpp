@@ -43,7 +43,7 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
     QWidget::hide();
 }
 
-SlidePanel::~SlidePanel() {}
+SlidePanel::~SlidePanel() = default;
 
 void SlidePanel::hide() {
     timeline.stop();

@@ -57,9 +57,8 @@ void ScriptEditorDialog::onNameChanged(const QString &name) {
         ui->messageLabel->setText(tr("Enter script name"));
         ui->acceptButton->setEnabled(false);
         return;
-    } else {
-        ui->acceptButton->setEnabled(true);
     }
+    ui->acceptButton->setEnabled(true);
 
     QString okBtnText;
     ui->messageLabel->clear();

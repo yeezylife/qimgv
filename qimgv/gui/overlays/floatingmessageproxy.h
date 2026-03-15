@@ -7,8 +7,8 @@ class FloatingMessageProxy
 public:
     FloatingMessageProxy(FloatingWidgetContainer *parent);
     ~FloatingMessageProxy();
-    void showMessage(QString text, FloatingMessageIcon icon, int duration);
-    void showMessage(QString text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration);
+    void showMessage(const QString &text, FloatingMessageIcon icon, int duration);
+    void showMessage(const QString &text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration);
     void init();
 private:
     FloatingWidgetContainer *container;

@@ -563,7 +563,7 @@ QString MW::getSaveFileName(const QString& filePath) {
         if(filters.filter(fmt).isEmpty())
             filters.append(fmt.toUpper() + " (*." + fmt + ")");
     }
-    QString filterString = filters.join(";; ");
+    QString filterString = filters.join(QStringLiteral(";; "));
 
     // find matching filter for the current image
     QString selectedFilter = "JPEG (*.jpg *.jpeg *jpe *jfif)";
@@ -969,8 +969,7 @@ bool MW::showConfirmation(const QString& title, const QString& msg) {
     msgBox.setModal(true);
     if(msgBox.exec() == QMessageBox::Yes)
         return true;
-    else
-        return false;
+    return false;
 }
 
 void MW::readSettings() {

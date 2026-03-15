@@ -106,7 +106,8 @@ bool ThumbnailView::eventFilter(QObject *o, QEvent *ev) {
         if(ev->type() == QEvent::Wheel) {
             this->wheelEvent(dynamic_cast<QWheelEvent*>(ev));
             return true;
-        } else if(ev->type() == QEvent::Paint && mDrawScrollbarIndicator) {
+        }
+        if(ev->type() == QEvent::Paint && mDrawScrollbarIndicator) {
             QPainter p(scrollBar);
             p.setOpacity(0.3);
             p.fillRect(indicator, QBrush(Qt::gray));
@@ -326,17 +327,15 @@ int ThumbnailView::thumbnailSize() {
 bool ThumbnailView::atSceneStart() {
     if(mOrientation == Qt::Horizontal) {
         return (viewportTransform().dx() == 0.0);
-    } else {
-        return (viewportTransform().dy() == 0.0);
     }
+    return (viewportTransform().dy() == 0.0);
 }
 
 bool ThumbnailView::atSceneEnd() {
     if(mOrientation == Qt::Horizontal) {
         return (viewportTransform().dx() <= viewport()->width() - sceneRect().width());
-    } else {
-        return (viewportTransform().dy() <= viewport()->height() - sceneRect().height());
     }
+    return (viewportTransform().dy() <= viewport()->height() - sceneRect().height());
 }
 
 bool ThumbnailView::checkRange(int pos) {
@@ -496,7 +495,8 @@ void ThumbnailView::mousePressEvent(QMouseEvent *event) {
                 if(selectMode == ACTIVATE_BY_PRESS) {
                     emit itemActivated(index);
                     return;
-                } else select(index);
+                }
+                select(index);
             } else mouseReleaseSelect = true;
             dragStartPos = event->position().toPoint();
         } else if(event->button() == Qt::RightButton) {

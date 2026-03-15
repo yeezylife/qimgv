@@ -30,8 +30,7 @@ QString ShortcutCreatorDialog::selectedAction()
 {
     if(ui->actionsRadioButton->isChecked())
         return ui->actionsComboBox->currentText();
-    else
-        return "s:"+ui->scriptsComboBox->currentText();
+    return "s:"+ui->scriptsComboBox->currentText();
 }
 
 QString ShortcutCreatorDialog::selectedShortcut()

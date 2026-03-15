@@ -1,5 +1,6 @@
 #include "floatingmessage.h"
 #include "ui_floatingmessage.h"
+#include <utility>
 
 FloatingMessage::FloatingMessage(FloatingWidgetContainer *parent) :
     OverlayWidget(parent),
@@ -45,12 +46,12 @@ void FloatingMessage::readSettings() {
 
 void FloatingMessage::showMessage(QString text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration) {
     setPosition(position);
-    doShowMessage(text, icon, duration);
+    doShowMessage(std::move(text), icon, duration);   // 修改此行
 }
 
 void FloatingMessage::showMessage(QString text, FloatingMessageIcon icon, int duration) {
     setPosition(preferredPosition);
-    doShowMessage(text, icon, duration);
+    doShowMessage(std::move(text), icon, duration);   // 修改此行
 }
 
 void FloatingMessage::doShowMessage(QString text, FloatingMessageIcon icon, int duration) {

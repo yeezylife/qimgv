@@ -64,7 +64,7 @@ private slots:
     void addScript();
     void editScript();
     void editScript(QListWidgetItem *item);
-    void editScript(QString name);
+    void editScript(const QString &name);
     void removeScript();
 
     void addShortcut();

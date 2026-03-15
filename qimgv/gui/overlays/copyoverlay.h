@@ -40,7 +40,7 @@ protected:
 
     bool focusNextPrevChild(bool);
 private slots:
-    void requestFileOperation(QString path);
+    void requestFileOperation(const QString &path);
     void readSettings();
 
 private:

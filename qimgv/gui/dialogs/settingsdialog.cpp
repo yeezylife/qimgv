@@ -532,7 +532,7 @@ void SettingsDialog::editScript(QListWidgetItem* item) {
     }
 }
 //------------------------------------------------------------------------------
-void SettingsDialog::editScript(QString name) {
+void SettingsDialog::editScript(const QString &name) {
     ScriptEditorDialog w(name, scriptManager->getScript(name));
     if(w.exec()) {
         if(w.scriptName().isEmpty())

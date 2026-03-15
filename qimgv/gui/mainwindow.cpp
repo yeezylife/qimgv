@@ -160,10 +160,11 @@ void MW::enableDocumentView() {
     centralWidget->showDocumentView();
     onInfoUpdated();
 
-    // 修复窗口激活 + 焦点链
+    // 必须：强制激活窗口（解决文件关联启动不激活的问题）
     QMetaObject::invokeMethod(this, [this] {
-        this->activateWindow();  // 必须：让窗口成为活动窗口
-        if (viewerWidget && viewerWidget->isVisible()) {
+        this->activateWindow();
+        this->raise();
+        if (viewerWidget) {
             viewerWidget->setFocus(Qt::OtherFocusReason);
         }
     }, Qt::QueuedConnection);

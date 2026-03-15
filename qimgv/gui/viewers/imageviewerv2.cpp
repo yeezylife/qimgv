@@ -1133,9 +1133,7 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
         }
         return;
     } 
-    else {
-        event->ignore();
-    }
+    event->ignore();
 }
 
 void ImageViewerV2::mouseReleaseEvent(QMouseEvent *event) {

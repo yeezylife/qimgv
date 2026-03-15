@@ -67,8 +67,7 @@ ImageViewerV2::ImageViewerV2(QWidget *parent)
     initSettings();  // 替换虚函数调用 readSettings()
 }
 
-ImageViewerV2::~ImageViewerV2() {
-}
+ImageViewerV2::~ImageViewerV2() = default;
 
 void ImageViewerV2::initializeScene() {
     pixmapItem.setTransformationMode(Qt::SmoothTransformation);

@@ -8,7 +8,10 @@ InfoBarProxy::InfoBarProxy(QWidget *parent) : QWidget(parent), infoBar(nullptr) 
     setLayout(&layout);
 }
 
-InfoBarProxy::~InfoBarProxy() = default;
+InfoBarProxy::~InfoBarProxy() {
+    if(infoBar)
+        infoBar->deleteLater();
+}
 
 void InfoBarProxy::setInfo(const QString& position, const QString& fileName, const QString& info) {
     if(infoBar) {

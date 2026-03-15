@@ -219,16 +219,14 @@ QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
         if (destSize.width() <= destSize.height()) {
             return source.scaledToWidth(destSize.width(), 
                                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-        } else {
-            return source.scaledToHeight(destSize.height(), 
-                                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
         }
-    } else {
-        // 放大操作 - 使用通用scaled方法
-        return source.scaled(destSize,
-                           Qt::KeepAspectRatio,
-                           smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+        return source.scaledToHeight(destSize.height(), 
+                                   smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
     }
+    // 放大操作 - 使用通用scaled方法
+    return source.scaled(destSize,
+                       Qt::KeepAspectRatio,
+                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
 }
 
 #ifdef USE_OPENCV

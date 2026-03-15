@@ -351,9 +351,9 @@ bool ViewerWidget::isDisplaying() {
         return true;
     if(currentWidget == VIDEOPLAYER)
         return true;
-    else
-        return false;
+    return false;
 }
+
 
 bool ViewerWidget::lockZoomEnabled() {
     return imageViewer->lockZoomEnabled();
@@ -503,7 +503,8 @@ bool ViewerWidget::eventFilter(QObject *object, QEvent *event) {
             clickZoneOverlay->highlightLeft();
             setCursor(Qt::PointingHandCursor);
             return true;
-        } else if(clickZoneOverlay->rightZone().contains(mousePos)) {
+        }
+        if(clickZoneOverlay->rightZone().contains(mousePos)) {
             clickZoneOverlay->setPressed(false);
             clickZoneOverlay->highlightRight();
             setCursor(Qt::PointingHandCursor);

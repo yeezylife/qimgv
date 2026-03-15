@@ -210,7 +210,7 @@ public slots:
     void showResizeDialog(QSize initialSize);
     void showSettings();
     void triggerFullScreen();
-    void showMessageDirectory(QString dirName);
+    void showMessageDirectory(const QString& dirName);
     void showMessageDirectoryEnd();
     void showMessageDirectoryStart();
     void showMessageFitWindow();
@@ -219,11 +219,11 @@ public slots:
     void showFullScreen();
     void showWindowed();
     void triggerCopyOverlay();
-    void showMessage(QString text);
-    void showMessage(QString text, int duration);
-    void showMessageSuccess(QString text);
-    void showWarning(QString text);
-    void showError(QString text);
+    void showMessage(const QString& text);
+    void showMessage(const QString& text, int duration);
+    void showMessageSuccess(const QString& text);
+    void showWarning(const QString& text);
+    void showError(const QString& text);
     void triggerMoveOverlay();
     void closeFullScreenOrExit();
     void close();

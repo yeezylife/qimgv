@@ -910,8 +910,8 @@ std::shared_ptr<ThumbnailStripProxy> MW::getThumbnailPanel() {
 }
 
 // todo: this is crap
-void MW::showMessageDirectory(QString dirName) {
-    floatingMessage->showMessage(std::move(dirName), FloatingMessageIcon::ICON_DIRECTORY, 1700);
+void MW::showMessageDirectory(const QString& dirName) {
+    floatingMessage->showMessage(dirName, FloatingMessageIcon::ICON_DIRECTORY, 1700);
 }
 
 void MW::showMessageDirectoryEnd() {
@@ -936,24 +936,24 @@ void MW::showMessageFitOriginal() {
     floatingMessage->showMessage(tr("Fit 1:1"), FloatingMessageIcon::NO_ICON, 350);
 }
 
-void MW::showMessage(QString text) {
-    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::NO_ICON, 1500);
+void MW::showMessage(const QString& text) {
+    floatingMessage->showMessage(text, FloatingMessageIcon::NO_ICON, 1500);
 }
 
-void MW::showMessage(QString text, int duration) {
-    floatingMessage->showMessage(std::move(text), FloatingMessageIcon::NO_ICON, duration);
+void MW::showMessage(const QString& text, int duration) {
+    floatingMessage->showMessage(text, FloatingMessageIcon::NO_ICON, duration);
 }
 
-void MW::showMessageSuccess(QString text) {
-    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_SUCCESS, 1500);
+void MW::showMessageSuccess(const QString& text) {
+    floatingMessage->showMessage(text, FloatingMessageIcon::ICON_SUCCESS, 1500);
 }
 
-void MW::showWarning(QString text) {
-    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_WARNING, 1500);
+void MW::showWarning(const QString& text) {
+    floatingMessage->showMessage(text, FloatingMessageIcon::ICON_WARNING, 1500);
 }
 
-void MW::showError(QString text) {
-    floatingMessage->showMessage(std::move(text),  FloatingMessageIcon::ICON_ERROR, 2800);
+void MW::showError(const QString& text) {
+    floatingMessage->showMessage(text, FloatingMessageIcon::ICON_ERROR, 2800);
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

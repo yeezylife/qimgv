@@ -431,7 +431,6 @@ void MW::showEvent(QShowEvent *event) {
         // 延迟到下一轮事件循环，确保窗口和子控件都完全就绪
         QTimer::singleShot(0, this, [this] {
             this->activateWindow();
-            this->raise();
             if (viewerWidget && viewerWidget->isVisible()) {
                 viewerWidget->setFocus(Qt::OtherFocusReason);
             }

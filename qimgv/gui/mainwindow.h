@@ -109,6 +109,7 @@ private:
     QMap<QString, QString> m_exifInfo;                       // 缓冲 EXIF 信息（实现 908 行 TODO）
 
     bool fullUiInitialized = false;                         // 延迟初始化标志
+    bool firstShowHandled = false;                          // 只在第一次 show 时激活窗口
 
     void saveWindowGeometry();
     void restoreWindowGeometry();
@@ -147,6 +148,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *e) override;
     void dropEvent(QDropEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;   // 新增
 
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;

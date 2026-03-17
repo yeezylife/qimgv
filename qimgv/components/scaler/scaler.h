@@ -5,7 +5,7 @@
 #include <QMutex>
 #include <QImage>
 #include <QPixmap>
-#include <utility> 
+#include <utility>
 #include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -17,7 +17,7 @@ public:
     ~Scaler() override;
 
 signals:
-    // 核心修改：改为值传递，以便支持 std::move
+    // 值传递，支持 std::move 避免拷贝
     void scalingFinished(QPixmap result, ScalerRequest request);
     void acceptScalingResult(QImage image, ScalerRequest req);
 
@@ -26,7 +26,6 @@ public slots:
 
 private slots:
     void onTaskStart(const ScalerRequest &req);
-    // 核心修改：接收端也改为值传递
     void onTaskFinish(QImage scaled, ScalerRequest req);
     void slotForwardScaledResult(QImage image, ScalerRequest req);
 

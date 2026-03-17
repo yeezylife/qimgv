@@ -61,8 +61,9 @@ void Scaler::requestScaled(const ScalerRequest &req) {
                 }
             }
         }
-    }
+    }  // 【优化点1】锁在此释放，后续操作在锁外执行
 
+    // 【优化点1】cache 操作移出锁外（I/O 可能耗时）
     if (!toReserve.isEmpty()) cache->reserve(toReserve);
     if (!toRelease.isEmpty()) cache->release(toRelease);
 
@@ -91,11 +92,14 @@ void Scaler::onTaskStart(const ScalerRequest &req) {
     startedRequest = req;
 }
 
-// 修复点：参数移除 const &，改为值传递
 void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
     QString toRelease;
     bool hasNextTask = false;
     ScalerRequest nextReq;
+    
+    // 【优化点2】用于锁外发射信号的临时变量
+    QImage resultImage;
+    ScalerRequest resultReq;
 
     {
         QMutexLocker locker(&mutex);
@@ -109,21 +113,30 @@ void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
             hasNextTask = true;
             nextReq = bufferedRequest;
         } else {
-            // 此时 scaled 是非 const 的左值，move 后将完美触发移动语义
-            emit acceptScalingResult(std::move(scaled), std::move(req));
+            // 【优化点2】将结果移动到临时变量，锁外发射信号
+            resultImage = std::move(scaled);
+            resultReq = std::move(req);
         }
-    }
+    }  // 【优化点2】锁在此释放，后续所有操作在锁外执行
 
+    // 【优化点2】以下操作均在锁外执行，减少锁持有时间
+    
+    // I/O 操作（可能涉及文件系统，耗时）
     if (!toRelease.isEmpty()) {
         cache->release(toRelease);
     }
 
+    // 启动下一个任务（可能涉及线程调度）
     if (hasNextTask) {
         startRequest(nextReq);
     }
+
+    // 信号发射（可能触发多个槽函数，耗时不确定）
+    if (!resultImage.isNull()) {
+        emit acceptScalingResult(std::move(resultImage), std::move(resultReq));
+    }
 }
 
-// 修复点：参数移除 const &，改为值传递
 void Scaler::slotForwardScaledResult(QImage image, ScalerRequest req) {
     // QPixmap::fromImage 在 Qt6 中针对右值有优化
     QPixmap result = QPixmap::fromImage(std::move(image));

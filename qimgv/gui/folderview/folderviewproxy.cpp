@@ -1,4 +1,5 @@
 #include "folderviewproxy.h"
+#include <QApplication>
 
 FolderViewProxy::FolderViewProxy(QWidget *parent)
     : QWidget(parent),
@@ -9,13 +10,24 @@ FolderViewProxy::FolderViewProxy(QWidget *parent)
 }
 
 void FolderViewProxy::init() {
-    qApp->processEvents(); // chew through events in case we have something that alters stateBuf in queue
-    QMutexLocker ml(&m);
-    if(folderView)
+    // 优化：进入锁前先检查，避免已初始化的情况下重复竞争锁
+    if (folderView)
         return;
-    folderView.reset(new FolderView());
-    folderView->setParent(this);
-    ml.unlock();
+
+    qApp->processEvents(); 
+
+    {
+        QMutexLocker ml(&m);
+        // 双检锁，防止 processEvents 期间的重入
+        if (folderView)
+            return;
+
+        // 优化：使用 std::make_shared 减少内存分配开销
+        folderView = std::make_shared<FolderView>();
+        folderView->setParent(this);
+    } 
+    // 优化：锁在创建完成后即释放，后续 UI 连接和布局操作均在锁外进行
+
     layout.addWidget(folderView.get());
     this->setFocusProxy(folderView.get());
     this->setLayout(&layout);
@@ -33,25 +45,29 @@ void FolderViewProxy::init() {
 
     folderView->show();
 
-    // apply buffer
+    // 应用缓冲状态
     if(!stateBuf.directory.isEmpty())
         folderView->setDirectoryPath(stateBuf.directory);
     folderView->onFullscreenModeChanged(stateBuf.fullscreenMode);
     folderView->populate(stateBuf.itemCount);
     folderView->select(stateBuf.selection);
-    // wait till layout stuff happens
-    // before calling focusOn()
+
     qApp->processEvents();
     folderView->focusOnSelection();
     folderView->onSortingChanged(stateBuf.sortingMode);
 }
 
 void FolderViewProxy::populate(int count) {
-    QMutexLocker ml(&m);
-    stateBuf.itemCount = count;
-    if(folderView) {
-        ml.unlock();
-        folderView->populate(stateBuf.itemCount);
+    std::shared_ptr<FolderView> view;
+    {
+        QMutexLocker ml(&m);
+        stateBuf.itemCount = count;
+        // 优化：通过拷贝 shared_ptr 延长对象生命周期，从而在锁外执行耗时的 populate
+        view = folderView;
+    }
+
+    if (view) {
+        view->populate(count);
     } else {
         stateBuf.selection.clear();
     }

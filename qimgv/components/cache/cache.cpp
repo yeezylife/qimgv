@@ -40,15 +40,18 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
 }
 
 void Cache::evictLRUItems() {
-    // 调用者已持有 unique_lock
     if (mMaxCacheSize <= 0 || items.size() <= mMaxCacheSize) return;
 
-    while (items.size() > mMaxCacheSize) {
+    // 目标：不仅要降到 mMaxCacheSize，最好再多腾出 5 个位置作为“缓冲”
+    // 这样接下来的 5 次插入都不用再跑这个 O(n) 的循环
+    int targetSize = std::max(0, mMaxCacheSize - 5);
+
+    while (items.size() > targetSize) {
         QString oldestPath;
         uint64_t oldestTime = std::numeric_limits<uint64_t>::max();
         bool foundAny = false;
 
-        // 扫描寻找：1. 未锁定 2. 时间戳最早的项目
+        // 简单的 O(n) 扫描，寻找当前未锁定的最旧项
         auto it = items.begin();
         while (it != items.end()) {
             auto item = it.value();
@@ -66,7 +69,11 @@ void Cache::evictLRUItems() {
         if (foundAny) {
             items.remove(oldestPath);
         } else {
-            break; // 所有项目都被锁定，无法继续淘汰
+            // 如果所有剩下的项目都被锁定了，或者已经降到了安全线以下，就停止
+            if (items.size() <= mMaxCacheSize) break; 
+            
+            // 实在删不动了（全部被锁定）
+            break;
         }
     }
 }

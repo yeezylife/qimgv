@@ -1,13 +1,10 @@
 #pragma once
 
-#include <QDebug>
 #include <QHash>
-#include <QSet>
-#include <QReadWriteLock> // 改用读写锁
-#include <QReadLocker>
-#include <QWriteLocker>
+#include <QStringList>
+#include <shared_mutex> // C++17 读写锁
 #include <memory>
-#include <list>
+#include <vector>
 #include "sourcecontainers/image.h"
 #include "components/cache/cacheitem.h"
 
@@ -16,30 +13,24 @@ public:
     explicit Cache();
     ~Cache() = default;
 
-    // 修复：参数改为 const 引用，避免不必要的拷贝
     bool contains(const QString &path) const;
     void remove(const QString &path);
     void clear();
-    bool insert(const std::shared_ptr<Image> &img); // shared_ptr 也建议使用 const 引用
-    void trimTo(QStringList list);
+    bool insert(const std::shared_ptr<Image> &img);
+    void trimTo(const QStringList &pathList);
     std::shared_ptr<Image> get(const QString &path);
     bool release(const QString &path);
     bool reserve(const QString &path);
     const QList<QString> keys() const;
 
-    // LRU 缓存管理功能
     void setMaxCacheSize(int maxItems);
     int maxCacheSize() const;
     int currentCacheSize() const;
 
 private:
-    QHash<QString, std::shared_ptr<CacheItem>> items; // 缓存项存储
-    std::list<QString> lruList; // LRU 顺序链表（前端最近使用）
-    QHash<QString, std::list<QString>::iterator> lruMap; // 路径到链表迭代器的映射
+    QHash<QString, std::shared_ptr<CacheItem>> items;
     int mMaxCacheSize;
-    mutable QReadWriteLock mRWLock; // 改用读写锁
+    mutable std::shared_mutex mRWLock; // 现代标准库读写锁
 
-    // 内部辅助方法
-    void updateLRU(const QString& path); // 需要写锁
-    void evictLRUItems(); // 尝试淘汰最久未使用的未锁定项目
+    void evictLRUItems(); // 现在基于时间戳进行扫描淘汰
 };

@@ -13,7 +13,7 @@ std::shared_ptr<Image> Cache::get(const QString &path) {
     std::shared_lock locker(mRWLock); // 全程使用读锁
     auto it = items.find(path);
     if (it != items.end()) {
-        auto item = it.value();
+        const auto& item = it.value();
         item->updateAccessTime(); // 原子操作，无需写锁
         return item->getContents();
     }

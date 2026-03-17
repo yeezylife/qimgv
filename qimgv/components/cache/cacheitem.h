@@ -4,6 +4,7 @@
 #include <memory>      // std::shared_ptr
 #include <atomic>      // std::atomic
 #include <chrono>      // std::chrono
+#include <cstdint>     // uint64_t
 #include "sourcecontainers/image.h"
 
 class CacheItem {
@@ -25,6 +26,10 @@ public:
     // 状态检查
     [[nodiscard]] bool isLocked() const;
 
+    // 时间戳管理（用于 LRU 淘汰策略）
+    void updateAccessTime();
+    [[nodiscard]] uint64_t lastAccessTime() const;
+
 private:
     std::shared_ptr<Image> contents;
     
@@ -33,4 +38,10 @@ private:
     
     // 用于快速检查锁定状态，避免信号量无法直接查询的问题
     std::atomic<bool> lockedFlag{false};
+
+    // 逻辑时间戳计数器（原子操作，线程安全）
+    std::atomic<uint64_t> mAccessTime{0};
+
+    // 全局单调递增计数器（用于生成时间戳）
+    static std::atomic<uint64_t> sGlobalCounter;
 };

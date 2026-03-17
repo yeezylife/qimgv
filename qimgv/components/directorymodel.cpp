@@ -342,19 +342,3 @@ void DirectoryModel::preload(const QString &filePath) {
     if(containsFile(filePath) && !cache.contains(filePath))
         loader.loadAsync(filePath);
 }
-
-// 线程安全的辅助方法
-bool DirectoryModel::isCacheFull() const {
-    QMutexLocker locker(&mMutex);
-    return cache.currentCacheSize() >= 30; // 可配置的缓存限制
-}
-
-void DirectoryModel::clearCache() {
-    QMutexLocker locker(&mMutex);
-    cache.clear();
-}
-
-int DirectoryModel::getCacheSize() const {
-    QMutexLocker locker(&mMutex);
-    return cache.currentCacheSize();
-}

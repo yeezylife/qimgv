@@ -56,10 +56,6 @@ public:
     bool saveFile(const QString &filePath, const QString &destPath);
     bool containsDir(const QString &dirPath) const;
     FileListSource source();
-    // 线程安全的辅助方法
-    bool isCacheFull() const;
-    void clearCache();
-    int getCacheSize() const;
 
 signals:
     void fileRemoved(const QString &filePath, int index);
@@ -81,8 +77,6 @@ private:
     Loader loader;
     Cache cache;
     FileListSource fileListSource;
-    // 线程安全增强：添加互斥锁
-    mutable QMutex mMutex;
 
 private slots:
     void onImageReady(const std::shared_ptr<Image> &img, const QString &path);

@@ -64,7 +64,6 @@ jobs:
             -DVIDEO_SUPPORT=ON \
             -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
-            -DQT_NO_DEBUG_OUTPUT=ON \
             -DCMAKE_CXX_FLAGS="\
               -DNDEBUG \
               -DQT_NO_DEBUG_OUTPUT \

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QPixmap>
-#include <QMutex>
 #include <QtGlobal>
 #include <memory>   // 引入 std::unique_ptr
 
@@ -25,7 +24,6 @@ private:
 
     mutable std::unique_ptr<QPixmap> mLoadingIcon72;      // 使用智能指针管理资源
     mutable std::unique_ptr<QPixmap> mLoadingErrorIcon72;
-    mutable QMutex mutex;                                 // 用于线程安全
 };
 
 // 保留全局引用，用于兼容旧代码

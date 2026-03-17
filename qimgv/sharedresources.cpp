@@ -17,12 +17,7 @@ QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
     std::unique_ptr<QPixmap>& targetPixmap =
         (icon == SHR_ICON_ERROR) ? mLoadingErrorIcon72 : mLoadingIcon72;
 
-    // 双重检查锁：已缓存直接返回，避免加锁开销
-    if (targetPixmap) {
-        return *targetPixmap;
-    }
-
-    QMutexLocker locker(&mutex);
+    // 已缓存直接返回
     if (targetPixmap) {
         return *targetPixmap;
     }

@@ -131,9 +131,9 @@ private:
     void rebuildFileIndexMap();
     void rebuildDirIndexMap();
     void updateFileIndexAfterInsert(const QString &path, int index);
-    void updateFileIndexAfterRemove(const QString &path);
+    void updateFileIndexAfterRemove(const QString &path, int index);
     void updateDirIndexAfterInsert(const QString &path, int index);
-    void updateDirIndexAfterRemove(const QString &path);
+    void updateDirIndexAfterRemove(const QString &path, int index);
 
 private:
     QRegularExpression regex;

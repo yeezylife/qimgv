@@ -115,21 +115,39 @@ void DirectoryManager::rebuildDirIndexMap() {
 }
 
 void DirectoryManager::updateFileIndexAfterInsert(const QString &path, int index) {
-    // 插入后所有后续索引都需要 +1，重建整个映射
-    rebuildFileIndexMap();
+    // 插入新元素
+    mFileIndexMap[path] = index;
+
+    // 更新 index 之后的所有元素（+1 已经体现在 vector 中，这里只需重写索引）
+    for (int i = index + 1; i < static_cast<int>(fileEntryVec.size()); ++i) {
+        mFileIndexMap[fileEntryVec[i].path] = i;
+    }
 }
 
-void DirectoryManager::updateFileIndexAfterRemove(const QString &path) {
-    // 删除后所有后续索引都需要 -1，重建整个映射
-    rebuildFileIndexMap();
+void DirectoryManager::updateFileIndexAfterRemove(const QString &path, int index) {
+    // 删除元素
+    mFileIndexMap.erase(path);
+
+    // 更新 index 之后的所有元素（vector 已前移）
+    for (int i = index; i < static_cast<int>(fileEntryVec.size()); ++i) {
+        mFileIndexMap[fileEntryVec[i].path] = i;
+    }
 }
 
 void DirectoryManager::updateDirIndexAfterInsert(const QString &path, int index) {
-    rebuildDirIndexMap();
+    mDirIndexMap[path] = index;
+
+    for (int i = index + 1; i < static_cast<int>(dirEntryVec.size()); ++i) {
+        mDirIndexMap[dirEntryVec[i].path] = i;
+    }
 }
 
-void DirectoryManager::updateDirIndexAfterRemove(const QString &path) {
-    rebuildDirIndexMap();
+void DirectoryManager::updateDirIndexAfterRemove(const QString &path, int index) {
+    mDirIndexMap.erase(path);
+
+    for (int i = index; i < static_cast<int>(dirEntryVec.size()); ++i) {
+        mDirIndexMap[dirEntryVec[i].path] = i;
+    }
 }
 
 // ==================== 核心功能方法 ====================
@@ -455,7 +473,7 @@ void DirectoryManager::removeFileEntry(const QString &filePath) {
     int index = indexOfFile(filePath);
     fileEntryVec.erase(fileEntryVec.begin() + index);
     // 同步更新索引映射
-    updateFileIndexAfterRemove(filePath);
+    updateFileIndexAfterRemove(filePath, index);
     qDebug() << "fileRem" << filePath;
     emit fileRemoved(filePath, index);
 }
@@ -542,7 +560,7 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
     int index = indexOfDir(dirPath);
     dirEntryVec.erase(dirEntryVec.begin() + index);
     // 同步更新索引映射
-    updateDirIndexAfterRemove(dirPath);
+    updateDirIndexAfterRemove(dirPath, index);
     qDebug() << "dirRem" << dirPath;
     emit dirRemoved(dirPath, index);
 }

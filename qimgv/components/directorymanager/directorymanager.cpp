@@ -19,19 +19,19 @@ insert_sorted(std::vector<T> &vec, T const& item, Pred pred) {
 
 bool DirectoryManager::path_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
     return collator.compare(e1.path, e2.path) < 0;
-};
+}
 
 bool DirectoryManager::path_entry_compare_reverse(const FSEntry &e1, const FSEntry &e2) const {
     return collator.compare(e1.path, e2.path) > 0;
-};
+}
 
 bool DirectoryManager::name_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
     return collator.compare(e1.name, e2.name) < 0;
-};
+}
 
 bool DirectoryManager::name_entry_compare_reverse(const FSEntry &e1, const FSEntry &e2) const {
     return collator.compare(e1.name, e2.name) > 0;
-};
+}
 
 bool DirectoryManager::date_entry_compare(const FSEntry& e1, const FSEntry& e2) const {
     return e1.modifyTime < e2.modifyTime;
@@ -49,7 +49,8 @@ bool DirectoryManager::size_entry_compare_reverse(const FSEntry& e1, const FSEnt
     return e1.size > e2.size;
 }
 
-DirectoryManager::CompareFunction DirectoryManager::compareFunction() {
+// 修复编译错误：使用尾置返回类型
+auto DirectoryManager::compareFunction() -> CompareFunction {
     CompareFunction cmpFn = &DirectoryManager::path_entry_compare;
     if(mSortingMode == SortingMode::SORT_NAME_DESC)
         cmpFn = &DirectoryManager::path_entry_compare_reverse;
@@ -113,12 +114,12 @@ void DirectoryManager::rebuildDirIndexMap() {
 }
 
 void DirectoryManager::updateFileIndexAfterInsert(const QString &path, int index) {
-    // 插入后所有后续索引都需要 +1
+    // 插入后所有后续索引都需要 +1，重建整个映射
     rebuildFileIndexMap();
 }
 
 void DirectoryManager::updateFileIndexAfterRemove(const QString &path) {
-    // 删除后所有后续索引都需要 -1
+    // 删除后所有后续索引都需要 -1，重建整个映射
     rebuildFileIndexMap();
 }
 

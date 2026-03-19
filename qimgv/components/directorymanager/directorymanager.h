@@ -26,12 +26,13 @@ enum FileListSource { // rename? wip
 };
 
 class DirectoryManager;
-typedef bool (DirectoryManager::*CompareFunction)(const FSEntry &e1, const FSEntry &e2) const;
-
-//TODO: rename? EntrySomething?
+// 类内定义类型别名，修复编译错误
 class DirectoryManager : public QObject {
     Q_OBJECT
 public:
+    // 类型别名 - 类内定义（修复编译错误关键）
+    using CompareFunction = bool (DirectoryManager::*)(const FSEntry &e1, const FSEntry &e2) const;
+    
     DirectoryManager();
     // ignored if the same dir is already opened
     bool setDirectory(const QString &dirPath);
@@ -126,7 +127,7 @@ private:
     bool name_entry_compare_reverse(const FSEntry &e1, const FSEntry &e2) const;
     bool date_entry_compare(const FSEntry &e1, const FSEntry &e2) const;
     bool date_entry_compare_reverse(const FSEntry &e1, const FSEntry &e2) const;
-    CompareFunction compareFunction();
+    auto compareFunction() -> CompareFunction;
     bool size_entry_compare(const FSEntry &e1, const FSEntry &e2) const;
     bool size_entry_compare_reverse(const FSEntry &e1, const FSEntry &e2) const;
     void startFileWatcher(const QString &directoryPath);

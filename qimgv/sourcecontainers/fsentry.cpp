@@ -19,14 +19,12 @@ FSEntry::FSEntry(const QString &filePath) {
             this->modifyTime = stdEntry.last_write_time();
         }
     } catch (const std::filesystem::filesystem_error &err) {
-        // 处理异常：保持对象为默认状态，避免空 catch 触发 clang-tidy 警告
-        // qimgv 的语义是“静默失败”，因此不记录日志、不抛出异常
+        // 静默失败，保持默认状态
         this->path = filePath;
         this->name = QString();
         this->isDirectory = false;
         this->size = 0;
-        // modifyTime 保持默认值
-        (void)err; // 明确使用 err，避免 unused-variable 警告
+        (void)err; // 避免未使用参数警告
     }
 }
 
@@ -51,6 +49,39 @@ FSEntry::FSEntry(FilePath _path, FileName _name, bool _isDirectory) noexcept
       name(std::move(_name.value)),
       isDirectory(_isDirectory)
 {}
+
+std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
+    std::error_code ec;
+    std::filesystem::path p(filePath.toStdWString());
+
+    // 使用 directory_entry 一次性获取状态（避免多次系统调用）
+    std::filesystem::directory_entry entry(p, ec);
+    if (ec) {
+        return std::nullopt;
+    }
+
+    // 检查是否存在（directory_entry 构造失败已设置 ec，此处可省略，但为安全保留）
+    if (!entry.exists(ec) || ec) {
+        return std::nullopt;
+    }
+
+    FSEntry result;
+    result.path = filePath;
+    result.name = QString::fromStdWString(p.filename().wstring());
+    result.isDirectory = entry.is_directory(ec);
+    if (ec) {
+        return std::nullopt;
+    }
+
+    if (!result.isDirectory) {
+        result.size = entry.file_size(ec);
+        if (ec) return std::nullopt;
+        result.modifyTime = entry.last_write_time(ec);
+        if (ec) return std::nullopt;
+    }
+
+    return result;
+}
 
 bool FSEntry::operator==(const QString &anotherPath) const noexcept {
     return this->path == anotherPath;

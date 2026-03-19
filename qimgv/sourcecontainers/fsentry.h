@@ -1,6 +1,8 @@
 #pragma once
+
 #include <QString>
 #include <filesystem>
+#include <optional>
 #include <utility>
 
 // 强类型包装 - 统一放在此处作为唯一源头
@@ -34,12 +36,15 @@ public:
     explicit FSEntry(const QString &filePath);
 
     // 性能优化版构造函数：按值传递 + std::move
-    FSEntry(FilePath _path, FileName _name, std::uintmax_t _size, 
+    FSEntry(FilePath _path, FileName _name, std::uintmax_t _size,
             std::filesystem::file_time_type _modifyTime, bool _isDirectory) noexcept;
 
     FSEntry(FilePath _path, FileName _name, std::uintmax_t _size, bool _isDirectory) noexcept;
 
     FSEntry(FilePath _path, FileName _name, bool _isDirectory) noexcept;
+
+    // 静态工厂方法：从路径构造，无异常，返回 optional
+    static std::optional<FSEntry> fromPath(const QString &filePath);
 
     bool operator==(const QString &anotherPath) const noexcept;
 

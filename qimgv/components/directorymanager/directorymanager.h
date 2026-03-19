@@ -1,25 +1,20 @@
 #pragma once
-
 #include <QObject>
-#include <QCollator>
-#include <QElapsedTimer>
 #include <QString>
-#include <QSize>
-#include <QDebug>
+#include <QDir>
+#include <QFileInfo>
 #include <QDateTime>
 #include <QRegularExpression>
-
+#include <QCollator>
 #include <vector>
-#include <string>
-#include <iostream>
-#include <filesystem>
+#include <unordered_map>
 #include <algorithm>
-
+#include <ranges>
+#include <filesystem>
 #include "settings.h"
 #include "watchers/directorywatcher.h"
 #include "utils/stuff.h"
 #include "sourcecontainers/fsentry.h"
-
 #ifdef Q_OS_WIN32
 #include "windows.h"
 #endif
@@ -31,11 +26,9 @@ enum FileListSource { // rename? wip
 };
 
 class DirectoryManager;
-
 typedef bool (DirectoryManager::*CompareFunction)(const FSEntry &e1, const FSEntry &e2) const;
 
 //TODO: rename? EntrySomething?
-
 class DirectoryManager : public QObject {
     Q_OBJECT
 public:
@@ -59,7 +52,6 @@ public:
     const QString &nextOfDir(const QString &dirPath) const;
     void sortEntryLists();
     QDateTime lastModified(const QString &filePath) const;
-
     const QString &firstFile() const;
     const QString &lastFile() const;
     void setSortingMode(SortingMode mode);
@@ -79,14 +71,13 @@ public:
     void removeFileEntry(const QString &filePath);
     void updateFileEntry(const QString &filePath);
 
-
-    void renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName);
+    void renameFileEntry(const FilePath &oldFilePath, const FileName &newFileName);
 
     bool insertDirEntry(const QString &dirPath);
     //bool forceInsertDirEntry(const QString &dirPath);
     void removeDirEntry(const QString &dirPath);
     //void updateDirEntry(const QString &dirPath);
-    void renameDirEntry(const DirPath& oldDirPath, const DirName& newDirName);
+    void renameDirEntry(const DirPath &oldDirPath, const DirName &newDirName);
 
     FileListSource source() const;
 
@@ -97,10 +88,21 @@ private:
     CompareFunction mLastCompareFunction = nullptr;
     bool mFilesSorted = false;
     bool mDirsSorted = false;
-    
     // 增量排序辅助方法
     void sortFileEntryListsIncremental();
     void sortDirEntryListsIncremental();
+
+    // 哈希索引映射 - 性能优化核心 (O(n) → O(1))
+    std::unordered_map<QString, int> mFileIndexMap;
+    std::unordered_map<QString, int> mDirIndexMap;
+    
+    // 索引映射维护方法
+    void rebuildFileIndexMap();
+    void rebuildDirIndexMap();
+    void updateFileIndexAfterInsert(const QString &path, int index);
+    void updateFileIndexAfterRemove(const QString &path);
+    void updateDirIndexAfterInsert(const QString &path, int index);
+    void updateDirIndexAfterRemove(const QString &path);
 
 private:
     QRegularExpression regex;
@@ -111,7 +113,10 @@ private:
     DirectoryWatcher* watcher = nullptr;
     SortingMode mSortingMode = SORT_NAME;
     FileListSource mListSource = SOURCE_DIRECTORY;
-
+    
+    // 替代 static const QString emptyString - 线程安全且性能更好
+    QString mEmptyString;
+    
     void readSettings();
     void loadEntryList(const QString &directoryPath, bool recursive);
 
@@ -145,7 +150,6 @@ signals:
     void fileModified(QString filePath);
     void fileAdded(QString filePath);
     void fileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);
-
     void dirRemoved(QString dirPath, int);
     void dirAdded(QString dirPath);
     void dirRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);

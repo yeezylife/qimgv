@@ -119,7 +119,7 @@ void DirectoryManager::updateFileIndexAfterInsert(const QString &path, int index
     mFileIndexMap[path] = index;
 
     // 更新 index 之后的所有元素（+1 已经体现在 vector 中，这里只需重写索引）
-    for (int i = index; i < size; ++i)
+    for (int i = index + 1; i < static_cast<int>(fileEntryVec.size()); ++i) {
         mFileIndexMap[fileEntryVec[i].path] = i;
     }
 }
@@ -525,8 +525,8 @@ void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileNa
     });
 
     int newIndex = static_cast<int>(it - fileEntryVec.begin());
-    // 此处理论上不用再同步更新索引映射，先注释掉，有问题加回来
-    //rebuildFileIndexMap();
+    // 增量更新索引映射
+    updateFileIndexAfterInsert(newFilePath, newIndex);
     qDebug() << "fileRen" << oldFilePath.value << newFilePath;
     emit fileRenamed(oldFilePath.value, oldIndex, newFilePath, newIndex);
 }

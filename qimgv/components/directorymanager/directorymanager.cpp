@@ -527,6 +527,7 @@ void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileNa
     int newIndex = static_cast<int>(it - fileEntryVec.begin());
     // 增量更新索引映射
     updateFileIndexAfterInsert(newFilePath, newIndex);
+
     qDebug() << "fileRen" << oldFilePath.value << newFilePath;
     emit fileRenamed(oldFilePath.value, oldIndex, newFilePath, newIndex);
 }
@@ -568,13 +569,26 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
 }
 
 void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& newDirName) {
-    if(!containsDir(oldDirPath.value))
+    if (!containsDir(oldDirPath.value))
         return;
+
     QFileInfo fi(oldDirPath.value);
     QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
+
+    // 处理目标路径已存在的情况（必须先删除它）
+    if (containsDir(newDirPath)) {
+        int replaceIndex = indexOfDir(newDirPath);
+        dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
+        updateDirIndexAfterRemove(newDirPath, replaceIndex);
+        emit dirRemoved(newDirPath, replaceIndex);
+    }
+
+    // 删除旧路径
     int oldIndex = indexOfDir(oldDirPath.value);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
     updateDirIndexAfterRemove(oldDirPath.value, oldIndex);
+
+    // 构造新条目并插入
     std::filesystem::path pathObj(newDirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry;
@@ -582,15 +596,16 @@ void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& 
     newEntry.path = newDirPath;
     newEntry.isDirectory = true;
 
-    // 优化：使用 lambda 替代 std::bind
     auto cmpFn = compareFunction();
     auto it = insert_sorted(dirEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
 
     int newIndex = static_cast<int>(it - dirEntryVec.begin());
-    // 同步更新索引映射
-    rebuildDirIndexMap();
+
+    // ✅ 使用增量更新（与 renameFileEntry 一致）
+    updateDirIndexAfterInsert(newDirPath, newIndex);
+
     qDebug() << "dirRen" << oldDirPath.value << newDirPath;
     emit dirRenamed(oldDirPath.value, oldIndex, newDirPath, newIndex);
 }

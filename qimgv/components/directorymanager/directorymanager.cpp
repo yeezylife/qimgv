@@ -119,7 +119,7 @@ void DirectoryManager::updateFileIndexAfterInsert(const QString &path, int index
     mFileIndexMap[path] = index;
 
     // 更新 index 之后的所有元素（+1 已经体现在 vector 中，这里只需重写索引）
-    for (int i = index + 1; i < static_cast<int>(fileEntryVec.size()); ++i) {
+    for (int i = index; i < size; ++i)
         mFileIndexMap[fileEntryVec[i].path] = i;
     }
 }
@@ -507,11 +507,13 @@ void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileNa
     if(containsFile(newFilePath)) {
         int replaceIndex = indexOfFile(newFilePath);
         fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
+        updateFileIndexAfterRemove(newFilePath, replaceIndex);  // ⭐关键补上
         emit fileRemoved(newFilePath, replaceIndex);
     }
 
     int oldIndex = indexOfFile(oldFilePath.value);
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
+    updateFileIndexAfterRemove(oldFilePath.value, oldIndex);  // ⭐必须
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry(FilePath(newFilePath), FileName(newFileName), stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
@@ -523,8 +525,8 @@ void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileNa
     });
 
     int newIndex = static_cast<int>(it - fileEntryVec.begin());
-    // 同步更新索引映射
-    rebuildFileIndexMap();
+    // 此处理论上不用再同步更新索引映射，先注释掉，有问题加回来
+    //rebuildFileIndexMap();
     qDebug() << "fileRen" << oldFilePath.value << newFilePath;
     emit fileRenamed(oldFilePath.value, oldIndex, newFilePath, newIndex);
 }
@@ -572,6 +574,7 @@ void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& 
     QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
     int oldIndex = indexOfDir(oldDirPath.value);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
+    updateDirIndexAfterRemove(oldDirPath.value, oldIndex);
     std::filesystem::path pathObj(newDirPath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry;

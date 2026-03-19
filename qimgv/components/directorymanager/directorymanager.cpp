@@ -4,6 +4,9 @@ namespace fs = std::filesystem;
 
 DirectoryManager::DirectoryManager() {
     regex.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
+    
+    // 关键修改：显式设置区域设置为系统默认，确保 NumericMode 生效
+    collator.setLocale(QLocale::system());
     collator.setNumericMode(true);
     collator.setCaseSensitivity(Qt::CaseInsensitive);
     readSettings();
@@ -51,9 +54,9 @@ bool DirectoryManager::size_entry_compare_reverse(const FSEntry& e1, const FSEnt
 
 // 修复编译错误：使用尾置返回类型
 auto DirectoryManager::compareFunction() -> CompareFunction {
-    CompareFunction cmpFn = &DirectoryManager::path_entry_compare;
+    CompareFunction cmpFn = &DirectoryManager::name_entry_compare;
     if(mSortingMode == SortingMode::SORT_NAME_DESC)
-        cmpFn = &DirectoryManager::path_entry_compare_reverse;
+        cmpFn = &DirectoryManager::name_entry_compare_reverse;
     if(mSortingMode == SortingMode::SORT_TIME)
         cmpFn = &DirectoryManager::date_entry_compare;
     if(mSortingMode == SortingMode::SORT_TIME_DESC)

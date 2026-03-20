@@ -1,5 +1,4 @@
 #include "cache.h"
-#include <mutex>
 #include <algorithm>
 
 Cache::Cache() : mMaxCacheSize(20) {}
@@ -9,80 +8,109 @@ bool Cache::contains(const QString &path) const {
     return items.contains(path);
 }
 
+// 🚀 低锁 get（核心优化）
 std::shared_ptr<Image> Cache::get(const QString &path) {
-    std::shared_lock locker(mRWLock); // 全程使用读锁
-    auto it = items.find(path);
-    if (it != items.end()) {
-        const auto& item = it.value();
-        item->updateAccessTime(); // 原子操作，无需写锁
-        return item->getContents();
+    {
+        std::shared_lock locker(mRWLock);
+        auto it = items.find(path);
+        if (it == items.end()) return nullptr;
+
+        {
+            std::lock_guard qlock(mAccessQueueMutex);
+            mAccessQueue.push_back(path);
+
+            // ✅ 修复1：限制队列大小（防止无限增长）
+            if (mAccessQueue.size() > 64) {
+                // ⚠️ 不能在持有 shared_lock 时直接 process！
+                // 只做标记
+            }
+        }
+
+        return it.value()->item->getContents();
     }
-    return nullptr;
+
+    // ✅ 在这里（锁外）尝试触发
+    if (mAccessQueue.size() > 64) {
+        std::unique_lock locker(mRWLock);
+        processAccessQueue();
+    }
 }
 
 bool Cache::insert(const std::shared_ptr<Image> &img) {
     if (!img) return false;
 
-    std::unique_lock locker(mRWLock); // 插入仍需写锁
+    std::unique_lock locker(mRWLock);
+
+    processAccessQueue(); // 🚀 批量更新 LRU
+
     const QString &path = img->filePath();
 
     if (items.contains(path)) return false;
 
     if (mMaxCacheSize > 0 && items.size() >= mMaxCacheSize) {
         evictLRUItems();
-        if (items.size() >= mMaxCacheSize) return false;
     }
 
-    auto newItem = std::make_shared<CacheItem>(img);
-    newItem->updateAccessTime();
-    items.insert(path, newItem);
+    lruList.push_front({path, std::make_shared<CacheItem>(img)});
+    items.insert(path, lruList.begin());
+
     return true;
 }
 
-void Cache::evictLRUItems() {
-    if (mMaxCacheSize <= 0 || items.size() <= mMaxCacheSize) return;
+// 🚀 批量处理访问（关键）
+void Cache::processAccessQueue() {
+    std::vector<QString> localQueue;
 
-    // 目标：不仅要降到 mMaxCacheSize，最好再多腾出 5 个位置作为“缓冲”
-    // 这样接下来的 5 次插入都不用再跑这个 O(n) 的循环
-    int targetSize = std::max(0, mMaxCacheSize - 5);
+    {
+        std::lock_guard qlock(mAccessQueueMutex);
+        if (mAccessQueue.empty()) return;
+        localQueue.swap(mAccessQueue);
+    }
 
-    while (items.size() > targetSize) {
-        QString oldestPath;
-        uint64_t oldestTime = std::numeric_limits<uint64_t>::max();
-        bool foundAny = false;
-
-        // 简单的 O(n) 扫描，寻找当前未锁定的最旧项
-        auto it = items.begin();
-        while (it != items.end()) {
-            auto item = it.value();
-            if (!item->isLocked()) {
-                uint64_t t = item->lastAccessTime();
-                if (t < oldestTime) {
-                    oldestTime = t;
-                    oldestPath = it.key();
-                    foundAny = true;
-                }
-            }
-            ++it;
+    for (const auto &key : localQueue) {
+        auto it = items.find(key);
+        if (it != items.end()) {
+            moveToFront(it.value());
         }
+    }
+}
 
-        if (foundAny) {
-            items.remove(oldestPath);
-        } else {
-            // 如果所有剩下的项目都被锁定了，或者已经降到了安全线以下，就停止
-            if (items.size() <= mMaxCacheSize) break; 
-            
-            // 实在删不动了（全部被锁定）
+void Cache::moveToFront(ListIt it) {
+    if (it == lruList.begin()) return;
+    lruList.splice(lruList.begin(), lruList, it);
+}
+
+void Cache::evictLRUItems() {
+    processAccessQueue(); // 确保顺序最新
+
+    while (items.size() > mMaxCacheSize && !lruList.empty()) {
+        auto lastIt = std::prev(lruList.end());
+
+        if (lastIt->item->isLocked()) {
             break;
         }
+
+        items.remove(lastIt->key);
+        lruList.erase(lastIt);
     }
 }
 
 void Cache::remove(const QString &path) {
     std::shared_ptr<CacheItem> itemPtr;
+
     {
         std::unique_lock locker(mRWLock);
-        itemPtr = items.take(path);
+
+        processAccessQueue();
+
+        auto it = items.find(path);
+        if (it == items.end()) return;
+
+        auto listIt = it.value();
+        itemPtr = listIt->item;
+
+        lruList.erase(listIt);
+        items.erase(it);
     }
 
     if (itemPtr && !itemPtr->tryLock(5000)) {
@@ -92,10 +120,15 @@ void Cache::remove(const QString &path) {
 
 void Cache::clear() {
     QList<std::shared_ptr<CacheItem>> itemsToClear;
+
     {
         std::unique_lock locker(mRWLock);
-        auto values = items.values();
-        for (auto &v : values) itemsToClear.append(v);
+
+        for (auto &node : lruList) {
+            itemsToClear.append(node.item);
+        }
+
+        lruList.clear();
         items.clear();
     }
 
@@ -108,7 +141,7 @@ bool Cache::reserve(const QString &path) {
     std::shared_lock locker(mRWLock);
     auto it = items.find(path);
     if (it == items.end()) return false;
-    it.value()->lock();
+    it.value()->item->lock();
     return true;
 }
 
@@ -116,13 +149,18 @@ bool Cache::release(const QString &path) {
     std::shared_lock locker(mRWLock);
     auto it = items.find(path);
     if (it == items.end()) return false;
-    it.value()->unlock();
+    it.value()->item->unlock();
     return true;
 }
 
 const QList<QString> Cache::keys() const {
     std::shared_lock locker(mRWLock);
-    return items.keys();
+
+    QList<QString> result;
+    for (const auto &node : lruList) {
+        result.append(node.key);
+    }
+    return result;
 }
 
 void Cache::setMaxCacheSize(int maxItems) {

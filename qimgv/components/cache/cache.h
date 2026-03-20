@@ -2,9 +2,10 @@
 
 #include <QHash>
 #include <QStringList>
-#include <shared_mutex> // C++17 读写锁
+#include <shared_mutex>
 #include <memory>
-#include <vector>
+#include <list>
+#include <atomic>
 #include "sourcecontainers/image.h"
 #include "components/cache/cacheitem.h"
 
@@ -27,9 +28,27 @@ public:
     int currentCacheSize() const;
 
 private:
-    QHash<QString, std::shared_ptr<CacheItem>> items;
-    int mMaxCacheSize;
-    mutable std::shared_mutex mRWLock; // 现代标准库读写锁
+    struct Node {
+        QString key;
+        std::shared_ptr<CacheItem> item;
+    };
 
-    void evictLRUItems(); // 现在基于时间戳进行扫描淘汰
+    using ListIt = std::list<Node>::iterator;
+
+    std::list<Node> lruList;
+    QHash<QString, ListIt> items;
+
+    int mMaxCacheSize;
+
+    mutable std::shared_mutex mRWLock;
+
+    // 🚀 延迟访问队列（低锁关键）
+    mutable std::mutex mAccessQueueMutex;
+    std::vector<QString> mAccessQueue;
+
+    void moveToFront(ListIt it);
+    void evictLRUItems();
+
+    // 🚀 批量刷新访问
+    void processAccessQueue();
 };

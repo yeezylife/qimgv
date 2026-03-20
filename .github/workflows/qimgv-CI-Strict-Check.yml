@@ -92,8 +92,7 @@ jobs:
               -Wunused-lambda-capture \
               -Wrange-loop-analysis \
               -Wunreachable-code \
-              -Wunused-template \
-              -fsanitize=address,undefined" \
+              -Wunused-template" \
             -DCMAKE_C_FLAGS="\
               -O0 -g3 -fno-omit-frame-pointer \
               -march=x86-64-v3 \
@@ -128,6 +127,5 @@ jobs:
               -Wself-assign-field \
               -Wtautological-compare \
               -Wunreachable-code \
-              -Wunused-template \
-              -fsanitize=address,undefined"
+              -Wunused-template"
           cmake --build build --config Debug

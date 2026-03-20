@@ -1250,8 +1250,8 @@ void ImageViewerV2::wheelEvent(QWheelEvent* event)
     }
 
     if (event->modifiers() == Qt::NoModifier) {
-        QPoint pixelDelta = event->pixelDelta();
-        QPoint angleDelta = event->angleDelta();
+        QPoint angleDelta = event->angleDelta();  // ✓ 保留：此变量在后续逻辑中使用
+												
 
         bool isWheel = true;
         if (trackpadDetection) {

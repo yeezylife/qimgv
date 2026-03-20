@@ -68,8 +68,8 @@ public:
     void stopAnimation();
     void closeImage();
     void setExpandImage(bool mode);
-    void show() override;
-    void hide() override;
+    void show();
+    void hide();
     void setFilterNearest();
     void setFilterBilinear();
     void setScalingFilter(ScalingFilter filter);

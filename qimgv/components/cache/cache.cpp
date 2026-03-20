@@ -2,7 +2,7 @@
 #include <mutex>
 #include <algorithm>
 
-Cache::Cache() : mMaxCacheSize(50) {}
+Cache::Cache() : mMaxCacheSize(20) {}
 
 bool Cache::contains(const QString &path) const {
     std::shared_lock locker(mRWLock);

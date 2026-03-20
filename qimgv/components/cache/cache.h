@@ -17,7 +17,6 @@ public:
     void remove(const QString &path);
     void clear();
     bool insert(const std::shared_ptr<Image> &img);
-    void trimTo(const QStringList &pathList);
     std::shared_ptr<Image> get(const QString &path);
     bool release(const QString &path);
     bool reserve(const QString &path);

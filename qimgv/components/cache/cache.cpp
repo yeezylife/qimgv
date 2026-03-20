@@ -120,24 +120,6 @@ bool Cache::release(const QString &path) {
     return true;
 }
 
-void Cache::trimTo(const QStringList &pathList) {
-    QSet<QString> keepSet(pathList.begin(), pathList.end());
-    QList<std::shared_ptr<CacheItem>> toRemove;
-    {
-        std::unique_lock locker(mRWLock);
-        auto it = items.begin();
-        while (it != items.end()) {
-            if (!keepSet.contains(it.key())) {
-                toRemove.append(it.value());
-                it = items.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }
-    for (auto &i : toRemove) i->tryLock(5000);
-}
-
 const QList<QString> Cache::keys() const {
     std::shared_lock locker(mRWLock);
     return items.keys();

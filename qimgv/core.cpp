@@ -1256,16 +1256,22 @@ bool Core::setDirectory(const QString& path) {
 bool Core::loadFileIndex(int index, bool async, bool preload) {
     if(!model)
         return false;
+
     auto entry = model->fileEntryAt(index);
     if(entry.path.isEmpty())
         return false;
+
     state.currentFilePath = entry.path;
-    model->unloadExcept(entry.path, preload);
+
+    // 删除：model->unloadExcept(entry.path, preload);
+
     model->load(entry.path, async);
+
     if(preload) {
         model->preload(model->nextOf(entry.path));
         model->preload(model->prevOf(entry.path));
     }
+
     thumbPanelPresenter.selectAndFocus(entry.path);
     folderViewPresenter.selectAndFocus(entry.path);
     updateInfoString();
@@ -1447,12 +1453,14 @@ void Core::onModelItemReady(const std::shared_ptr<Image>& img, const QString &pa
         state.currentImg = img;
         guiSetImage(img);
         updateInfoString();
+
         if(state.delayModel) {
             this->showGui();
             state.delayModel = false;
             QTimer::singleShot(40, this, SLOT(modelDelayLoad()));
         }
-        model->unloadExcept(state.currentFilePath, settings->usePreloader());
+
+        // 删除：model->unloadExcept(state.currentFilePath, settings->usePreloader());
     }
 }
 

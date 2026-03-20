@@ -46,7 +46,6 @@ public:
     bool isLoaded(const QString& filePath) const;
     void reload(const QString &filePath);
     const QString &filePathAt(int index) const;
-    void unloadExcept(const QString &filePath, bool keepNearby);
     const FSEntry &fileEntryAt(int index) const;
     size_t totalCount() const;
     const QString &dirNameAt(int index) const;

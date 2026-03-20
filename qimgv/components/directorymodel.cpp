@@ -192,16 +192,6 @@ void DirectoryModel::unload(const QString &filePath) {
     cache.remove(filePath);
 }
 
-void DirectoryModel::unloadExcept(const QString &filePath, bool keepNearby) {
-    QList<QString> list;
-    list << filePath;
-    if(keepNearby) {
-        list << prevOf(filePath);
-        list << nextOf(filePath);
-    }
-    cache.trimTo(list);
-}
-
 bool DirectoryModel::loaderBusy() const {
     return loader.isBusy();
 }

@@ -226,8 +226,8 @@ bool ImageViewerV2::imageFitsInternal() const
     if (!pixmap)
         return true;
 
-    return (pixmap->width() <= static_cast<int>(viewport()->width() * dpr) &&
-            pixmap->height() <= static_cast<int>(viewport()->height() * dpr));
+    return (pixmap->width() <= static_cast<int>(static_cast<float>(viewport()->width()) * dpr) &&
+            pixmap->height() <= static_cast<int>(static_cast<float>(viewport()->height()) * dpr));
 }
 
 float ImageViewerV2::currentScaleInternal() const
@@ -744,7 +744,7 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
             } else if (currentScaleInternal() <= zoomLevels.first()) {
                 newScale = currentScaleInternal() * (1.0f - zoomStep);
             } else {
-                for (int i = zoomLevels.size() - 1; i >= 0; --i) {
+                for (int i = static_cast<int>(zoomLevels.size()) - 1; i >= 0; --i) {
                     if (currentScaleInternal() > zoomLevels[i]) {
                         newScale = zoomLevels[i];
                         break;
@@ -1295,10 +1295,10 @@ void ImageViewerV2::handleTrackpadScroll(QWheelEvent* event)
 
     if (settings->imageScrolling() != SCROLL_NONE) {
         stopPosAnimation();
-        QPoint pixelDelta = event->pixelDelta();
         QPoint angleDelta = event->angleDelta();
-        int dx = abs(angleDelta.x()) > abs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
-        int dy = abs(angleDelta.y()) > abs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
+        // 直接使用 event->pixelDelta()，避免创建未读取的变量
+        int dx = abs(angleDelta.x()) > abs(event->pixelDelta().x()) ? angleDelta.x() : event->pixelDelta().x();
+        int dy = abs(angleDelta.y()) > abs(event->pixelDelta().y()) ? angleDelta.y() : event->pixelDelta().y();
         horizontalScroll->setValue(qRound(horizontalScroll->value() - dx * TRACKPAD_SCROLL_MULTIPLIER));
         verticalScroll->setValue(qRound(verticalScroll->value() - dy * TRACKPAD_SCROLL_MULTIPLIER));
         centerIfNecessary();

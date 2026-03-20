@@ -1294,10 +1294,10 @@ void ImageViewerV2::handleTrackpadScroll(QWheelEvent* event)
 
     if (settings->imageScrolling() != SCROLL_NONE) {
         stopPosAnimation();
+        QPoint pixelDelta = event->pixelDelta();   // 局部变量，会被使用
         QPoint angleDelta = event->angleDelta();
-        // 直接使用 event->pixelDelta()，避免创建未读取的变量
-        int dx = abs(angleDelta.x()) > abs(event->pixelDelta().x()) ? angleDelta.x() : event->pixelDelta().x();
-        int dy = abs(angleDelta.y()) > abs(event->pixelDelta().y()) ? angleDelta.y() : event->pixelDelta().y();
+        int dx = abs(angleDelta.x()) > abs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
+        int dy = abs(angleDelta.y()) > abs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
         horizontalScroll->setValue(qRound(horizontalScroll->value() - dx * TRACKPAD_SCROLL_MULTIPLIER));
         verticalScroll->setValue(qRound(verticalScroll->value() - dy * TRACKPAD_SCROLL_MULTIPLIER));
         centerIfNecessary();

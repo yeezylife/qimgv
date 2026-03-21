@@ -363,25 +363,25 @@ void MW::setFilter(ScalingFilter filter) {
     QString filterName;
     switch (filter) {
         case QI_FILTER_NEAREST:
-            filterName = "nearest";
+            filterName = QStringLiteral("nearest");
             break;
         case ScalingFilter::QI_FILTER_BILINEAR:
-            filterName = "bilinear";
+            filterName = QStringLiteral("bilinear");
             break;
         case QI_FILTER_CV_BILINEAR_SHARPEN:
-            filterName = "bilinear + sharpen";
+            filterName = QStringLiteral("bilinear + sharpen");
             break;
         case QI_FILTER_CV_CUBIC:
-            filterName = "bicubic";
+            filterName = QStringLiteral("bicubic");
             break;
         case QI_FILTER_CV_CUBIC_SHARPEN:
-            filterName = "bicubic + sharpen";
+            filterName = QStringLiteral("bicubic + sharpen");
             break;
         default:
-            filterName = "configured " + QString::number(static_cast<int>(filter));
+            filterName = QStringLiteral("configured ") + QString::number(static_cast<int>(filter));
             break;
     }
-    showMessage(QString("Filter %1").arg(filterName), 600);
+    showMessage(QStringLiteral("Filter %1").arg(filterName), 600);
     viewerWidget->setScalingFilter(filter);
 }
 

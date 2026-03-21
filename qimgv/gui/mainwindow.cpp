@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include <QImageWriter>
 #include <QMessageBox>
+using namespace Qt::StringLiterals;
 
 // TODO: nuke this and rewrite
 MW::MW(QWidget *parent)
@@ -540,22 +541,22 @@ QString MW::getSaveFileName(const QString & filePath) {
         }
     };
     
-    addFilter("jpg",  u"JPEG (*.jpg *.jpeg *jpe *jfif)"_qs);
-    addFilter("png",  u"PNG (*.png)"_qs);
-    addFilter("webp", u"WebP (*.webp)"_qs);
-    addFilter("jp2",  u"JPEG 2000 (*.jp2 *.j2k *.jpf *.jpx *.jpm *.jpgx)"_qs);
-    addFilter("jxl",  u"JPEG-XL (*.jxl)"_qs);
-    addFilter("avif", u"AVIF (*.avif *.avifs)"_qs);
-    addFilter("tif",  u"TIFF (*.tif *.tiff)"_qs);
-    addFilter("bmp",  u"BMP (*.bmp)"_qs);
+    addFilter("jpg",  u"JPEG (*.jpg *.jpeg *jpe *jfif)"_s);
+    addFilter("png",  u"PNG (*.png)"_s);
+    addFilter("webp", u"WebP (*.webp)"_s);
+    addFilter("jp2",  u"JPEG 2000 (*.jp2 *.j2k *.jpf *.jpx *.jpm *.jpgx)"_s);
+    addFilter("jxl",  u"JPEG-XL (*.jxl)"_s);
+    addFilter("avif", u"AVIF (*.avif *.avifs)"_s);
+    addFilter("tif",  u"TIFF (*.tif *.tiff)"_s);
+    addFilter("bmp",  u"BMP (*.bmp)"_s);
 #ifdef _WIN32
-    addFilter("ico",  u"Icon Files (*.ico)"_qs);
+    addFilter("ico",  u"Icon Files (*.ico)"_s);
 #endif
-    addFilter("ppm",  u"PPM (*.ppm)"_qs);
-    addFilter("xbm",  u"XBM (*.xbm)"_qs);
-    addFilter("xpm",  u"XPM (*.xpm)"_qs);
-    addFilter("dds",  u"DDS (*.dds)"_qs);
-    addFilter("wbmp", u"WBMP (*.wbmp)"_qs);
+    addFilter("ppm",  u"PPM (*.ppm)"_s);
+    addFilter("xbm",  u"XBM (*.xbm)"_s);
+    addFilter("xpm",  u"XPM (*.xpm)"_s);
+    addFilter("dds",  u"DDS (*.dds)"_s);
+    addFilter("wbmp", u"WBMP (*.wbmp)"_s);
     
     for (const auto& format : writerFormats) {
         QString fmtStr = QString::fromUtf8(format);
@@ -564,8 +565,8 @@ QString MW::getSaveFileName(const QString & filePath) {
         filters.append(fmtStr.toUpper() + u" (*." + fmtStr + u")");
     }
     
-    QString filterString = filters.join(u";; "_qs);
-    QString selectedFilter = u"JPEG (*.jpg *.jpeg *jpe *jfif)"_qs;
+    QString filterString = filters.join(u";; "_s);
+    QString selectedFilter = u"JPEG (*.jpg *.jpeg *jpe *jfif)"_s;
     
     QFileInfo fi(filePath);
     QString suffix = fi.suffix().toLower();
@@ -585,10 +586,10 @@ void MW::showOpenDialog(const QString& path) {
     QFileDialog dialog(this);
     QStringList imageFilter;
     imageFilter.append(settings->supportedFormatsFilter());
-    imageFilter.append(u"All Files (*)"_qs);
+    imageFilter.append(u"All Files (*)"_s);
     dialog.setDirectory(path);
     dialog.setNameFilters(imageFilter);
-    dialog.setWindowTitle(u"Open image"_qs);
+    dialog.setWindowTitle(u"Open image"_s);
     dialog.setWindowModality(Qt::ApplicationModal);
     connect(&dialog, &QFileDialog::fileSelected, this, &MW::opened);
     dialog.exec();
@@ -793,39 +794,39 @@ QString MW::calculateWindowTitle() {
     if(settings->windowTitleExtendedInfo()) {
         QString posString;
         if(info.fileCount)
-            posString = u"[ %1/%2 ]"_qs.arg(info.index + 1).arg(info.fileCount);
+            posString = u"[ %1/%2 ]"_s.arg(info.index + 1).arg(info.fileCount);
         
         QString resString;
         if(info.imageSize.width())
-            resString = u"%1 x %2"_qs.arg(info.imageSize.width()).arg(info.imageSize.height());
+            resString = u"%1 x %2"_s.arg(info.imageSize.width()).arg(info.imageSize.height());
         
         QString sizeString;
         if(info.fileSize)
             sizeString = locale().formattedDataSize(info.fileSize, 1);
         
         if(!posString.isEmpty())
-            windowTitle.prepend(posString + u"  "_qs);
+            windowTitle.prepend(posString + u"  "_s);
         if(!resString.isEmpty())
-            windowTitle.append(u"  -  "_qs + resString);
+            windowTitle.append(u"  -  "_s + resString);
         if(!sizeString.isEmpty())
-            windowTitle.append(u"  -  "_qs + sizeString);
+            windowTitle.append(u"  -  "_s + sizeString);
     }
     
     QString states;
     if(info.slideshow)
-        states.append(u" [slideshow]"_qs);
+        states.append(u" [slideshow]"_s);
     if(info.shuffle)
-        states.append(u" [shuffle]"_qs);
+        states.append(u" [shuffle]"_s);
     if(viewerWidget->lockZoomEnabled())
-        states.append(u" [zoom lock]"_qs);
+        states.append(u" [zoom lock]"_s);
     if(viewerWidget->lockViewEnabled())
-        states.append(u" [view lock]"_qs);
+        states.append(u" [view lock]"_s);
     
     if(!settings->infoBarWindowed() && !states.isEmpty())
-        windowTitle.append(u" -"_qs + states);
+        windowTitle.append(u" -"_s + states);
     
     if(info.edited)
-        windowTitle.prepend(u"* "_qs);
+        windowTitle.prepend(u"* "_s);
     
     return windowTitle;
 }
@@ -838,30 +839,30 @@ void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
     }
     
     // 优化：使用 arg 代替 + 拼接
-    infoText = info.fileName + (info.edited ? u"  *"_qs : QString());
+    infoText = info.fileName + (info.edited ? u"  *"_s : QString());
     
     QString resString;
     if(info.imageSize.width())
-        resString = u"%1 x %2"_qs.arg(info.imageSize.width()).arg(info.imageSize.height());
+        resString = u"%1 x %2"_s.arg(info.imageSize.width()).arg(info.imageSize.height());
     
     QString sizeString;
     if(info.fileSize)
         sizeString = locale().formattedDataSize(info.fileSize, 1);
     
-    sizeText = resString + u"  "_qs + sizeString;
+    sizeText = resString + u"  "_s + sizeString;
     
     QString states;
     if(info.slideshow)
-        states.append(u" [slideshow]"_qs);
+        states.append(u" [slideshow]"_s);
     if(info.shuffle)
-        states.append(u" [shuffle]"_qs);
+        states.append(u" [shuffle]"_s);
     if(viewerWidget->lockZoomEnabled())
-        states.append(u" [zoom lock]"_qs);
+        states.append(u" [zoom lock]"_s);
     if(viewerWidget->lockViewEnabled())
-        states.append(u" [view lock]"_qs);
+        states.append(u" [view lock]"_s);
     
     if(!settings->infoBarWindowed() && !states.isEmpty())
-        sizeText.append(u" "_qs + states);
+        sizeText.append(u" "_s + states);
 }
 
 void MW::onInfoUpdated() {
@@ -875,7 +876,7 @@ void MW::onInfoUpdated() {
     
     QString posString;
     if(info.fileCount)
-        posString = u"[ %1/%2 ]"_qs.arg(info.index + 1).arg(info.fileCount);
+        posString = u"[ %1/%2 ]"_s.arg(info.index + 1).arg(info.fileCount);
     
     infoBarFullscreen->setInfo(posString, infoText, sizeText);
     infoBarWindowed->setInfo(posString, infoText, sizeText);

@@ -37,7 +37,7 @@ void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
             ui->entryLayout->addWidget(entries.last());
         }
     }
-    QMap<QString, QString>::const_iterator i = info.constBegin();
+    QHash<QString, QString>::const_iterator i = info.constBegin();
     qsizetype entryIdx = 0;
     while(i != info.constEnd()) {
         entries.at(entryIdx)->setInfo(i.key(), i.value());

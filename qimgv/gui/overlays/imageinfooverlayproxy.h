@@ -3,7 +3,7 @@
 #include "gui/overlays/imageinfooverlay.h"
 
 struct ImageInfoOverlayStateBuffer {
-    QMap<QString, QString> info;
+    QHash<QString, QString> info;
 };
 
 class ImageInfoOverlayProxy {

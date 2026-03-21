@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QString>
-#include <QMap>
+#include <QHash>
 #include <QSize>
 #include <QUrl>
 #include <QMimeDatabase>
@@ -47,7 +47,7 @@ public:
 
     // 懒加载 EXIF 标签
     void loadExifTags() const;
-    const QMap<QString, QString>& getExifTags() const;
+    const QHash<QString, QString>& getExifTags() const;
 
     bool isValid() const { return mDocumentType != NONE; }
 
@@ -60,9 +60,9 @@ private:
     QMimeType mMimeType;
 
     mutable bool exifLoaded = false;
-    mutable QMap<QString, QString> exifTags;
+    mutable QHash<QString, QString> exifTags;
 
-    static const QMap<QString, QString>& getKeyMapping();
+    static const QHash<QString, QString>& getKeyMapping();
 
     void detectFormat();
     void loadExifOrientation();

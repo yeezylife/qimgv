@@ -879,7 +879,7 @@ void MW::onInfoUpdated() {
     infoBarWindowed->setInfo(posString, infoText, sizeText);
 }
 
-void MW::setExifInfo(const QMap<QString, QString> &info) {
+void MW::setExifInfo(const QHash<QString, QString> &info) {
     m_exifInfo = info;
     if(imageInfoOverlay)
         imageInfoOverlay->setExifInfo(info);

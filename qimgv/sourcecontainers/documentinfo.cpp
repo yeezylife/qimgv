@@ -3,8 +3,8 @@
 
 using namespace Qt::StringLiterals;
 
-const QMap<QString, QString>& DocumentInfo::getKeyMapping() {
-    static const QMap<QString, QString> mapping = {
+const QHash<QString, QString>& DocumentInfo::getKeyMapping() {
+    static const QHash<QString, QString> mapping = {
 
         {u"Make"_s, QObject::tr("Make")},
         {u"Model"_s, QObject::tr("Model")},
@@ -374,7 +374,7 @@ void DocumentInfo::loadExifTags() const {
     }
 }
 
-const QMap<QString, QString>& DocumentInfo::getExifTags() const
+const QHash<QString, QString>& DocumentInfo::getExifTags() const
 {
     if(!exifLoaded)
         loadExifTags();

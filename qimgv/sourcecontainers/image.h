@@ -46,8 +46,8 @@ public:
         return mDocInfo ? mDocInfo->lastModified() : QDateTime(); 
     }
     
-    QMap<QString, QString> getExifTags() { 
-        return mDocInfo ? mDocInfo->getExifTags() : QMap<QString, QString>(); 
+   QHash<QString, QString> getExifTags() { 
+        return mDocInfo ? mDocInfo->getExifTags() : QHash<QString, QString>(); 
     }
 
     // --- 纯虚函数接口 ---

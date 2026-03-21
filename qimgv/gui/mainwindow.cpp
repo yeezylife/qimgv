@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include <QImageWriter>
+#include <QMessageBox>
 
 // TODO: nuke this and rewrite
 MW::MW(QWidget *parent)
@@ -361,25 +363,25 @@ void MW::setFilter(ScalingFilter filter) {
     QString filterName;
     switch (filter) {
         case QI_FILTER_NEAREST:
-            filterName = u"nearest";
+            filterName = "nearest";
             break;
         case ScalingFilter::QI_FILTER_BILINEAR:
-            filterName = u"bilinear";
+            filterName = "bilinear";
             break;
         case QI_FILTER_CV_BILINEAR_SHARPEN:
-            filterName = u"bilinear + sharpen";
+            filterName = "bilinear + sharpen";
             break;
         case QI_FILTER_CV_CUBIC:
-            filterName = u"bicubic";
+            filterName = "bicubic";
             break;
         case QI_FILTER_CV_CUBIC_SHARPEN:
-            filterName = u"bicubic + sharpen";
+            filterName = "bicubic + sharpen";
             break;
         default:
-            filterName = u"configured " + QString::number(static_cast<int>(filter));
+            filterName = "configured " + QString::number(static_cast<int>(filter));
             break;
     }
-    showMessage(u"Filter %1"_qs.arg(filterName), 600);
+    showMessage(QString("Filter %1").arg(filterName), 600);
     viewerWidget->setScalingFilter(filter);
 }
 

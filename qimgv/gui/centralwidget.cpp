@@ -9,10 +9,11 @@ CentralWidget::CentralWidget(std::shared_ptr<DocumentWidget> docWidget,
       mode(MODE_DOCUMENT)
 {
     setMouseTracking(true);
-    // docWidget - 0, folderView - 1
     addWidget(documentView.get());
-    if (folderView)
-        addWidget(folderView.get());
+    if (this->folderView) {
+        addWidget(this->folderView.get());
+    }
+
     showDocumentView();
 }
 
@@ -37,14 +38,21 @@ ViewMode CentralWidget::currentViewMode() {
 
 void CentralWidget::switchTo(int index, ViewMode newMode)
 {
-    if (mode == newMode)
+    bool modeChanged = (mode != newMode);
+    bool indexChanged = (currentIndex() != index);
+
+    // 如果模式没变但 index 变了，也应该更新 UI
+    if (!modeChanged && !indexChanged)
         return;
+
     mode = newMode;
     setCurrentIndex(index);
     QWidget *w = widget(index);
     if (w) {
+        w->show();
         w->setFocus();
     }
+
     if (newMode == MODE_DOCUMENT)
         documentView->viewWidget()->startPlayback();
     else

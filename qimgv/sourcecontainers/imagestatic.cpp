@@ -39,7 +39,7 @@ void ImageStatic::loadGeneric() {
      * tldr: qimage bad
      */
     // 使用 UTF-8 而不是 Latin1，以兼容 Windows 上的中文路径和元数据
-    QImageReader reader(mPath, mDocInfo->format().toUtf8());
+    QImageReader reader(mPath);
     
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     reader.setAllocationLimit(settings->memoryAllocationLimit());
@@ -154,14 +154,14 @@ bool ImageStatic::save(QString destPath) {
     }
     
     // 以 UTF-8 编码解析格式，而不是 Latin1，以兼容 Windows 上的中文路径和元数据
-    QImageWriter writer(&saveFile, ext.toUtf8());
+    QImageWriter writer(&saveFile);
     writer.setQuality(quality);
     
     // 保留原始图片的元数据（特别是 EXIF 中的文本字段）
     // 这修复了编辑后保存图片时中文标题变乱码的问题
     if(destPath == mPath || isEdited()) {
         // 从原始文件读取元数据
-        QImageReader reader(mPath, mDocInfo->format().toUtf8());
+        QImageReader reader(mPath);
         QStringList textKeys = reader.textKeys();
         for(const QString &key : textKeys) {
             QString value = reader.text(key);

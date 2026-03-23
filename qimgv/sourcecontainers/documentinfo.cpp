@@ -270,7 +270,7 @@ void DocumentInfo::loadExifOrientation() {
     if(mDocumentType == VIDEO || mDocumentType == NONE)
         return;
 
-    QImageReader reader(filePath(), mFormat.toUtf8());
+    QImageReader reader(filePath());
 
     if(reader.canRead()) {
 
@@ -326,7 +326,7 @@ void DocumentInfo::loadExifTags() const {
     exifLoaded = true;
     exifTags.clear();
 
-    QImageReader reader(filePath(), mFormat.toUtf8());
+    QImageReader reader(filePath());
 
     if(!reader.canRead())
         return;

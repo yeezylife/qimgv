@@ -28,10 +28,12 @@ void ImageAnimated::load() {
 }
 
 void ImageAnimated::loadMovie() {
-    // 保持使用 std::shared_ptr 逻辑，但建议用 make_shared (如有性能需求)
     movie = std::make_shared<QMovie>();
     movie->setFileName(mPath);
-    movie->setFormat(mDocInfo->format().toLatin1());
+
+    // ❌ 不再手动设置 format（让 Qt 自动识别）
+    // movie->setFormat(...);
+
     movie->jumpToFrame(0);
     mSize = movie->frameRect().size();
     mFrameCount = movie->frameCount();

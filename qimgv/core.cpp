@@ -539,8 +539,7 @@ void Core::openFromClipboard() {
             backupExists = true;
         }
         // save file
-        QByteArray extBytes = ext.toLatin1();
-        success = image.save(destPath, extBytes.constData(), quality);
+        success = image.save(destPath, nullptr, quality);
 
         if(backupExists) {
             if(success) {

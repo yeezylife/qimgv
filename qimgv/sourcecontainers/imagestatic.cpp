@@ -154,7 +154,7 @@ bool ImageStatic::save(QString destPath) {
     }
     
     // 以 UTF-8 编码解析格式，而不是 Latin1，以兼容 Windows 上的中文路径和元数据
-    QImageWriter writer(&saveFile);
+    QImageWriter writer(&saveFile, ext.toUtf8());
     writer.setQuality(quality);
     
     // 保留原始图片的元数据（特别是 EXIF 中的文本字段）

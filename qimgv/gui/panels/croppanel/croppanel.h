@@ -1,18 +1,20 @@
 #pragma once
 
+#include <memory>
 #include <QWidget>
 #include <QScreen>
 #include <QStyleOption>
 #include <QStyledItemDelegate>
 #include <QAbstractItemView>
 #include <QPainter>
-#include <QtGlobal>
-#include "gui/customwidgets/sidepanelwidget.h"
-#include "gui/customwidgets/iconwidget.h"
-#include "gui/customwidgets/spinboxinputfix.h"
-#include "gui/overlays/cropoverlay.h"
 #include <QTimer>
-#include <QDebug>
+#include <QKeyEvent>
+#include <QWheelEvent>
+
+#include "gui/customwidgets/sidepanelwidget.h"
+#include "gui/overlays/cropoverlay.h"
+
+// 移除不必要的 include 提高编译速度
 
 namespace Ui {
 class CropPanel;
@@ -24,7 +26,8 @@ class CropPanel : public SidePanelWidget
 
 public:
     explicit CropPanel(CropOverlay *_overlay, QWidget *parent = nullptr);
-    ~CropPanel();
+    ~CropPanel() override; // 明确标注 override
+
     void setImageRealSize(QSize size);
 
 public slots:
@@ -32,32 +35,31 @@ public slots:
     void show();
 
 signals:
-    void crop(QRect);
-    void cropAndSave(QRect);
+    void crop(const QRect& rect);
+    void cropAndSave(const QRect& rect);
     void cancel();
     void cropClicked();
-    void selectionChanged(QRect);
+    void selectionChanged(const QRect& rect);
     void selectAll();
-    void aspectRatioChanged(QPointF);
+    void aspectRatioChanged(const QPointF& ratio);
 
 protected:
-    void paintEvent(QPaintEvent *);
-    void keyPressEvent(QKeyEvent *event);
-    void wheelEvent(QWheelEvent *event);
+    void paintEvent(QPaintEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private slots:
     void doCrop();
     void doCropSave();
     void onSelectionChange();
-    void onAspectRatioChange(); // via manual input
-    void onAspectRatioSelected(); // via ComboBox
+    void onAspectRatioChange();   // 响应 SpinBox 手动输入
+    void onAspectRatioSelected(); // 响应 ComboBox 下拉选择
     void setFocusCropBtn();
     void setFocusCropSaveBtn();
-
     void doCropDefaultAction();
+
 private:
-    Ui::CropPanel *ui;
-    QRect cropRect;
+    std::unique_ptr<Ui::CropPanel> ui; // 使用智能指针管理 UI 生命周期
     CropOverlay *overlay;
     QSize realSize;
 };

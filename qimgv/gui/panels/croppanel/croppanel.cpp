@@ -1,189 +1,158 @@
 #include "croppanel.h"
 #include "ui_croppanel.h"
-
-// RAII helper for blocking signals
-class SignalBlocker {
-public:
-    SignalBlocker(QObject* obj) : m_obj(obj), m_blocked(false) {
-        if (m_obj) {
-            m_blocked = m_obj->blockSignals(true);
-        }
-    }
-
-    ~SignalBlocker() {
-        if (m_obj) {
-            m_obj->blockSignals(m_blocked);
-        }
-    }
-
-private:
-    QObject* m_obj;
-    bool m_blocked;
-};
+#include <QSignalBlocker>
+#include <QGuiApplication>
 
 CropPanel::CropPanel(CropOverlay *_overlay, QWidget *parent) :
     SidePanelWidget(parent),
-    ui(new Ui::CropPanel),
+    ui(std::make_unique<Ui::CropPanel>()),
     overlay(_overlay)
 {
     ui->setupUi(this);
     setFocusPolicy(Qt::NoFocus);
 
+    // 下拉框美化
     ui->ARcomboBox->setItemDelegate(new QStyledItemDelegate(ui->ARcomboBox));
     ui->ARcomboBox->view()->setTextElideMode(Qt::ElideNone);
-
     ui->headerIcon->setIconPath(":/res/icons/common/other/image-crop48.png");
-
     ui->ARcomboBox->setIconPath(":res/icons/common/other/dropDownArrow.png");
 
     hide();
 
-    if(settings->defaultCropAction() == ACTION_CROP)
+    // 初始化焦点状态
+    if (settings->defaultCropAction() == ACTION_CROP)
         setFocusCropBtn();
     else
         setFocusCropSaveBtn();
 
+    // --- 使用 Qt6 函数指针语法进行信号槽连接 ---
+    
+    // UI 内部交互
     connect(ui->cropButton, &PushButtonFocusInd::rightPressed, this, &CropPanel::setFocusCropBtn);
     connect(ui->cropSaveButton, &PushButtonFocusInd::rightPressed, this, &CropPanel::setFocusCropSaveBtn);
 
-    connect(ui->cancelButton, SIGNAL(clicked()), this, SIGNAL(cancel()));
-    connect(ui->cropButton, SIGNAL(clicked()), this, SLOT(doCrop()));
-    connect(ui->cropSaveButton, SIGNAL(clicked()), this, SLOT(doCropSave()));
-    connect(ui->width, SIGNAL(valueChanged(int)), this, SLOT(onSelectionChange()));
-    connect(ui->height, SIGNAL(valueChanged(int)), this, SLOT(onSelectionChange()));
-    connect(ui->posX, SIGNAL(valueChanged(int)), this, SLOT(onSelectionChange()));
-    connect(ui->posY, SIGNAL(valueChanged(int)), this, SLOT(onSelectionChange()));
-    connect(ui->ARX, SIGNAL(valueChanged(double)), this, SLOT(onAspectRatioChange()));
-    connect(ui->ARY, SIGNAL(valueChanged(double)), this, SLOT(onAspectRatioChange()));
-    connect(ui->ARcomboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onAspectRatioSelected()));
+    connect(ui->cancelButton, &QPushButton::clicked, this, &CropPanel::cancel);
+    connect(ui->cropButton, &QPushButton::clicked, this, &CropPanel::doCrop);
+    connect(ui->cropSaveButton, &QPushButton::clicked, this, &CropPanel::doCropSave);
 
-    connect(overlay, SIGNAL(selectionChanged(QRect)),
-            this, SLOT(onSelectionOutsideChange(QRect)));
-    connect(this, SIGNAL(selectionChanged(QRect)),
-            overlay, SLOT(onSelectionOutsideChange(QRect)));
-    connect(this, SIGNAL(aspectRatioChanged(QPointF)),
-            overlay, SLOT(setAspectRatio(QPointF)));
-    connect(overlay, SIGNAL(escPressed()), this, SIGNAL(cancel()));
-    connect(overlay, SIGNAL(cropDefault()), this, SLOT(doCropDefaultAction()));
-    connect(overlay, SIGNAL(cropSave()), this, SLOT(doCropSave()));
-    connect(this, SIGNAL(selectAll()), overlay, SLOT(selectAll()));
+    // 数值变化同步
+    auto syncSelection = &CropPanel::onSelectionChange;
+    connect(ui->width, &QSpinBox::valueChanged, this, syncSelection);
+    connect(ui->height, &QSpinBox::valueChanged, this, syncSelection);
+    connect(ui->posX, &QSpinBox::valueChanged, this, syncSelection);
+    connect(ui->posY, &QSpinBox::valueChanged, this, syncSelection);
+
+    // 比例调节同步
+    auto syncARChange = &CropPanel::onAspectRatioChange;
+    connect(ui->ARX, &QDoubleSpinBox::valueChanged, this, syncARChange);
+    connect(ui->ARY, &QDoubleSpinBox::valueChanged, this, syncARChange);
+    connect(ui->ARcomboBox, &QComboBox::currentIndexChanged, this, &CropPanel::onAspectRatioSelected);
+
+    // 与 Overlay 的双向通信
+    connect(overlay, &CropOverlay::selectionChanged, this, &CropPanel::onSelectionOutsideChange);
+    connect(this, &CropPanel::selectionChanged, overlay, &CropOverlay::onSelectionOutsideChange);
+    connect(this, &CropPanel::aspectRatioChanged, overlay, &CropOverlay::setAspectRatio);
+    
+    connect(overlay, &CropOverlay::escPressed, this, &CropPanel::cancel);
+    connect(overlay, &CropOverlay::cropDefault, this, &CropPanel::doCropDefaultAction);
+    connect(overlay, &CropOverlay::cropSave, this, &CropPanel::doCropSave);
+    connect(this, &CropPanel::selectAll, overlay, &CropOverlay::selectAll);
 }
 
-CropPanel::~CropPanel() {
-    delete ui;
-}
+CropPanel::~CropPanel() = default; // std::unique_ptr 会自动处理释放
 
 void CropPanel::setImageRealSize(QSize sz) {
     ui->width->setMaximum(sz.width());
     ui->height->setMaximum(sz.height());
     realSize = sz;
 
+    // 重置为自由模式（Index 0），触发 onAspectRatioSelected 更新
     ui->ARcomboBox->setCurrentIndex(0);
-
     onAspectRatioSelected();
 }
 
 void CropPanel::doCropDefaultAction() {
-    if(settings->defaultCropAction() == ACTION_CROP)
+    if (settings->defaultCropAction() == ACTION_CROP)
         doCrop();
     else
         doCropSave();
 }
 
 void CropPanel::doCrop() {
-    QRect target(ui->posX->value(), ui->posY->value(),
-                 ui->width->value(), ui->height->value());
-
-    if(target.width() > 0 && target.height() > 0 && target.size() != realSize)
+    QRect target(ui->posX->value(), ui->posY->value(), ui->width->value(), ui->height->value());
+    if (target.isValid() && target.size() != realSize)
         emit crop(target);
     else
         emit cancel();
 }
 
 void CropPanel::doCropSave() {
-    QRect target(ui->posX->value(), ui->posY->value(),
-                 ui->width->value(), ui->height->value());
-
-    if(target.width() > 0 && target.height() > 0 && target.size() != realSize)
+    QRect target(ui->posX->value(), ui->posY->value(), ui->width->value(), ui->height->value());
+    if (target.isValid() && target.size() != realSize)
         emit cropAndSave(target);
     else
         emit cancel();
 }
 
 void CropPanel::onSelectionChange() {
-    emit selectionChanged(QRect(ui->posX->value(),
-                                ui->posY->value(),
-                                ui->width->value(),
-                                ui->height->value()));
+    emit selectionChanged(QRect(ui->posX->value(), ui->posY->value(),
+                                ui->width->value(), ui->height->value()));
 }
 
 void CropPanel::onAspectRatioChange() {
-    ui->ARcomboBox->setCurrentIndex(1); // "Custom"
+    // 防止循环触发：手动修改数值时自动切换到 "Custom" 模式
+    const QSignalBlocker blocker(ui->ARcomboBox);
+    ui->ARcomboBox->setCurrentIndex(1); 
 
-    if(ui->ARX->value() != 0.0 && ui->ARY->value() != 0.0)
+    if (ui->ARX->value() > 0.0 && ui->ARY->value() > 0.0)
         emit aspectRatioChanged(QPointF(ui->ARX->value(), ui->ARY->value()));
 }
 
 void CropPanel::onAspectRatioSelected() {
-    QPointF newAR(1, 1);
-
+    QPointF newAR(1.0, 1.0);
     int index = ui->ARcomboBox->currentIndex();
+
     switch(index) {
-    case 0:
-    {
-        overlay->setLockAspectRatio(false);
-        if(realSize.height() != 0)
-            newAR = QPointF(qreal(realSize.width()) / realSize.height(), 1.0);
-        break;
-    }
-    case 1:
-    {
-        newAR = QPointF(ui->ARX->value(), ui->ARY->value());
-        break;
-    }
-    case 2:
-    {
-        newAR = QPointF(qreal(realSize.width()) / realSize.height(), 1.0);
-        break;
-    }
-    case 3:
-    {
-        QScreen* screen = nullptr;
-#if QT_VERSION >= 0x050A00
-        screen = QGuiApplication::screenAt(mapToGlobal(ui->ARcomboBox->geometry().topLeft()));
-        if(!screen)
-            screen = QGuiApplication::primaryScreen();
-#else
-        screen = QGuiApplication::primaryScreen();
-#endif
-        newAR = QPointF(qreal(screen->geometry().width()) / screen->geometry().height(), 1.0);
-        break;
-    }
-    case 4:
-        newAR = QPointF(1.0, 1.0);
-        break;
-    case 5:
-        newAR = QPointF(4.0, 3.0);
-        break;
-    case 6:
-        newAR = QPointF(16.0, 9.0);
-        break;
-    case 7:
-        newAR = QPointF(16.0, 10.0);
-        break;
-    default:
-        break;
+        case 0: // Free Mode
+            overlay->setLockAspectRatio(false);
+            [[fallthrough]]; // 继续执行 case 2 的计算逻辑逻辑
+        case 2: // Original Image
+            if (realSize.height() > 0)
+                newAR = QPointF(static_cast<qreal>(realSize.width()) / realSize.height(), 1.0);
+            break;
+
+        case 1: // Custom
+            newAR = QPointF(ui->ARX->value(), ui->ARY->value());
+            break;
+
+        case 3: { // Screen
+            QScreen* screen = QGuiApplication::screenAt(mapToGlobal(ui->ARcomboBox->geometry().topLeft()));
+            if (!screen) screen = QGuiApplication::primaryScreen();
+            if (screen) {
+                QSize ss = screen->size();
+                newAR = QPointF(static_cast<qreal>(ss.width()) / ss.height(), 1.0);
+            }
+            break;
+        }
+        case 4: newAR = QPointF(1.0, 1.0); break;
+        case 5: newAR = QPointF(4.0, 3.0); break;
+        case 6: newAR = QPointF(16.0, 9.0); break;
+        case 7: newAR = QPointF(16.0, 10.0); break;
+        default: return;
     }
 
-    ui->ARX->blockSignals(true);
-    ui->ARY->blockSignals(true);
-    ui->ARX->setValue(newAR.x());
-    ui->ARY->setValue(newAR.y());
-    ui->ARX->blockSignals(false);
-    ui->ARY->blockSignals(false);
+    // 更新 UI 数值显示，屏蔽信号防止死循环
+    {
+        const QSignalBlocker blockerX(ui->ARX);
+        const QSignalBlocker blockerY(ui->ARY);
+        ui->ARX->setValue(newAR.x());
+        ui->ARY->setValue(newAR.y());
+    }
 
-    if(index)
+    if (index != 0) {
+        overlay->setLockAspectRatio(true);
         overlay->setAspectRatio(newAR);
+    }
 }
 
 void CropPanel::setFocusCropBtn() {
@@ -199,10 +168,11 @@ void CropPanel::setFocusCropSaveBtn() {
 }
 
 void CropPanel::onSelectionOutsideChange(QRect rect) {
-    SignalBlocker widthBlocker(ui->width);
-    SignalBlocker heightBlocker(ui->height);
-    SignalBlocker posXBlocker(ui->posX);
-    SignalBlocker posYBlocker(ui->posY);
+    // 批量阻塞信号
+    const QSignalBlocker b1(ui->width);
+    const QSignalBlocker b2(ui->height);
+    const QSignalBlocker b3(ui->posX);
+    const QSignalBlocker b4(ui->posY);
 
     ui->width->setValue(rect.width());
     ui->height->setValue(rect.height());
@@ -218,25 +188,28 @@ void CropPanel::paintEvent(QPaintEvent *) {
 }
 
 void CropPanel::show() {
-    QWidget::show();
-    QTimer::singleShot(0,ui->width,SLOT(setFocus()));
+    SidePanelWidget::show();
+    // 使用新的 Lambda 语法连接 Timer，更现代
+    QTimer::singleShot(0, this, [this](){ ui->width->setFocus(); });
 }
 
 void CropPanel::keyPressEvent(QKeyEvent *event) {
-    if(event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) {
-        if(event->modifiers() == Qt::ShiftModifier)
-            doCropSave();
-        else
-            doCropDefaultAction();
-    } else if(event->key() == Qt::Key_Escape) {
-        emit cancel();
-    } else if(event->matches(QKeySequence::SelectAll)) {
-        emit selectAll();
-    } else {
-        event->ignore();
+    switch (event->key()) {
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            (event->modifiers() & Qt::ShiftModifier) ? doCropSave() : doCropDefaultAction();
+            break;
+        case Qt::Key_Escape:
+            emit cancel();
+            break;
+        default:
+            if (event->matches(QKeySequence::SelectAll))
+                emit selectAll();
+            else
+                event->ignore();
     }
 }
 
 void CropPanel::wheelEvent(QWheelEvent *event) {
-    event->accept();
+    event->accept(); // 拦截滚轮，防止侧边栏滚动
 }

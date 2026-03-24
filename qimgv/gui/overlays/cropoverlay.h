@@ -83,6 +83,8 @@ private:
     void setCursorByAction(CursorAction action);
     void setResizeAnchorByAction(CursorAction action);
     void resizeSelection(const QPointF& delta);
+    void applyAspectRatio();                              // 将现有选区调整为锁定比例
+    QPointF adjustPointForAspectRatio(const QPointF& anchor, const QPointF& point, qreal ratio) const; // 新选区时调整鼠标点
     
     // 坐标映射
     [[nodiscard]] QPointF mapToImage(const QPointF& widgetPos) const;

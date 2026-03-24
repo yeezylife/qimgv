@@ -176,7 +176,7 @@ QPointF CropOverlay::adjustPointForAspectRatio(const QPointF& anchor, const QPoi
 void CropOverlay::resizeSelection(const QPointF& delta) {
     QRectF newRect = selectionRect;
 
-    // 1. 基础位移处理 (按手柄类型移动相应的边/角)
+    // 1. 基础位移处理
     switch (cursorAction) {
         case CursorAction::DragTopLeft:     newRect.setTopLeft(newRect.topLeft() + delta); break;
         case CursorAction::DragTopRight:    newRect.setTopRight(newRect.topRight() + delta); break;
@@ -189,38 +189,35 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
         default: break;
     }
 
-    // 2. 等比缩放限制 (根据拖拽方向决定以宽度还是高度为基准)
+    // 2. 等比缩放限制
     if (lockAspectRatio) {
         qreal targetRatio = aspectRatio.x() / aspectRatio.y();
         QSizeF sz = newRect.size();
 
-        // 判断应该以宽度为基准还是以高度为基准
+        // 决定以宽度还是高度为基准
         bool widthBased = true;
         switch (cursorAction) {
             case CursorAction::DragLeft:
             case CursorAction::DragRight:
-                widthBased = true;   // 水平拖拽，保持宽度调整高度
+                widthBased = true;
                 break;
             case CursorAction::DragTop:
             case CursorAction::DragBottom:
-                widthBased = false;  // 垂直拖拽，保持高度调整宽度
+                widthBased = false;
                 break;
             default:
-                // 角拖拽：根据鼠标移动的幅度决定基准（用户意图）
                 widthBased = (qAbs(delta.x()) >= qAbs(delta.y()));
                 break;
         }
 
         if (widthBased) {
-            // 以宽度为基准，高度 = 宽度 / 比例
             sz.setHeight(sz.width() / targetRatio);
         } else {
-            // 以高度为基准，宽度 = 高度 * 比例
             sz.setWidth(sz.height() * targetRatio);
         }
         newRect.setSize(sz);
 
-        // 保持固定点 (resizeAnchor) 不变，移动矩形使其锚点对齐
+        // 保持固定点
         if (cursorAction == CursorAction::DragTopLeft) {
             newRect.moveBottomRight(resizeAnchor);
         } else if (cursorAction == CursorAction::DragTopRight) {
@@ -230,22 +227,94 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
         } else if (cursorAction == CursorAction::DragBottomRight) {
             newRect.moveTopLeft(resizeAnchor);
         } else if (cursorAction == CursorAction::DragLeft) {
-            // 左边移动，右边固定。resizeAnchor 是右上角点，取其 x 作为右边界
             newRect.moveRight(resizeAnchor.x());
         } else if (cursorAction == CursorAction::DragRight) {
-            // 右边移动，左边固定。resizeAnchor 是左上角点，取其 x 作为左边界
             newRect.moveLeft(resizeAnchor.x());
         } else if (cursorAction == CursorAction::DragTop) {
-            // 上边移动，底边固定。resizeAnchor 是左下角点，取其 y 作为底边界
             newRect.moveBottom(resizeAnchor.y());
         } else if (cursorAction == CursorAction::DragBottom) {
-            // 下边移动，顶边固定。resizeAnchor 是左上角点，取其 y 作为顶边界
             newRect.moveTop(resizeAnchor.y());
         }
     }
 
-    // 3. 边界约束 (确保不超出图片范围)
-    selectionRect = newRect.normalized().intersected(imageRect);
+    // 3. 边界约束（保持比例）
+    // 先进行普通裁剪，但会破坏比例
+    QRectF clippedRect = newRect.normalized().intersected(imageRect);
+    
+    if (lockAspectRatio && (clippedRect != newRect)) {
+        // 如果被裁剪，需要重新调整矩形，使其既符合比例又不超出边界
+        qreal targetRatio = aspectRatio.x() / aspectRatio.y();
+        QRectF boundedRect = clippedRect;
+        
+        // 尝试保持矩形在边界内并符合比例
+        // 先确定被裁剪的边，然后调整矩形使其贴合边界且比例正确
+        bool leftClipped = (newRect.left() < imageRect.left());
+        bool rightClipped = (newRect.right() > imageRect.right());
+        bool topClipped = (newRect.top() < imageRect.top());
+        bool bottomClipped = (newRect.bottom() > imageRect.bottom());
+        
+        if (leftClipped || rightClipped) {
+            // 水平方向被限制，以宽度为基准调整高度
+            qreal newWidth = boundedRect.width();
+            qreal newHeight = newWidth / targetRatio;
+            boundedRect.setHeight(newHeight);
+            
+            // 根据拖拽方向调整垂直位置，确保矩形不超出垂直边界
+            if (topClipped && !bottomClipped) {
+                boundedRect.setTop(imageRect.top());
+            } else if (bottomClipped && !topClipped) {
+                boundedRect.setBottom(imageRect.bottom());
+            } else if (topClipped && bottomClipped) {
+                // 矩形过高，同时超出上下边界，此时应该缩小高度
+                newHeight = imageRect.height();
+                newWidth = newHeight * targetRatio;
+                boundedRect.setSize(QSizeF(newWidth, newHeight));
+                boundedRect.moveTop(imageRect.top());
+            } else {
+                // 垂直方向未超限，尝试保持中心点
+                qreal centerY = std::clamp(boundedRect.center().y(), imageRect.top(), imageRect.bottom());
+                boundedRect.moveCenter(QPointF(boundedRect.center().x(), centerY));
+            }
+        } else if (topClipped || bottomClipped) {
+            // 垂直方向被限制，以高度为基准调整宽度
+            qreal newHeight = boundedRect.height();
+            qreal newWidth = newHeight * targetRatio;
+            boundedRect.setWidth(newWidth);
+            
+            if (leftClipped && !rightClipped) {
+                boundedRect.setLeft(imageRect.left());
+            } else if (rightClipped && !leftClipped) {
+                boundedRect.setRight(imageRect.right());
+            } else if (leftClipped && rightClipped) {
+                // 矩形过宽，同时超出左右边界
+                newWidth = imageRect.width();
+                newHeight = newWidth / targetRatio;
+                boundedRect.setSize(QSizeF(newWidth, newHeight));
+                boundedRect.moveLeft(imageRect.left());
+            } else {
+                qreal centerX = std::clamp(boundedRect.center().x(), imageRect.left(), imageRect.right());
+                boundedRect.moveCenter(QPointF(centerX, boundedRect.center().y()));
+            }
+        } else {
+            // 角拖拽时可能同时超限，这种情况复杂，简单处理：直接按比例缩放并居中
+            // 这里可以尝试保持矩形在边界内，但需要精细处理，简单起见，使用之前版本的 applyAspectRatio 逻辑
+            QSizeF sz = boundedRect.size();
+            if (sz.width() / sz.height() > targetRatio) {
+                sz.setHeight(sz.width() / targetRatio);
+            } else {
+                sz.setWidth(sz.height() * targetRatio);
+            }
+            boundedRect.setSize(sz);
+            boundedRect.moveCenter(clippedRect.center());
+            // 最后确保在边界内
+            boundedRect = boundedRect.intersected(imageRect);
+        }
+        
+        selectionRect = boundedRect;
+    } else {
+        selectionRect = clippedRect;
+    }
+    
     updateSelectionDrawRect();
 }
 

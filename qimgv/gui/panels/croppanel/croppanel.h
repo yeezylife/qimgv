@@ -32,7 +32,7 @@ public:
 
 public slots:
     void onSelectionOutsideChange(QRect rect);
-    void show();
+    void show() override;
 
 signals:
     void crop(const QRect& rect);

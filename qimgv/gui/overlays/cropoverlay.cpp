@@ -13,7 +13,7 @@ CropOverlay::CropOverlay(FloatingWidgetContainer *parent)
     hide();
 }
 
-void CropOverlay::setImageRealSize(QSize sz) {
+void CropOverlay::setImageRealSize(const QSize& sz) {
     imageRect = QRectF(QPointF(0, 0), QSizeF(sz));
     clearSelection();
 }

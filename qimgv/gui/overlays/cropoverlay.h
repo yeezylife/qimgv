@@ -86,5 +86,5 @@ private:
     
     // 坐标映射
     [[nodiscard]] QPointF mapToImage(const QPointF& widgetPos) const;
-    void recalculateGeometry();
+    void recalculateGeometry() override;
 };

@@ -4,20 +4,20 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
+#include <algorithm>
 
-enum CursorAction {
-    NO_DRAG,          // 0
-    SELECTION_START,  // 1
-    DRAG_SELECT,      // 2
-    DRAG_MOVE,        // 3
-    DRAG_LEFT,        // 4
-    DRAG_RIGHT,       // 5
-    DRAG_TOP,         // 6
-    DRAG_BOTTOM,      // 7
-    DRAG_TOPLEFT,     // 8
-    DRAG_TOPRIGHT,    // 9
-    DRAG_BOTTOMLEFT,  // 10
-    DRAG_BOTTOMRIGHT  // 11
+enum class CursorAction {
+    None,
+    SelectionStart,
+    DragMove,
+    DragLeft,
+    DragRight,
+    DragTop,
+    DragBottom,
+    DragTopLeft,
+    DragTopRight,
+    DragBottomLeft,
+    DragBottomRight
 };
 
 class CropOverlay : public FloatingWidget
@@ -25,62 +25,66 @@ class CropOverlay : public FloatingWidget
     Q_OBJECT
 public:
     explicit CropOverlay(FloatingWidgetContainer *parent = nullptr);
-    void setImageDrawRect(QRect);
-    void setImageRealSize(QSize);
-    void setButtonText(QString text);
-    void setImageScale(float scale);
+    
+    void setImageDrawRect(const QRect& rect);
+    void setImageRealSize(const QSize& sz);
+    void setImageScale(float s);
     void clearSelection();
 
 signals:
-    void positionChanged(float x, float y);
-    void selectionChanged(QRect);
+    void selectionChanged(const QRect& rect);
     void escPressed();
     void cropDefault();
     void cropSave();
 
-protected:
-    virtual void paintEvent(QPaintEvent *event);
-    virtual void mousePressEvent(QMouseEvent *event);
-    virtual void mouseMoveEvent(QMouseEvent *event);
-    virtual void mouseReleaseEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void resizeEvent(QResizeEvent *event);
-
-private:
-    QPoint startPos, endPos, moveStartPos, resizeAnchor;
-    QRect imageRect, imageDrawRect, imageDrawRectDpi, selectionRect, selectionDrawRect, selectionDrawRectDpi, handles[8];
-    bool lockAspectRatio;
-    float scale;
-    QBrush brushInactiveTint, brushDarkGray, brushGray, brushLightGray;
-    QRectF handlesDpi[8];
-    int handleSize;
-    CursorAction cursorAction;
-    QPen selectionOutlinePen;
-    qreal dpr;
-    QPointF ar;
-    QPointF m_accumulatedDelta; // Sub-pixel accumulation for fractional scaling
-
-    QPoint setInsidePoint(QPoint, QRect);
-    QRect placeInside(QRect what, QRect where);
-    void drawSelection(QPainter*);
-    void drawHandles(QBrush&, QPainter*);
-    void updateHandlePositions();
-    void prepareDrawElements();
-    CursorAction hoverTarget(QPoint pos);
-    void resizeSelection(QPoint d);
-    void resizeSelectionAR(QPoint d);
-    void resizeSelectionFree(QPoint d);
-    void recalculateGeometry();
-    QPoint mapPointToImage(QPoint p);
-    void updateSelectionDrawRect();
-    void setCursorAction(CursorAction action);
-    void setResizeAnchor(CursorAction action);
-    bool hasSelection();
-
 public slots:
     void hide();
-    void onSelectionOutsideChange(QRect selection);
+    void onSelectionOutsideChange(const QRect& selection);
     void selectAll();
-    void setAspectRatio(QPointF);
+    void setAspectRatio(const QPointF& ratio);
     void setLockAspectRatio(bool mode);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+
+private:
+    // 核心几何数据 (逻辑坐标/图片坐标)
+    QRectF imageRect;         // 原图全尺寸 QRect
+    QRectF selectionRect;     // 选区在原图上的位置 (浮点精度防止缩放抖动)
+    QRectF imageDrawRect;     // 图像在 Widget 上的显示区域 (逻辑像素)
+    QRectF selectionDrawRect; // 选区在 Widget 上的显示区域 (逻辑像素)
+    
+    // 状态与配置
+    QPointF moveStartPos;
+    QPointF resizeAnchor;
+    QPointF aspectRatio{16.0, 9.0};
+    float scale = 1.0f;
+    qreal dpr = 1.0;
+    bool lockAspectRatio = false;
+    CursorAction cursorAction = CursorAction::None;
+
+    // 绘制资源
+    int handleSize = 8;
+    QRectF handles[8];
+    QBrush brushInactiveTint{QColor(0, 0, 0, 160)};
+    QBrush brushHandle{QColor(150, 150, 150, 160)};
+    QPen selectionOutlinePen{Qt::white, 1.0};
+
+    // 私有辅助工具
+    [[nodiscard]] bool hasSelection() const;
+    [[nodiscard]] CursorAction hoverTarget(const QPointF& pos) const;
+    void updateSelectionDrawRect();
+    void updateHandlePositions();
+    void setCursorByAction(CursorAction action);
+    void setResizeAnchorByAction(CursorAction action);
+    void resizeSelection(const QPointF& delta);
+    
+    // 坐标映射
+    [[nodiscard]] QPointF mapToImage(const QPointF& widgetPos) const;
+    void recalculateGeometry();
 };

@@ -139,7 +139,7 @@ private:
     QRegularExpression regex;
     QCollator collator;
     std::vector<FSEntry> fileEntryVec, dirEntryVec;
-    const FSEntry defaultEntry{};
+    const FSEntry defaultEntry;
     QString mDirectoryPath;
     DirectoryWatcher* watcher = nullptr;
     SortingMode mSortingMode = SORT_NAME;

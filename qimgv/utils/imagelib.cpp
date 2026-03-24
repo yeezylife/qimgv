@@ -176,20 +176,21 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     // 定义移动版本的 Qt 缩放 lambda，避免在 scaled_Qt 中拷贝
     auto scaleQtMove = [&](QImage img, QSize destSize, bool smooth) -> QImage {
         if (destSize == img.size()) return img;  // 移动返回
+        
         if (destSize.width() < img.width() || destSize.height() < img.height()) {
             // 缩小操作
             if (destSize.width() <= destSize.height()) {
                 return img.scaledToWidth(destSize.width(),
                                          smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-            } else {
-                return img.scaledToHeight(destSize.height(),
-                                          smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
             }
-        } else {
-            // 放大操作
-            return img.scaled(destSize, Qt::KeepAspectRatio,
-                              smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+            // 移除多余的 else
+            return img.scaledToHeight(destSize.height(),
+                                      smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
         }
+        
+        // 放大操作 (移除多余的 else)
+        return img.scaled(destSize, Qt::KeepAspectRatio,
+                          smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
     };
 
     QImage result;

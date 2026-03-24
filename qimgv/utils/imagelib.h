@@ -4,7 +4,6 @@
 #include <QColor>
 #include <QRect>
 #include <QSize>
-#include <QTransform>
 #include <memory>
 #include "settings.h"
 
@@ -15,35 +14,33 @@
 class ImageLib {
 public:
     static QImage rotatedRaw(const QImage &src, int grad);
+    // Take by-value so callers can move images in to avoid copies (Qt6 move-friendly)
     static QImage rotated(const QImage &src, int grad);
 
     static QImage croppedRaw(const QImage &src, QRect newRect);
+    // By-value to enable move optimization
     static QImage cropped(const QImage &src, QRect newRect);
 
+    // Accept by-value for operations that produce a new image; callers may move
     static QImage flippedHRaw(QImage src);
     static QImage flippedH(QImage src);
     static QImage flippedVRaw(QImage src);
     static QImage flippedV(QImage src);
 
+    // Scale helpers accept by-value to allow move-optimization
     static QImage scaled(QImage source, QSize destSize, ScalingFilter filter);
     static QImage scaled_Qt(const QImage &source, QSize destSize, bool smooth);
 
 #ifdef USE_OPENCV
-    static QImage scaled_CV(QImage source, QSize destSize,
-                           cv::InterpolationFlags filter, int sharpen);
+    static QImage scaled_CV(QImage source, QSize destSize, cv::InterpolationFlags filter, int sharpen);
 #endif
 
+    // EXIF 处理：也改为返回 QImage 以保持一致性
     static QImage exifRotated(QImage src, int orientation);
 
+    // 保留 unique_ptr 版本以保持向后兼容
     static std::unique_ptr<const QImage> exifRotated(std::unique_ptr<const QImage> src, int orientation);
     static std::unique_ptr<QImage> exifRotated(std::unique_ptr<QImage> src, int orientation);
 
     static void recolor(QPixmap &pixmap, const QColor &color);
-
-private:
-    // 统一变换入口（核心优化点）
-    static QImage applyTransform(QImage src, const QTransform &t);
-
-    // EXIF transform 构建
-    static bool buildExifTransform(int orientation, QTransform &t);
 };

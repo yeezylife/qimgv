@@ -1,5 +1,6 @@
 #include "cropoverlay.h"
 #include <QtMath>
+#include <QRegion>
 
 CropOverlay::CropOverlay(FloatingWidgetContainer *parent) 
     : FloatingWidget(parent)
@@ -30,9 +31,12 @@ void CropOverlay::setImageScale(float s) {
 
 void CropOverlay::clearSelection() {
     if (hasSelection()) {
+        // 记录旧区域用于局部刷新
+        QRectF oldDrawRect = selectionDrawRect;
         selectionRect = QRectF();
         selectionDrawRect = QRectF();
-        update();
+        updateHandlePositions();
+        update(); // 因为整个区域都要刷新，直接全刷新
         emit selectionChanged(QRect());
     }
 }
@@ -58,6 +62,7 @@ void CropOverlay::setLockAspectRatio(bool mode) {
 void CropOverlay::setAspectRatio(const QPointF& ratio) {
     if (qFuzzyIsNull(ratio.x()) || qFuzzyIsNull(ratio.y())) return;
     aspectRatio = ratio;
+    cachedRatio = aspectRatio.x() / aspectRatio.y(); // 优化2：缓存比例
     setLockAspectRatio(true);
     if (hasSelection()) {
         applyAspectRatio();
@@ -81,11 +86,12 @@ void CropOverlay::paintEvent(QPaintEvent *) {
         return;
     }
 
-    p.setPen(Qt::NoPen);
-    p.fillRect(QRectF(imageDrawRect.left(), imageDrawRect.top(), imageDrawRect.width(), selectionDrawRect.top() - imageDrawRect.top()), brushInactiveTint);
-    p.fillRect(QRectF(imageDrawRect.left(), selectionDrawRect.bottom(), imageDrawRect.width(), imageDrawRect.bottom() - selectionDrawRect.bottom()), brushInactiveTint);
-    p.fillRect(QRectF(imageDrawRect.left(), selectionDrawRect.top(), selectionDrawRect.left() - imageDrawRect.left(), selectionDrawRect.height()), brushInactiveTint);
-    p.fillRect(QRectF(selectionDrawRect.right(), selectionDrawRect.top(), imageDrawRect.right() - selectionDrawRect.right(), selectionDrawRect.height()), brushInactiveTint);
+    // 优化5：使用QRegion合并填充外部区域
+    QRegion outside(imageDrawRect.toRect());
+    QRegion inside(selectionDrawRect.toRect());
+    p.setClipRegion(outside.subtracted(inside));
+    p.fillRect(imageDrawRect, brushInactiveTint);
+    p.setClipping(false);
 
     p.setPen(selectionOutlinePen);
     p.setBrush(Qt::NoBrush);
@@ -93,7 +99,7 @@ void CropOverlay::paintEvent(QPaintEvent *) {
 
     if (cursorAction == CursorAction::None && selectionDrawRect.width() > 40) {
         p.setBrush(brushHandle);
-        for (const auto& handle : handles) {
+        for (const auto& handle : drawHandles) {
             p.drawRect(handle);
         }
     }
@@ -104,28 +110,58 @@ void CropOverlay::paintEvent(QPaintEvent *) {
 //------------------------------------------------------------------------------
 void CropOverlay::updateSelectionDrawRect() {
     if (!hasSelection()) return;
+    // 记录旧区域用于局部刷新
+    oldSelectionDrawRect = selectionDrawRect;
     selectionDrawRect.setTopLeft(selectionRect.topLeft() * scale + imageDrawRect.topLeft());
     selectionDrawRect.setSize(selectionRect.size() * scale);
     updateHandlePositions();
+    
+    // 优化1：局部刷新
+    if (!oldSelectionDrawRect.isNull() || !selectionDrawRect.isNull()) {
+        QRect dirty = oldSelectionDrawRect.toAlignedRect().adjusted(-handleSize, -handleSize, handleSize, handleSize);
+        dirty |= selectionDrawRect.toAlignedRect().adjusted(-handleSize, -handleSize, handleSize, handleSize);
+        update(dirty);
+    } else {
+        update(); // fallback
+    }
 }
 
 void CropOverlay::updateHandlePositions() {
-    const qreal hs = 6.0;
+    const qreal drawSize = handleSize * 0.75;   // 绘制区域较小
+    const qreal hitSize = handleSize;           // 命中区域较大
+    const qreal drawHalf = drawSize * 0.5;
+    const qreal hitHalf = hitSize * 0.5;
     const QRectF& r = selectionDrawRect;
-    handles[0] = QRectF(r.left() - hs, r.top() - hs, hs*2, hs*2);
-    handles[1] = QRectF(r.right() - hs, r.top() - hs, hs*2, hs*2);
-    handles[2] = QRectF(r.left() - hs, r.bottom() - hs, hs*2, hs*2);
-    handles[3] = QRectF(r.right() - hs, r.bottom() - hs, hs*2, hs*2);
-    handles[4] = QRectF(r.left() - hs, r.center().y() - hs, hs*2, hs*2);
-    handles[5] = QRectF(r.right() - hs, r.center().y() - hs, hs*2, hs*2);
-    handles[6] = QRectF(r.center().x() - hs, r.top() - hs, hs*2, hs*2);
-    handles[7] = QRectF(r.center().x() - hs, r.bottom() - hs, hs*2, hs*2);
+    
+    // 优化4：使用setRect避免临时对象构造
+    // 绘制手柄（较小）
+    drawHandles[0].setRect(r.left() - drawHalf, r.top() - drawHalf, drawSize, drawSize);
+    drawHandles[1].setRect(r.right() - drawHalf, r.top() - drawHalf, drawSize, drawSize);
+    drawHandles[2].setRect(r.left() - drawHalf, r.bottom() - drawHalf, drawSize, drawSize);
+    drawHandles[3].setRect(r.right() - drawHalf, r.bottom() - drawHalf, drawSize, drawSize);
+    drawHandles[4].setRect(r.left() - drawHalf, r.center().y() - drawHalf, drawSize, drawSize);
+    drawHandles[5].setRect(r.right() - drawHalf, r.center().y() - drawHalf, drawSize, drawSize);
+    drawHandles[6].setRect(r.center().x() - drawHalf, r.top() - drawHalf, drawSize, drawSize);
+    drawHandles[7].setRect(r.center().x() - drawHalf, r.bottom() - drawHalf, drawSize, drawSize);
+    
+    // 命中手柄（较大）
+    hitHandles[0].setRect(r.left() - hitHalf, r.top() - hitHalf, hitSize, hitSize);
+    hitHandles[1].setRect(r.right() - hitHalf, r.top() - hitHalf, hitSize, hitSize);
+    hitHandles[2].setRect(r.left() - hitHalf, r.bottom() - hitHalf, hitSize, hitSize);
+    hitHandles[3].setRect(r.right() - hitHalf, r.bottom() - hitHalf, hitSize, hitSize);
+    hitHandles[4].setRect(r.left() - hitHalf, r.center().y() - hitHalf, hitSize, hitSize);
+    hitHandles[5].setRect(r.right() - hitHalf, r.center().y() - hitHalf, hitSize, hitSize);
+    hitHandles[6].setRect(r.center().x() - hitHalf, r.top() - hitHalf, hitSize, hitSize);
+    hitHandles[7].setRect(r.center().x() - hitHalf, r.bottom() - hitHalf, hitSize, hitSize);
 }
 
 QPointF CropOverlay::mapToImage(const QPointF& widgetPos) const {
-    QPointF p = (widgetPos - imageDrawRect.topLeft()) / scale;
-    return QPointF(std::clamp(p.x(), 0.0, imageRect.width()),
-                   std::clamp(p.y(), 0.0, imageRect.height()));
+    // 优化6：避免临时对象构造
+    qreal x = (widgetPos.x() - imageDrawRect.left()) / scale;
+    qreal y = (widgetPos.y() - imageDrawRect.top()) / scale;
+    x = std::clamp(x, 0.0, imageRect.width());
+    y = std::clamp(y, 0.0, imageRect.height());
+    return {x, y};
 }
 
 //------------------------------------------------------------------------------
@@ -133,14 +169,13 @@ QPointF CropOverlay::mapToImage(const QPointF& widgetPos) const {
 //------------------------------------------------------------------------------
 void CropOverlay::applyAspectRatio() {
     if (!lockAspectRatio || !hasSelection()) return;
-    qreal targetRatio = aspectRatio.x() / aspectRatio.y();
     QRectF newRect = selectionRect;
     QSizeF sz = newRect.size();
     QPointF center = newRect.center();
-    if (sz.width() / sz.height() > targetRatio) {
-        sz.setWidth(sz.height() * targetRatio);
+    if (sz.width() / sz.height() > cachedRatio) {
+        sz.setWidth(sz.height() * cachedRatio);
     } else {
-        sz.setHeight(sz.width() / targetRatio);
+        sz.setHeight(sz.width() / cachedRatio);
     }
     newRect.setSize(sz);
     newRect.moveCenter(center);
@@ -148,10 +183,12 @@ void CropOverlay::applyAspectRatio() {
     if (newRect.top() < 0) newRect.moveTop(0);
     if (newRect.right() > imageRect.right()) newRect.moveRight(imageRect.right());
     if (newRect.bottom() > imageRect.bottom()) newRect.moveBottom(imageRect.bottom());
-    selectionRect = newRect;
-    updateSelectionDrawRect();
-    update();
-    emit selectionChanged(selectionRect.toRect());
+    
+    if (!fuzzyCompareRect(selectionRect, newRect)) {
+        selectionRect = newRect;
+        updateSelectionDrawRect();
+        emit selectionChanged(selectionRect.toRect());
+    }
 }
 
 QPointF CropOverlay::adjustPointForAspectRatio(const QPointF& anchor, const QPointF& point, qreal ratio) const {
@@ -191,7 +228,6 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
 
     // 2. 等比缩放限制
     if (lockAspectRatio) {
-        qreal targetRatio = aspectRatio.x() / aspectRatio.y();
         QSizeF sz = newRect.size();
 
         // 决定以宽度还是高度为基准
@@ -211,9 +247,9 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
         }
 
         if (widthBased) {
-            sz.setHeight(sz.width() / targetRatio);
+            sz.setHeight(sz.width() / cachedRatio);
         } else {
-            sz.setWidth(sz.height() * targetRatio);
+            sz.setWidth(sz.height() * cachedRatio);
         }
         newRect.setSize(sz);
 
@@ -238,15 +274,18 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
     }
 
     // 3. 边界约束（保持比例）
-    // 先进行普通裁剪，但会破坏比例
-    QRectF clippedRect = newRect.normalized().intersected(imageRect);
+    QRectF clippedRect;
+    // 优化7：仅在需要时调用 normalized()
+    if (newRect.width() < 0 || newRect.height() < 0) {
+        clippedRect = newRect.normalized().intersected(imageRect);
+    } else {
+        clippedRect = newRect.intersected(imageRect);
+    }
     
     if (lockAspectRatio && (clippedRect != newRect)) {
         // 如果被裁剪，需要重新调整矩形，使其既符合比例又不超出边界
-        qreal targetRatio = aspectRatio.x() / aspectRatio.y();
         QRectF boundedRect = clippedRect;
         
-        // 尝试保持矩形在边界内并符合比例
         // 先确定被裁剪的边，然后调整矩形使其贴合边界且比例正确
         bool leftClipped = (newRect.left() < imageRect.left());
         bool rightClipped = (newRect.right() > imageRect.right());
@@ -256,7 +295,7 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
         if (leftClipped || rightClipped) {
             // 水平方向被限制，以宽度为基准调整高度
             qreal newWidth = boundedRect.width();
-            qreal newHeight = newWidth / targetRatio;
+            qreal newHeight = newWidth / cachedRatio;
             boundedRect.setHeight(newHeight);
             
             // 根据拖拽方向调整垂直位置，确保矩形不超出垂直边界
@@ -267,7 +306,7 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
             } else if (topClipped && bottomClipped) {
                 // 矩形过高，同时超出上下边界，此时应该缩小高度
                 newHeight = imageRect.height();
-                newWidth = newHeight * targetRatio;
+                newWidth = newHeight * cachedRatio;
                 boundedRect.setSize(QSizeF(newWidth, newHeight));
                 boundedRect.moveTop(imageRect.top());
             } else {
@@ -278,7 +317,7 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
         } else if (topClipped || bottomClipped) {
             // 垂直方向被限制，以高度为基准调整宽度
             qreal newHeight = boundedRect.height();
-            qreal newWidth = newHeight * targetRatio;
+            qreal newWidth = newHeight * cachedRatio;
             boundedRect.setWidth(newWidth);
             
             if (leftClipped && !rightClipped) {
@@ -288,7 +327,7 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
             } else if (leftClipped && rightClipped) {
                 // 矩形过宽，同时超出左右边界
                 newWidth = imageRect.width();
-                newHeight = newWidth / targetRatio;
+                newHeight = newWidth / cachedRatio;
                 boundedRect.setSize(QSizeF(newWidth, newHeight));
                 boundedRect.moveLeft(imageRect.left());
             } else {
@@ -297,12 +336,11 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
             }
         } else {
             // 角拖拽时可能同时超限，这种情况复杂，简单处理：直接按比例缩放并居中
-            // 这里可以尝试保持矩形在边界内，但需要精细处理，简单起见，使用之前版本的 applyAspectRatio 逻辑
             QSizeF sz = boundedRect.size();
-            if (sz.width() / sz.height() > targetRatio) {
-                sz.setHeight(sz.width() / targetRatio);
+            if (sz.width() / sz.height() > cachedRatio) {
+                sz.setHeight(sz.width() / cachedRatio);
             } else {
-                sz.setWidth(sz.height() * targetRatio);
+                sz.setWidth(sz.height() * cachedRatio);
             }
             boundedRect.setSize(sz);
             boundedRect.moveCenter(clippedRect.center());
@@ -310,23 +348,30 @@ void CropOverlay::resizeSelection(const QPointF& delta) {
             boundedRect = boundedRect.intersected(imageRect);
         }
         
-        selectionRect = boundedRect;
+        if (!fuzzyCompareRect(selectionRect, boundedRect)) {
+            selectionRect = boundedRect;
+            updateSelectionDrawRect();
+            emit selectionChanged(selectionRect.toRect());
+        }
     } else {
-        selectionRect = clippedRect;
+        if (!fuzzyCompareRect(selectionRect, clippedRect)) {
+            selectionRect = clippedRect;
+            updateSelectionDrawRect();
+            emit selectionChanged(selectionRect.toRect());
+        }
     }
-    
-    updateSelectionDrawRect();
 }
 
 CursorAction CropOverlay::hoverTarget(const QPointF& pos) const {
-    if (handles[0].contains(pos)) return CursorAction::DragTopLeft;
-    if (handles[1].contains(pos)) return CursorAction::DragTopRight;
-    if (handles[2].contains(pos)) return CursorAction::DragBottomLeft;
-    if (handles[3].contains(pos)) return CursorAction::DragBottomRight;
-    if (handles[4].contains(pos)) return CursorAction::DragLeft;
-    if (handles[5].contains(pos)) return CursorAction::DragRight;
-    if (handles[6].contains(pos)) return CursorAction::DragTop;
-    if (handles[7].contains(pos)) return CursorAction::DragBottom;
+    // 使用命中手柄数组（较大）进行检测
+    if (hitHandles[0].contains(pos)) return CursorAction::DragTopLeft;
+    if (hitHandles[1].contains(pos)) return CursorAction::DragTopRight;
+    if (hitHandles[2].contains(pos)) return CursorAction::DragBottomLeft;
+    if (hitHandles[3].contains(pos)) return CursorAction::DragBottomRight;
+    if (hitHandles[4].contains(pos)) return CursorAction::DragLeft;
+    if (hitHandles[5].contains(pos)) return CursorAction::DragRight;
+    if (hitHandles[6].contains(pos)) return CursorAction::DragTop;
+    if (hitHandles[7].contains(pos)) return CursorAction::DragBottom;
     if (selectionDrawRect.contains(pos)) return CursorAction::DragMove;
     return CursorAction::None;
 }
@@ -356,30 +401,43 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         QPointF currentPos = event->position();
         QPointF delta = (currentPos - moveStartPos) / scale;
         
+        // 优化8：分支顺序调整，将最常见路径放在前面
         if (cursorAction == CursorAction::DragMove) {
-            selectionRect.translate(delta);
-            if (selectionRect.left() < 0) selectionRect.moveLeft(0);
-            if (selectionRect.right() > imageRect.right()) selectionRect.moveRight(imageRect.right());
-            if (selectionRect.top() < 0) selectionRect.moveTop(0);
-            if (selectionRect.bottom() > imageRect.bottom()) selectionRect.moveBottom(imageRect.bottom());
-            updateSelectionDrawRect();
+            QRectF newRect = selectionRect;
+            newRect.translate(delta);
+            if (newRect.left() < 0) newRect.moveLeft(0);
+            if (newRect.right() > imageRect.right()) newRect.moveRight(imageRect.right());
+            if (newRect.top() < 0) newRect.moveTop(0);
+            if (newRect.bottom() > imageRect.bottom()) newRect.moveBottom(imageRect.bottom());
+            
+            // 优化3：仅当选区实际变化时才更新
+            if (!fuzzyCompareRect(selectionRect, newRect)) {
+                selectionRect = newRect;
+                updateSelectionDrawRect();
+                emit selectionChanged(selectionRect.toRect());
+            }
         } 
+        else if (cursorAction >= CursorAction::DragLeft && cursorAction <= CursorAction::DragBottomRight) {
+            // resize group
+            resizeSelection(delta);
+        }
         else if (cursorAction == CursorAction::SelectionStart) {
             QPointF imgCurrent = mapToImage(currentPos);
             if (lockAspectRatio) {
-                qreal targetRatio = aspectRatio.x() / aspectRatio.y();
-                imgCurrent = adjustPointForAspectRatio(resizeAnchor, imgCurrent, targetRatio);
+                imgCurrent = adjustPointForAspectRatio(resizeAnchor, imgCurrent, cachedRatio);
             }
-            selectionRect = QRectF(resizeAnchor, imgCurrent).normalized().intersected(imageRect);
-            updateSelectionDrawRect();
-        }
-        else {
-            resizeSelection(delta);
+            QRectF newRect = QRectF(resizeAnchor, imgCurrent);
+            if (newRect.width() < 0 || newRect.height() < 0) newRect = newRect.normalized();
+            newRect = newRect.intersected(imageRect);
+            
+            if (!fuzzyCompareRect(selectionRect, newRect)) {
+                selectionRect = newRect;
+                updateSelectionDrawRect();
+                emit selectionChanged(selectionRect.toRect());
+            }
         }
         
         moveStartPos = currentPos;
-        update();
-        emit selectionChanged(selectionRect.toRect());
     } else {
         setCursorByAction(hoverTarget(event->position()));
     }
@@ -391,7 +449,7 @@ void CropOverlay::mouseReleaseEvent(QMouseEvent *event) {
     }
     cursorAction = CursorAction::None;
     setCursorByAction(hoverTarget(event->position()));
-    update();
+    update(); // 确保手柄样式更新
 }
 
 void CropOverlay::setCursorByAction(CursorAction action) {
@@ -426,9 +484,12 @@ void CropOverlay::setResizeAnchorByAction(CursorAction action) {
 
 void CropOverlay::onSelectionOutsideChange(const QRect& selection) {
     if (selection.isValid()) {
-        selectionRect = QRectF(selection).intersected(imageRect);
-        updateSelectionDrawRect();
-        update();
+        QRectF newRect = QRectF(selection).intersected(imageRect);
+        if (!fuzzyCompareRect(selectionRect, newRect)) {
+            selectionRect = newRect;
+            updateSelectionDrawRect();
+            emit selectionChanged(selectionRect.toRect());
+        }
     }
 }
 
@@ -452,4 +513,12 @@ void CropOverlay::resizeEvent(QResizeEvent *event) {
 
 void CropOverlay::recalculateGeometry() {
     setGeometry(0, 0, containerSize().width(), containerSize().height());
+}
+
+bool CropOverlay::fuzzyCompareRect(const QRectF& a, const QRectF& b) const {
+    const qreal eps = 1e-6;
+    return qFuzzyCompare(a.left(), b.left()) &&
+           qFuzzyCompare(a.top(), b.top()) &&
+           qFuzzyCompare(a.width(), b.width()) &&
+           qFuzzyCompare(a.height(), b.height());
 }

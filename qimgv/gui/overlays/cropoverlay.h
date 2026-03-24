@@ -58,11 +58,13 @@ private:
     QRectF selectionRect;     // 选区在原图上的位置 (浮点精度防止缩放抖动)
     QRectF imageDrawRect;     // 图像在 Widget 上的显示区域 (逻辑像素)
     QRectF selectionDrawRect; // 选区在 Widget 上的显示区域 (逻辑像素)
+    QRectF oldSelectionDrawRect; // 用于局部刷新
     
     // 状态与配置
     QPointF moveStartPos;
     QPointF resizeAnchor;
     QPointF aspectRatio{16.0, 9.0};
+    qreal cachedRatio = 16.0 / 9.0; // 优化2：缓存比例
     float scale = 1.0f;
     qreal dpr = 1.0;
     bool lockAspectRatio = false;
@@ -70,7 +72,8 @@ private:
 
     // 绘制资源
     int handleSize = 8;
-    QRectF handles[8];
+    QRectF drawHandles[8];   // 绘制手柄（较小）
+    QRectF hitHandles[8];    // 命中区域手柄（较大）
     QBrush brushInactiveTint{QColor(0, 0, 0, 160)};
     QBrush brushHandle{QColor(150, 150, 150, 160)};
     QPen selectionOutlinePen{Qt::white, 1.0};
@@ -89,4 +92,7 @@ private:
     // 坐标映射
     [[nodiscard]] QPointF mapToImage(const QPointF& widgetPos) const;
     void recalculateGeometry() override;
+    
+    // 辅助函数
+    bool fuzzyCompareRect(const QRectF& a, const QRectF& b) const;
 };

@@ -193,8 +193,10 @@ void CropOverlay::mousePressEvent(QMouseEvent *event) {
         
         if (!hasSelection()) {
             cursorAction = CursorAction::SelectionStart;
-            selectionRect.setTopLeft(mapToImage(moveStartPos));
-            selectionRect.setBottomRight(selectionRect.topLeft());
+            QPointF imgPos = mapToImage(moveStartPos);
+            selectionRect.setTopLeft(imgPos);
+            selectionRect.setBottomRight(imgPos);
+            resizeAnchor = imgPos; // 关键修复：设置起始锚点
         }
         
         setResizeAnchorByAction(cursorAction);
@@ -210,6 +212,7 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
         QPointF delta = (currentPos - moveStartPos) / scale;
         
         if (cursorAction == CursorAction::DragMove) {
+            // 移动现有选区
             selectionRect.translate(delta);
             // 限制在图片范围内
             if (selectionRect.left() < 0) selectionRect.moveLeft(0);
@@ -217,7 +220,15 @@ void CropOverlay::mouseMoveEvent(QMouseEvent *event) {
             if (selectionRect.top() < 0) selectionRect.moveTop(0);
             if (selectionRect.bottom() > imageRect.bottom()) selectionRect.moveBottom(imageRect.bottom());
             updateSelectionDrawRect();
-        } else {
+        } 
+        else if (cursorAction == CursorAction::SelectionStart) {
+            // 创建新选区：从起始锚点到当前鼠标位置
+            QPointF imgCurrent = mapToImage(currentPos);
+            selectionRect = QRectF(resizeAnchor, imgCurrent).normalized().intersected(imageRect);
+            updateSelectionDrawRect();
+        }
+        else {
+            // 调整已有选区大小（resizeSelection 内部已调用 updateSelectionDrawRect）
             resizeSelection(delta);
         }
         

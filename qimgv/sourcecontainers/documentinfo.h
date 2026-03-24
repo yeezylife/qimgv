@@ -13,6 +13,7 @@
 #include <QDataStream>
 #include <cmath>
 #include <cstring>
+#include <array>
 
 #include "utils/stuff.h"
 #include "settings.h"
@@ -23,10 +24,8 @@ class DocumentInfo {
 public:
     explicit DocumentInfo(const QString &path);
 
-    // 析构函数
     ~DocumentInfo() = default;
 
-    // 拷贝和移动操作
     DocumentInfo(const DocumentInfo &) = default;
     DocumentInfo& operator=(const DocumentInfo &) = default;
     DocumentInfo(DocumentInfo &&) noexcept = default;
@@ -45,7 +44,6 @@ public:
 
     void refresh();
 
-    // 懒加载 EXIF 标签
     void loadExifTags() const;
     const QHash<QString, QString>& getExifTags() const;
 
@@ -66,6 +64,7 @@ private:
 
     void detectFormat();
     void loadExifOrientation();
+
     bool detectAPNG();
     bool detectAnimatedWebP();
     bool detectAnimatedJxl();

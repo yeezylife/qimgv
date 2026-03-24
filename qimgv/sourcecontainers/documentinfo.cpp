@@ -5,7 +5,6 @@ using namespace Qt::StringLiterals;
 
 const QHash<QString, QString>& DocumentInfo::getKeyMapping() {
     static const QHash<QString, QString> mapping = {
-
         {u"Make"_s, QObject::tr("Make")},
         {u"Model"_s, QObject::tr("Model")},
 
@@ -34,7 +33,6 @@ const QHash<QString, QString>& DocumentInfo::getKeyMapping() {
         {u"Comment"_s, QObject::tr("UserComment")},
         {u"Author"_s, u"Artist"_s},
     };
-
     return mapping;
 }
 
@@ -50,56 +48,25 @@ DocumentInfo::DocumentInfo(const QString &path)
     detectFormat();
 }
 
-QString DocumentInfo::directoryPath() const {
-    return fileInfo.absolutePath();
-}
+QString DocumentInfo::directoryPath() const { return fileInfo.absolutePath(); }
+QString DocumentInfo::filePath() const { return fileInfo.absoluteFilePath(); }
+QString DocumentInfo::fileName() const { return fileInfo.fileName(); }
+QString DocumentInfo::baseName() const { return fileInfo.baseName(); }
+qint64 DocumentInfo::fileSize() const { return fileInfo.size(); }
+DocumentType DocumentInfo::type() const { return mDocumentType; }
+QMimeType DocumentInfo::mimeType() const { return mMimeType; }
+QString DocumentInfo::format() const { return mFormat; }
+QDateTime DocumentInfo::lastModified() const { return fileInfo.lastModified(); }
 
-QString DocumentInfo::filePath() const {
-    return fileInfo.absoluteFilePath();
-}
-
-QString DocumentInfo::fileName() const {
-    return fileInfo.fileName();
-}
-
-QString DocumentInfo::baseName() const {
-    return fileInfo.baseName();
-}
-
-qint64 DocumentInfo::fileSize() const {
-    return fileInfo.size();
-}
-
-DocumentType DocumentInfo::type() const {
-    return mDocumentType;
-}
-
-QMimeType DocumentInfo::mimeType() const {
-    return mMimeType;
-}
-
-QString DocumentInfo::format() const {
-    return mFormat;
-}
-
-QDateTime DocumentInfo::lastModified() const {
-    return fileInfo.lastModified();
-}
-
-void DocumentInfo::refresh() {
-    fileInfo.refresh();
-}
-
-int DocumentInfo::exifOrientation() const {
-    return mOrientation;
-}
+void DocumentInfo::refresh() { fileInfo.refresh(); }
+int DocumentInfo::exifOrientation() const { return mOrientation; }
 
 void DocumentInfo::detectFormat() {
 
     if(mDocumentType != NONE)
         return;
 
-    QMimeDatabase mimeDb;
+    static QMimeDatabase mimeDb;
 
     mMimeType = mimeDb.mimeTypeForFile(fileInfo.filePath(), QMimeDatabase::MatchContent);
 
@@ -114,15 +81,11 @@ void DocumentInfo::detectFormat() {
     } else if(mimeName == "image/png") {
 
         if(QImageReader::supportedImageFormats().contains("apng") && detectAPNG()) {
-
             mFormat = "apng";
             mDocumentType = ANIMATED;
-
         } else {
-
             mFormat = "png";
             mDocumentType = STATIC;
-
         }
 
     } else if(mimeName == "image/gif") {
@@ -179,19 +142,16 @@ void DocumentInfo::detectFormat() {
 bool DocumentInfo::detectAPNG() {
 
     QFile f(fileInfo.filePath());
-
     if(!f.open(QFile::ReadOnly))
         return false;
 
     QByteArray buf = f.read(120);
-
     return buf.contains("acTL");
 }
 
 bool DocumentInfo::detectAnimatedWebP() {
 
     QFile f(fileInfo.filePath());
-
     if(!f.open(QFile::ReadOnly))
         return false;
 
@@ -199,18 +159,16 @@ bool DocumentInfo::detectAnimatedWebP() {
 
     in.skipRawData(12);
 
-    std::array<char, 5> header{};
-
+    std::array<char, 4> header{};
     if(in.readRawData(header.data(), 4) != 4)
         return false;
 
-    if(strcmp(header.data(),"VP8X") != 0)
+    if(std::memcmp(header.data(), "VP8X", 4) != 0)
         return false;
 
     in.skipRawData(4);
 
     char flags;
-
     if(in.readRawData(&flags,1) != 1)
         return false;
 
@@ -218,16 +176,13 @@ bool DocumentInfo::detectAnimatedWebP() {
 }
 
 bool DocumentInfo::detectAnimatedJxl() {
-
-    QImageReader r(fileInfo.filePath(), "jxl");
-
+    QImageReader r(fileInfo.absoluteFilePath(), "jxl");
     return r.supportsAnimation();
 }
 
 bool DocumentInfo::detectAnimatedAvif() {
 
     QFile f(fileInfo.filePath());
-
     if(!f.open(QFile::ReadOnly))
         return false;
 
@@ -235,32 +190,24 @@ bool DocumentInfo::detectAnimatedAvif() {
 
     in.skipRawData(4);
 
-    std::array<char, 9> buf{};
-
+    std::array<char, 8> buf{};
     if(in.readRawData(buf.data(), 8) != 8)
         return false;
 
-    return strcmp(buf.data(),"ftypavis") == 0;
+    return std::memcmp(buf.data(), "ftypavis", 8) == 0;
 }
 
-int DocumentInfo::transformationToExifOrientation(QImageIOHandler::Transformations transformation) const {
+int DocumentInfo::transformationToExifOrientation(QImageIOHandler::Transformations t) const {
 
-    if(transformation == QImageIOHandler::TransformationNone)
-        return 1;
+    if (t == QImageIOHandler::TransformationNone) return 1;
+    if (t == QImageIOHandler::TransformationRotate180) return 3;
+    if (t == QImageIOHandler::TransformationRotate90) return 6;
+    if (t == QImageIOHandler::TransformationRotate270) return 8;
 
-    bool mirror = transformation & QImageIOHandler::TransformationMirror;
-    bool flip = transformation & QImageIOHandler::TransformationFlip;
-    bool rotate90 = transformation & QImageIOHandler::TransformationRotate90;
-    bool rotate180 = transformation & QImageIOHandler::TransformationRotate180;
-    bool rotate270 = transformation & QImageIOHandler::TransformationRotate270;
-
-    if(rotate180 && !mirror && !flip) return 3;
-    if(rotate90 && !mirror && !flip) return 6;
-    if(rotate270 && !mirror && !flip) return 8;
-    if(mirror && !rotate90 && !rotate180 && !rotate270) return 2;
-    if(flip && !rotate90 && !rotate180 && !rotate270) return 4;
-    if(mirror && rotate270) return 5;
-    if(mirror && rotate90) return 7;
+    if (t == QImageIOHandler::TransformationMirror) return 2;
+    if (t == QImageIOHandler::TransformationFlip) return 4;
+    if (t == (QImageIOHandler::TransformationMirror | QImageIOHandler::TransformationRotate270)) return 5;
+    if (t == (QImageIOHandler::TransformationMirror | QImageIOHandler::TransformationRotate90)) return 7;
 
     return 1;
 }
@@ -270,13 +217,10 @@ void DocumentInfo::loadExifOrientation() {
     if(mDocumentType == VIDEO || mDocumentType == NONE)
         return;
 
-    QImageReader reader(filePath());
+    QImageReader reader(fileInfo.absoluteFilePath());
 
     if(reader.canRead()) {
-
-        auto transformation = reader.transformation();
-
-        mOrientation = transformationToExifOrientation(transformation);
+        mOrientation = transformationToExifOrientation(reader.transformation());
     }
 }
 
@@ -288,13 +232,11 @@ QString DocumentInfo::formatMetadataValue(const QString &key,const QVariant &val
         double t = value.toDouble(&ok);
 
         if(ok && t>0) {
-
-            if(t<1.0)
+            if(t < 1.0)
                 return QString("1/%1 %2").arg(qRound(1.0/t)).arg(QObject::tr("sec"));
 
-            return QString("%1 %2").arg(t,0,'f',2).arg(QObject::tr("sec"));
+            return QString::number(t, 'f', 2) + u' ' + QObject::tr("sec");
         }
-
     }
 
     else if(key == u"FNumber"_s || key == u"ApertureValue"_s) {
@@ -326,31 +268,25 @@ void DocumentInfo::loadExifTags() const {
     exifLoaded = true;
     exifTags.clear();
 
-    QImageReader reader(filePath());
+    QImageReader reader(fileInfo.absoluteFilePath());
 
     if(!reader.canRead())
         return;
 
     const auto &mapping = getKeyMapping();
-
     QStringList textKeys = reader.textKeys();
 
     for(const QString &key : textKeys) {
 
         QString value = reader.text(key);
-
         if(value.isEmpty())
             continue;
 
         QString displayKey = mapping.value(key, key);
-
         QString formattedValue = formatMetadataValue(key, value);
 
-        // EXIF UserComment 特殊处理
         if(key == u"UserComment"_s && formattedValue.startsWith(u"charset="_s)) {
-
             qsizetype spaceIndex = formattedValue.indexOf(u' ');
-
             if(spaceIndex > 0)
                 formattedValue = formattedValue.mid(spaceIndex + 1);
         }
@@ -359,13 +295,11 @@ void DocumentInfo::loadExifTags() const {
             exifTags.insert(displayKey, formattedValue);
     }
 
-    // 如果没有 EXIF 信息，则至少显示图片尺寸
     if(exifTags.isEmpty()) {
 
         QSize size = reader.size();
 
         if(size.isValid()) {
-
             exifTags.insert(
                 QObject::tr("Dimensions"),
                 QString("%1 x %2").arg(size.width()).arg(size.height())

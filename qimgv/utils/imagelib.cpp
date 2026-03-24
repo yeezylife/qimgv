@@ -26,7 +26,10 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
 
 QImage ImageLib::rotated(const QImage &src, int grad) {
     if (src.isNull()) return QImage();
-    // 这里 rotatedRaw 接 const QImage&，不涉及 && 优化
+    // 旋转角度为 360° 的整数倍，无需变换，直接返回源图像（注意：src 是 const&，返回时会拷贝，但避免了 transform 开销）
+    if (grad % 360 == 0) {
+        return src;
+    }
     return rotatedRaw(src, grad);
 }
 
@@ -39,6 +42,10 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
 
 QImage ImageLib::cropped(const QImage &src, QRect newRect) {
     if (src.isNull()) return QImage();
+    // 裁剪区域等于原图大小，直接返回源图像
+    if (src.rect() == newRect) {
+        return src;
+    }
     return croppedRaw(src, newRect);
 }
 
@@ -106,7 +113,6 @@ std::unique_ptr<const QImage> ImageLib::exifRotated(std::unique_ptr<const QImage
     }
 
     if (needsTransform) {
-        // 使用 make_unique 替代 new，完全消除裸指针
         return std::make_unique<const QImage>(
             src->transformed(trans, Qt::SmoothTransformation)
         );
@@ -134,10 +140,9 @@ std::unique_ptr<QImage> ImageLib::exifRotated(std::unique_ptr<QImage> src, int o
     }
 
     if (needsTransform) {
-        std::unique_ptr<QImage> result(
-            new QImage(src->transformed(trans, Qt::SmoothTransformation))
+        return std::make_unique<QImage>(
+            src->transformed(trans, Qt::SmoothTransformation)
         );
-        return result;
     }
 
     return src;
@@ -148,14 +153,19 @@ std::unique_ptr<QImage> ImageLib::exifRotated(std::unique_ptr<QImage> src, int o
 QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     if (source.isNull()) return QImage();
 
+    // 目标尺寸与源相同，直接返回源（移动）
+    if (destSize == source.size()) {
+        return source;
+    }
+
     QImage scaleTarget = std::move(source);
 
-    // 只保留真正有收益的转换
+    // 格式转换时使用右值引用版本，避免额外拷贝
     if (scaleTarget.format() == QImage::Format_Indexed8) {
         QImage::Format newFmt = scaleTarget.hasAlphaChannel()
                                 ? QImage::Format_ARGB32
                                 : QImage::Format_RGB32;
-        scaleTarget = scaleTarget.convertToFormat(newFmt);
+        scaleTarget = std::move(scaleTarget).convertToFormat(newFmt);
     }
 
 #ifdef USE_OPENCV
@@ -163,44 +173,47 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
         filter = QI_FILTER_BILINEAR;
 #endif
 
+    // 定义移动版本的 Qt 缩放 lambda，避免在 scaled_Qt 中拷贝
+    auto scaleQtMove = [&](QImage img, QSize destSize, bool smooth) -> QImage {
+        if (destSize == img.size()) return img;  // 移动返回
+        if (destSize.width() < img.width() || destSize.height() < img.height()) {
+            // 缩小操作
+            if (destSize.width() <= destSize.height()) {
+                return img.scaledToWidth(destSize.width(),
+                                         smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+            } else {
+                return img.scaledToHeight(destSize.height(),
+                                          smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+            }
+        } else {
+            // 放大操作
+            return img.scaled(destSize, Qt::KeepAspectRatio,
+                              smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+        }
+    };
+
     QImage result;
     switch (filter) {
-        case QI_FILTER_NEAREST: {
-            // 移除 std::move，直接传递 scaleTarget
-            QImage tmp = scaled_Qt(scaleTarget, destSize, false);
-            if (!tmp.isNull()) result = std::move(tmp);
+        case QI_FILTER_NEAREST:
+            result = scaleQtMove(std::move(scaleTarget), destSize, false);
             break;
-        }
-        case QI_FILTER_BILINEAR: {
-            // 移除 std::move
-            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
-            if (!tmp.isNull()) result = std::move(tmp);
+        case QI_FILTER_BILINEAR:
+            result = scaleQtMove(std::move(scaleTarget), destSize, true);
             break;
-        }
 #ifdef USE_OPENCV
-        case QI_FILTER_CV_BILINEAR_SHARPEN: {
-            // scaled_CV 仍按值传递，保留 std::move 以利用移动语义
-            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
-            if (!tmp.isNull()) result = std::move(tmp);
+        case QI_FILTER_CV_BILINEAR_SHARPEN:
+            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
             break;
-        }
-        case QI_FILTER_CV_CUBIC: {
-            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
-            if (!tmp.isNull()) result = std::move(tmp);
+        case QI_FILTER_CV_CUBIC:
+            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
             break;
-        }
-        case QI_FILTER_CV_CUBIC_SHARPEN: {
-            QImage tmp = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
-            if (!tmp.isNull()) result = std::move(tmp);
+        case QI_FILTER_CV_CUBIC_SHARPEN:
+            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
             break;
-        }
 #endif
-        default: {
-            // 移除 std::move
-            QImage tmp = scaled_Qt(scaleTarget, destSize, true);
-            if (!tmp.isNull()) result = std::move(tmp);
+        default:
+            result = scaleQtMove(std::move(scaleTarget), destSize, true);
             break;
-        }
     }
 
     return result;
@@ -208,15 +221,18 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 
 QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
     if (source.isNull()) return QImage();
-    
+    if (destSize == source.size()) {
+        return source;  // 源与目标大小相同，直接返回（但 source 是 const&，会拷贝）
+    }
+
     // Qt 6.10优化：根据缩放方向选择最优方法
     if (destSize.width() < source.width() || destSize.height() < source.height()) {
         // 缩小操作 - 使用专门的缩小方法，性能更好
         if (destSize.width() <= destSize.height()) {
-            return source.scaledToWidth(destSize.width(), 
+            return source.scaledToWidth(destSize.width(),
                                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
         }
-        return source.scaledToHeight(destSize.height(), 
+        return source.scaledToHeight(destSize.height(),
                                    smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
     }
     // 放大操作 - 使用通用scaled方法

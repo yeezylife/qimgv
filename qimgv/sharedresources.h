@@ -12,19 +12,19 @@ enum ShrIcon {
 class SharedResources
 {
 public:
-    static SharedResources& getInstance();                // 单例引用
+    static SharedResources& getInstance();                // 单例入口
     ~SharedResources() = default;
 
     QPixmap& getPixmap(ShrIcon icon, qreal dpr);
     const QPixmap& getPixmap(ShrIcon icon, qreal dpr) const;
 
 private:
-    SharedResources() = default;
+    SharedResources() = default;                          // 私有构造
     Q_DISABLE_COPY(SharedResources)
 
     mutable std::unique_ptr<QPixmap> mLoadingIcon72;
     mutable std::unique_ptr<QPixmap> mLoadingErrorIcon72;
 };
 
-// 全局引用声明（不初始化）
-extern SharedResources& shrRes;
+// 全局引用（inline，不会触发静态初始化警告）
+inline SharedResources& shrRes = SharedResources::getInstance();

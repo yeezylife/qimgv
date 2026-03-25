@@ -378,7 +378,7 @@ QVersionNumber Settings::lastVersion() {
     return QVersionNumber(vmajor, vminor, vmicro);
 }
 
-void Settings::setLastVersion(QVersionNumber &ver) {
+void Settings::setLastVersion(const QVersionNumber &ver) {
     settings->settingsConf->setValue("lastVerMajor", ver.majorVersion());
     settings->settingsConf->setValue("lastVerMinor", ver.minorVersion());
     settings->settingsConf->setValue("lastVerMicro", ver.microVersion());

@@ -157,7 +157,7 @@ public:
     bool panelFullscreenOnly();
     void setPanelFullscreenOnly(bool mode);
     QVersionNumber lastVersion();
-    void setLastVersion(QVersionNumber &ver);
+    void setLastVersion(const QVersionNumber &ver);
     void setShowChangelogs(bool mode);
     bool showChangelogs();
     qreal backgroundOpacity();

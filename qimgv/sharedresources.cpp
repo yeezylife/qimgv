@@ -1,19 +1,11 @@
 #include "sharedresources.h"
 #include <QFileInfo>
 
-// 内部懒加载函数，避免静态初始化警告
-static SharedResources& getShrRes()
-{
-    static SharedResources instance;
-    return instance;
-}
-
-// 全局引用定义
-SharedResources& shrRes = getShrRes();
-
 SharedResources& SharedResources::getInstance()
 {
-    return getShrRes();
+    // C++11 线程安全懒加载
+    static SharedResources instance;
+    return instance;
 }
 
 QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)

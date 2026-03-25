@@ -184,9 +184,12 @@ void ImageViewerV2::initSettings()
     useFixedZoomLevels = settings->useFixedZoomLevels();
     if (useFixedZoomLevels) {
         zoomLevels.clear();
-        auto levelsStr = settings->zoomLevels().split(',');
+        zoomLevels.reserve(16);
+
+        const auto levelsStr = settings->zoomLevels().split(',');
         for (const auto& s : levelsStr)
             zoomLevels.append(s.toFloat());
+
         std::sort(zoomLevels.begin(), zoomLevels.end());
     }
 
@@ -575,8 +578,7 @@ void ImageViewerV2::scrollToX(int x)
     horizontalScroll->setValue(x);
     centerIfNecessary();
     snapToEdges();
-    update();
-    qApp->processEvents();
+    viewport()->update();
 }
 
 void ImageViewerV2::scrollToY(int y)
@@ -584,8 +586,7 @@ void ImageViewerV2::scrollToY(int y)
     verticalScroll->setValue(y);
     centerIfNecessary();
     snapToEdges();
-    update();
-    qApp->processEvents();
+    viewport()->update();
 }
 
 void ImageViewerV2::onScrollTimelineFinished()
@@ -666,14 +667,21 @@ void ImageViewerV2::hide()
 
 void ImageViewerV2::requestScaling()
 {
-    if (!pixmap || pixmapItem.scale() == 1.0f ||
-        (!smoothUpscaling && pixmapItem.scale() >= 1.0f) || movie)
+    if (!pixmap)
+        return;
+
+    const float scale = pixmapItem.scale();
+
+    if (scale == 1.0f || movie)
+        return;
+
+    if (!smoothUpscaling && scale >= 1.0f)
         return;
 
     if (scaleTimer->isActive())
         scaleTimer->stop();
 
-    if (currentScaleInternal() < FAST_SCALE_THRESHOLD)
+    if (scale < FAST_SCALE_THRESHOLD)
         emit scalingRequested(scaledSizeR() * dpr, mScalingFilter);
 }
 
@@ -717,35 +725,34 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
     else
         setZoomAnchor(viewport()->rect().center());
 
-    float newScale;
-    if (zoomIn)
-        newScale = currentScaleInternal() * (1.0f + zoomStep);
-    else
-        newScale = currentScaleInternal() * (1.0f - zoomStep);
+    const float current = currentScaleInternal();
 
-    // Fixed zoom levels
+    float newScale = zoomIn
+        ? current * (1.0f + zoomStep)
+        : current * (1.0f - zoomStep);
+
     if (useFixedZoomLevels && !zoomLevels.isEmpty()) {
         if (zoomIn) {
-            if (currentScaleInternal() < zoomLevels.first()) {
-                newScale = qMin(currentScaleInternal() * (1.0f + zoomStep), zoomLevels.first());
-            } else if (currentScaleInternal() >= zoomLevels.last()) {
-                newScale = currentScaleInternal() * (1.0f + zoomStep);
+            if (current < zoomLevels.first()) {
+                newScale = qMin(current * (1.0f + zoomStep), zoomLevels.first());
+            } else if (current >= zoomLevels.last()) {
+                newScale = current * (1.0f + zoomStep);
             } else {
                 for (float level : zoomLevels) {
-                    if (currentScaleInternal() < level) {
+                    if (current < level) {
                         newScale = level;
                         break;
                     }
                 }
             }
-        } else { // zoom out
-            if (currentScaleInternal() > zoomLevels.last()) {
-                newScale = qMax(zoomLevels.last(), currentScaleInternal() * (1.0f - zoomStep));
-            } else if (currentScaleInternal() <= zoomLevels.first()) {
-                newScale = currentScaleInternal() * (1.0f - zoomStep);
+        } else {
+            if (current > zoomLevels.last()) {
+                newScale = qMax(zoomLevels.last(), current * (1.0f - zoomStep));
+            } else if (current <= zoomLevels.first()) {
+                newScale = current * (1.0f - zoomStep);
             } else {
-                for (int i = static_cast<int>(zoomLevels.size()) - 1; i >= 0; --i) {
-                    if (currentScaleInternal() > zoomLevels[i]) {
+                for (int i = zoomLevels.size() - 1; i >= 0; --i) {
+                    if (current > zoomLevels[i]) {
                         newScale = zoomLevels[i];
                         break;
                     }
@@ -759,6 +766,7 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
     snapToEdges();
 
     imageFitMode = FIT_FREE;
+
     if (pixmapItem.scale() == fitWindowScale)
         imageFitMode = FIT_WINDOW;
     else if (pixmapItem.scale() == fitWindowStretchScale)
@@ -775,14 +783,23 @@ void ImageViewerV2::setZoomAnchor(QPoint viewportPos)
 
 void ImageViewerV2::zoomAnchored(float newScale)
 {
-    if (currentScaleInternal() == newScale)
+    const float current = currentScaleInternal();
+    if (current == newScale)
         return;
 
-    QPointF vportCenter = mapToScene(viewport()->geometry()).boundingRect().center();
+    const QPointF vportCenter =
+        mapToScene(viewport()->rect().center());
+
     doZoom(newScale);
 
-    QPointF diff = zoomAnchor.second - mapFromScene(pixmapItem.mapToScene(zoomAnchor.first));
+    const QPointF mapped =
+        pixmapItem.mapToScene(zoomAnchor.first);
+
+    const QPointF diff =
+        zoomAnchor.second - mapFromScene(mapped);
+
     centerOn(vportCenter - diff);
+
     requestScaling();
 }
 
@@ -1249,31 +1266,35 @@ void ImageViewerV2::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    if (event->modifiers() == Qt::NoModifier) {
-        QPoint angleDelta = event->angleDelta();
+    if (event->modifiers() != Qt::NoModifier) {
+        event->ignore();
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
 
-        bool isWheel = true;
-        if (trackpadDetection) {
-            if (wayland)
-                isWheel = (event->phase() == Qt::NoScrollPhase);
-            else
-                isWheel = angleDelta.y() && (abs(angleDelta.y()) >= 120 &&
-                         !(angleDelta.y() % 60)) && lastTouchpadScroll.elapsed() > 250;
-        }
+    QPoint angleDelta = event->angleDelta();
 
-        if (!isWheel) {
-            handleTrackpadScroll(event);
-        } else if (isWheel && settings->imageScrolling() == SCROLL_BY_TRACKPAD_AND_WHEEL) {
-            handleMouseWheelScroll(event);
-        } else {
-            event->ignore();
-            QGraphicsView::wheelEvent(event);
-        }
-        saveViewportPos();
+    bool isWheel = true;
+    if (trackpadDetection) {
+        if (wayland)
+            isWheel = (event->phase() == Qt::NoScrollPhase);
+        else
+            isWheel = angleDelta.y() &&
+                      (abs(angleDelta.y()) >= 120 &&
+                      !(angleDelta.y() % 60)) &&
+                      lastTouchpadScroll.elapsed() > 250;
+    }
+
+    if (!isWheel) {
+        handleTrackpadScroll(event);
+    } else if (settings->imageScrolling() == SCROLL_BY_TRACKPAD_AND_WHEEL) {
+        handleMouseWheelScroll(event);
     } else {
         event->ignore();
         QGraphicsView::wheelEvent(event);
     }
+
+    saveViewportPos();
 }
 
 void ImageViewerV2::handleWheelZoom(QWheelEvent* event)
@@ -1401,8 +1422,10 @@ QSize ImageViewerV2::scaledSizeR() const
     if (!pixmap)
         return QSize(0, 0);
 
-    QRectF pixmapSceneRect = pixmapItem.mapRectToScene(pixmapItem.boundingRect());
-    return sceneRoundRect(pixmapSceneRect).size().toSize();
+    const QRectF rect =
+        pixmapItem.mapRectToScene(pixmapItem.boundingRect());
+
+    return sceneRoundRect(rect).size().toSize();
 }
 
 QRect ImageViewerV2::scaledRectR() const

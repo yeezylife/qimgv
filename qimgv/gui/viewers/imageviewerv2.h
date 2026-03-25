@@ -35,7 +35,6 @@ public:
     explicit ImageViewerV2(QWidget* parent = nullptr);
     ~ImageViewerV2();
 
-    // Query methods
     ImageFitMode fitMode() const;
     QRect scaledRectR() const;
     float currentScale() const;
@@ -49,7 +48,7 @@ public:
     bool hasAnimation() const;
     QSize scaledSizeR() const;
 
-    // Public slots
+public slots:
     void setFitMode(ImageFitMode mode);
     void setFitOriginal();
     void setFitWidth();
@@ -84,7 +83,6 @@ public:
     void toggleLockView();
     bool lockViewEnabled() const;
 
-    // Display operations
     void showImage(std::unique_ptr<QPixmap> pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& animation);
     void setScaledPixmap(const QPixmap& newFrame);
@@ -123,16 +121,14 @@ private slots:
     void onDPRChanged();
 
 private:
-    // Scene components
     QGraphicsScene* scene;
     std::shared_ptr<QPixmap> pixmap;
     QPixmap pixmapScaled;
     std::shared_ptr<QMovie> movie;
     QGraphicsPixmapItem pixmapItem;
     QGraphicsPixmapItem pixmapItemScaled;
-    QPixmap checkboard;                     // replaced raw pointer
+    QPixmap checkboard;
 
-    // Timers and scroll
     QTimer* animationTimer;
     QTimer* scaleTimer;
     QScrollBar* horizontalScroll;
@@ -141,13 +137,11 @@ private:
     QTimeLine* scrollTimeLineY;
     QElapsedTimer lastTouchpadScroll;
 
-    // Interaction state
     QPoint mouseMoveStartPos;
     QPoint mousePressPos;
     MouseInteractionState mouseInteraction;
     QPair<QPointF, QPoint> zoomAnchor;
 
-    // Display flags
     bool transparencyGrid;
     bool expandImage;
     bool smoothAnimatedImages;
@@ -162,7 +156,6 @@ private:
     bool dragsEnabled;
     bool wayland;
 
-    // Zoom and scale
     QList<float> zoomLevels;
     float zoomStep;
     float dpr;
@@ -182,7 +175,6 @@ private:
     int zoomThreshold;
     int dragThreshold;
 
-    // Constants
     static constexpr int SCROLL_UPDATE_RATE = 7;
     static constexpr int DEFAULT_SCROLL_DISTANCE = 240;
     static constexpr qreal TRACKPAD_SCROLL_MULTIPLIER = 0.7;
@@ -191,30 +183,26 @@ private:
     static constexpr float FAST_SCALE_THRESHOLD = 1.0f;
     static constexpr int LARGE_VIEWPORT_SIZE = 2073600;
 
-    static constexpr int SCENE_SIZE = 200000;      // scene width/height
-    static constexpr int CENTER_OFFSET = 10000;    // initial item offset
+    static constexpr int SCENE_SIZE = 200000;
+    static constexpr int CENTER_OFFSET = 10000;
     static constexpr int ZOOM_THRESHOLD_FACTOR = 4;
 
-    // Internal helpers
     void initSettings();
     void setScalingFilterImpl(ScalingFilter filter);
     void setFitModeImpl(ImageFitMode mode);
     bool imageFitsInternal() const;
     float currentScaleInternal() const;
 
-    // Initialization
     void initializeScene();
     void initializeTimers();
     void initializeScrollBars();
     void setupConnections();
 
-    // Zoom
     void adjustZoom(bool zoomIn, bool atCursor);
     void zoomAnchored(float newScale);
     void doZoom(float newScale);
     void setZoomAnchor(QPoint viewportPos);
 
-    // Fit mode helpers
     void fitNormal();
     void fitWidth();
     void fitWindow();
@@ -225,32 +213,27 @@ private:
     void updateFitWindowStretchScale();
     void updateMinScale();
 
-    // Scroll helpers
     void scroll(int dx, int dy, bool animated);
     void scrollSmooth(int dx, int dy);
     void scrollPrecise(int dx, int dy);
     void stopPosAnimation();
 
-    // Mouse helpers
     void mousePan(QMouseEvent* event);
     void mouseMoveZoom(QMouseEvent* event);
     void handleWheelZoom(QWheelEvent* event);
     void handleTrackpadScroll(QWheelEvent* event);
     void handleMouseWheelScroll(QWheelEvent* event);
 
-    // Viewport helpers
     void centerIfNecessary();
     void snapToEdges();
     void saveViewportPos();
     void applySavedViewportPos();
     void lockZoom();
 
-    // Pixmap helpers
     void updatePixmap(std::unique_ptr<QPixmap> newPixmap);
     void swapToOriginalPixmap();
     Qt::TransformationMode selectTransformationMode();
 
-    // Utility
     void reset();
     QPointF sceneRoundPos(QPointF scenePoint) const;
     QRectF sceneRoundRect(QRectF sceneRect) const;

@@ -787,18 +787,21 @@ void ImageViewerV2::zoomAnchored(float newScale)
     if (current == newScale)
         return;
 
-    const QPointF vportCenter =
-        mapToScene(viewport()->rect().center());
+    const QPoint viewportCenter = viewport()->rect().center();
+    const QPointF sceneCenter = mapToScene(viewportCenter);
 
     doZoom(newScale);
 
-    const QPointF mapped =
+    const QPointF anchorScene =
         pixmapItem.mapToScene(zoomAnchor.first);
 
-    const QPointF diff =
-        zoomAnchor.second - mapFromScene(mapped);
+    const QPoint mapped =
+        mapFromScene(anchorScene);
 
-    centerOn(vportCenter - diff);
+    const QPointF diff =
+        zoomAnchor.second - mapped;
+
+    centerOn(sceneCenter - diff);
 
     requestScaling();
 }
@@ -1010,10 +1013,19 @@ void ImageViewerV2::setFitWindowStretch()
 
 void ImageViewerV2::centerOnPixmap()
 {
-    auto imgRect = pixmapItem.sceneBoundingRect();
-    auto vport = mapToScene(viewport()->geometry()).boundingRect();
-    horizontalScroll->setValue(qRound(pixmapItem.offset().x() - (vport.width() - imgRect.width()) / 2.0));
-    verticalScroll->setValue(qRound(pixmapItem.offset().y() - (vport.height() - imgRect.height()) / 2.0));
+    const QRectF imgRect = pixmapItem.sceneBoundingRect();
+
+    const QRectF vport =
+        mapToScene(viewport()->rect()).boundingRect();
+
+    const qreal x =
+        pixmapItem.offset().x() - (vport.width() - imgRect.width()) * 0.5;
+
+    const qreal y =
+        pixmapItem.offset().y() - (vport.height() - imgRect.height()) * 0.5;
+
+    horizontalScroll->setValue(qRound(x));
+    verticalScroll->setValue(qRound(y));
 }
 
 void ImageViewerV2::centerIfNecessary()
@@ -1021,35 +1033,54 @@ void ImageViewerV2::centerIfNecessary()
     if (!pixmap)
         return;
 
-    QSize sz = scaledSizeR();
-    auto imgRect = pixmapItem.sceneBoundingRect();
-    auto vport = mapToScene(viewport()->geometry()).boundingRect();
+    const QSize sz = scaledSizeR();
 
-    if (sz.width() <= viewport()->width())
-        horizontalScroll->setValue(qRound(pixmapItem.offset().x() - (vport.width() - imgRect.width()) / 2.0));
-    if (sz.height() <= viewport()->height())
-        verticalScroll->setValue(qRound(pixmapItem.offset().y() - (vport.height() - imgRect.height()) / 2.0));
+    const QRectF imgRect = pixmapItem.sceneBoundingRect();
+    const QRectF vport =
+        mapToScene(viewport()->rect()).boundingRect();
+
+    if (sz.width() <= viewport()->width()) {
+        const qreal x =
+            pixmapItem.offset().x() - (vport.width() - imgRect.width()) * 0.5;
+
+        horizontalScroll->setValue(qRound(x));
+    }
+
+    if (sz.height() <= viewport()->height()) {
+        const qreal y =
+            pixmapItem.offset().y() - (vport.height() - imgRect.height()) * 0.5;
+
+        verticalScroll->setValue(qRound(y));
+    }
 }
 
 void ImageViewerV2::snapToEdges()
 {
-    QRect imgRect = scaledRectR();
-    QPointF centerTarget = mapToScene(viewport()->rect()).boundingRect().center();
-    qreal xShift = 0;
-    qreal yShift = 0;
+    const QRect imgRect = scaledRectR();
 
-    if (imgRect.width() > width()) {
+    const QRectF vportScene =
+        mapToScene(viewport()->rect()).boundingRect();
+
+    const QPointF centerTarget = vportScene.center();
+
+    qreal xShift = 0.0;
+    qreal yShift = 0.0;
+
+    const int viewW = viewport()->width();
+    const int viewH = viewport()->height();
+
+    if (imgRect.width() > viewW) {
         if (imgRect.left() > 0)
             xShift = imgRect.left();
-        else if (imgRect.right() < width())
-            xShift = imgRect.right() - width();
+        else if (imgRect.right() < viewW)
+            xShift = imgRect.right() - viewW;
     }
 
-    if (imgRect.height() > height()) {
+    if (imgRect.height() > viewH) {
         if (imgRect.top() > 0)
             yShift = imgRect.top();
-        else if (imgRect.bottom() < height())
-            yShift = imgRect.bottom() - height();
+        else if (imgRect.bottom() < viewH)
+            yShift = imgRect.bottom() - viewH;
     }
 
     centerOn(centerTarget + QPointF(xShift, yShift));
@@ -1107,26 +1138,30 @@ void ImageViewerV2::saveViewportPos()
     if (mViewLock != LOCK_ALL)
         return;
 
-    QGraphicsPixmapItem* item = &pixmapItem;
-    QPointF sceneCenter = mapToScene(viewport()->rect().center()) + QPointF(1, 1);
-    auto itemRect = item->sceneBoundingRect();
+    const QRectF itemRect = pixmapItem.sceneBoundingRect();
 
-    savedViewportPos.setX(qBound(qreal(0),
-                                  (sceneCenter.x() - itemRect.left()) / itemRect.width(),
-                                  qreal(1)));
-    savedViewportPos.setY(qBound(qreal(0),
-                                  (sceneCenter.y() - itemRect.top()) / itemRect.height(),
-                                  qreal(1)));
+    const QPointF sceneCenter =
+        mapToScene(viewport()->rect().center());
+
+    savedViewportPos.setX(qBound(
+        0.0,
+        (sceneCenter.x() - itemRect.left()) / itemRect.width(),
+        1.0));
+
+    savedViewportPos.setY(qBound(
+        0.0,
+        (sceneCenter.y() - itemRect.top()) / itemRect.height(),
+        1.0));
 }
 
 void ImageViewerV2::applySavedViewportPos()
 {
-    QGraphicsPixmapItem* item = &pixmapItem;
-    auto itemRect = item->sceneBoundingRect();
+    const QRectF itemRect = pixmapItem.sceneBoundingRect();
 
-    QPointF newScenePos;
-    newScenePos.setX(itemRect.left() + itemRect.width() * savedViewportPos.x());
-    newScenePos.setY(itemRect.top() + itemRect.height() * savedViewportPos.y());
+    const QPointF newScenePos(
+        itemRect.left() + itemRect.width() * savedViewportPos.x(),
+        itemRect.top() + itemRect.height() * savedViewportPos.y()
+    );
 
     centerOn(newScenePos);
     centerIfNecessary();
@@ -1430,9 +1465,13 @@ QSize ImageViewerV2::scaledSizeR() const
 
 QRect ImageViewerV2::scaledRectR() const
 {
-    QRectF pixmapSceneRect = pixmapItem.mapRectToScene(pixmapItem.boundingRect());
-    return QRect(mapFromScene(pixmapSceneRect.topLeft()),
-                 mapFromScene(pixmapSceneRect.bottomRight()));
+    const QRectF rect =
+        pixmapItem.mapRectToScene(pixmapItem.boundingRect());
+
+    const QPoint topLeft = mapFromScene(rect.topLeft());
+    const QPoint bottomRight = mapFromScene(rect.bottomRight());
+
+    return QRect(topLeft, bottomRight);
 }
 
 QSize ImageViewerV2::sourceSize() const

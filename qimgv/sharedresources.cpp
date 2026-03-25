@@ -1,25 +1,30 @@
 #include "sharedresources.h"
 #include <QFileInfo>
 
-SharedResources& SharedResources::getInstance()
+// 内部懒加载函数，避免静态初始化警告
+static SharedResources& getShrRes()
 {
-    // 线程安全的局部静态实例（C++11 起）
     static SharedResources instance;
     return instance;
 }
 
+// 全局引用定义
+SharedResources& shrRes = getShrRes();
+
+SharedResources& SharedResources::getInstance()
+{
+    return getShrRes();
+}
+
 QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
 {
-    // 根据图标选择对应的成员指针
     std::unique_ptr<QPixmap>& targetPixmap =
         (icon == SHR_ICON_ERROR) ? mLoadingErrorIcon72 : mLoadingIcon72;
 
-    // 已缓存直接返回
     if (targetPixmap) {
         return *targetPixmap;
     }
 
-    // 确定基础路径
     QString basePath = (icon == SHR_ICON_ERROR)
         ? ":/res/icons/common/other/loading-error72.png"
         : ":/res/icons/common/other/loading72.png";
@@ -27,14 +32,12 @@ QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
     QString path = basePath;
     qreal targetDpr = 1.0;
 
-    // 判断是否需要高分辨率图片
-    if (dpr >= 1.0 + 0.001) {
+    if (dpr >= 1.001) {
         QFileInfo fi(basePath);
         path = fi.path() + "/" + fi.completeBaseName() + "@2x." + fi.suffix();
-        targetDpr = (dpr >= 2.0 - 0.001) ? dpr : 2.0;
+        targetDpr = (dpr >= 1.999) ? dpr : 2.0;
     }
 
-    // 加载图片
     auto pixmap = std::make_unique<QPixmap>(path);
 
     if (!pixmap->isNull() && targetDpr != 1.0) {
@@ -47,6 +50,5 @@ QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
 
 const QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr) const
 {
-    // const 重载调用非 const 版本，保证只读
     return const_cast<SharedResources*>(this)->getPixmap(icon, dpr);
 }

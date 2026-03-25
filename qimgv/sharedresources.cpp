@@ -1,9 +1,6 @@
 #include "sharedresources.h"
 #include <QFileInfo>
 
-// 定义全局引用，直接绑定到单例实例
-SharedResources& shrRes = SharedResources::getInstance();
-
 SharedResources& SharedResources::getInstance()
 {
     // 线程安全的局部静态实例（C++11 起）

@@ -44,13 +44,15 @@ public:
     
     QString keyForNativeScancode(quint32 scanCode) const;
 
+public:
+    explicit ActionManager(QObject *parent = nullptr);
+    ActionManager(const ActionManager&) = delete;
+    ActionManager& operator=(const ActionManager&) = delete;
+
 public slots:
     bool invokeAction(const QString &actionName);
 
 private:
-    explicit ActionManager(QObject *parent = nullptr);
-    ActionManager(const ActionManager&) = delete;
-    ActionManager& operator=(const ActionManager&) = delete;
     
     void initDefaults();
     void initShortcuts();

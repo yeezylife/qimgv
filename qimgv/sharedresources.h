@@ -28,3 +28,5 @@ private:
 
 // 保留全局引用，用于兼容旧代码
 extern SharedResources& shrRes;
+
+inline SharedResources& shrRes = SharedResources::getInstance();

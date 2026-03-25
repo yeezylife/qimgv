@@ -670,12 +670,14 @@ void ImageViewerV2::requestScaling()
     if (!pixmap)
         return;
 
-    const float scale = pixmapItem.scale();
+    // 修复: 将 float 改为 qreal (double)，避免从 double 到 float 的收缩转换
+    const qreal scale = pixmapItem.scale();
 
-    if (scale == 1.0f || movie)
+    // 建议将 1.0f 改为 1.0 以匹配 qreal 类型
+    if (scale == 1.0 || movie)
         return;
 
-    if (!smoothUpscaling && scale >= 1.0f)
+    if (!smoothUpscaling && scale >= 1.0)
         return;
 
     if (scaleTimer->isActive())
@@ -751,7 +753,8 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
             } else if (current <= zoomLevels.first()) {
                 newScale = current * (1.0f - zoomStep);
             } else {
-                for (int i = zoomLevels.size() - 1; i >= 0; --i) {
+                // 修复: 将 int 改为 qsizetype，匹配 zoomLevels.size() 的返回类型
+                for (qsizetype i = zoomLevels.size() - 1; i >= 0; --i) {
                     if (current > zoomLevels[i]) {
                         newScale = zoomLevels[i];
                         break;

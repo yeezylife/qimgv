@@ -83,7 +83,7 @@ public slots:
     void toggleLockView();
     bool lockViewEnabled() const;
 
-    void showImage(std::unique_ptr<QPixmap> pixmap);
+    void showImage(const QPixmap& pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& animation);
     void setScaledPixmap(const QPixmap& newFrame);
     void enableDrags();

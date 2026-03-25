@@ -206,13 +206,13 @@ bool ViewerWidget::interactionEnabled() {
     return mInteractionEnabled;
 }
 
-bool ViewerWidget::showImage(std::unique_ptr<QPixmap> pixmap) {
-    if(!pixmap)
+bool ViewerWidget::showImage(const QPixmap& pixmap) {
+    if(pixmap.isNull())
         return false;
     stopPlayback();
     videoControls->hide();
     enableImageViewer();
-    imageViewer->showImage(std::move(pixmap));
+    imageViewer->showImage(pixmap);
     hideCursorTimed(false);
     return true;
 }

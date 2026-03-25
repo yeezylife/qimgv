@@ -28,7 +28,7 @@ public:
     void setInteractionEnabled(bool mode);
     bool interactionEnabled();
 
-    bool showImage(std::unique_ptr<QPixmap> pixmap);
+    bool showImage(const QPixmap& pixmap);
     bool showAnimation(const std::shared_ptr<QMovie>& movie);
     void onScalingFinished(const QPixmap& scaled);
     bool isDisplaying();

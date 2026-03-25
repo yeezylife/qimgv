@@ -250,7 +250,7 @@ void MW::preShowResize(QSize sz) {
 void MW::showImage(std::unique_ptr<QPixmap> pixmap) {
     if(settings->autoResizeWindow())
         preShowResize(pixmap->size());
-    viewerWidget->showImage(std::move(pixmap));
+    viewerWidget->showImage(*pixmap);
     updateCropPanelData();
 }
 

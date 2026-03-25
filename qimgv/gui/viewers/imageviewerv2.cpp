@@ -419,15 +419,15 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<QMovie>& animation)
     startAnimation();
 }
 
-void ImageViewerV2::showImage(std::unique_ptr<QPixmap> newPixmap)
+void ImageViewerV2::showImage(const QPixmap& newPixmap)
 {
     reset();
 
-    if (!newPixmap)
+    if (newPixmap.isNull())
         return;
 
     pixmapItemScaled.hide();
-    pixmap = std::move(newPixmap);
+    pixmap = std::make_shared<QPixmap>(newPixmap);
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
 

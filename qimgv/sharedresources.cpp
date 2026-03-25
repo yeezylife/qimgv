@@ -1,7 +1,7 @@
 #include "sharedresources.h"
 #include <QFileInfo>
 
-SharedResources& SharedResources::getInstance()
+SharedResources& SharedResources::getInstance() noexcept
 {
     // C++11 线程安全懒加载
     static SharedResources instance;

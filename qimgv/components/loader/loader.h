@@ -23,6 +23,7 @@ public:
 private:
     QHash<QString, LoaderRunnable*> tasks;
     QThreadPool *pool;
+
     void clearPool();
     void doLoadAsync(const QString &path, int priority);
 

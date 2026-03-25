@@ -1,3 +1,7 @@
 #include "appversion.h"
 
-constexpr QVersionNumber appVersion(1, 0, 3);
+const QVersionNumber& appVersion()
+{
+    static const QVersionNumber v(1, 0, 3);
+    return v;
+}

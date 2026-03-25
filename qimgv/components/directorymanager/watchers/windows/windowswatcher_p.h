@@ -13,13 +13,13 @@ class WindowsWorker;                        // WindowsWorker 仍保持前向声�
 static inline QString lastError() {
     char buffer[1024];
     DWORD lastError = GetLastError();
-    int res = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
-                             nullptr,
-                             lastError,
-                             LANG_SYSTEM_DEFAULT,
-                             buffer,
-                             sizeof(buffer),
-                             nullptr);
+    DWORD res = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
+                               nullptr,
+                               lastError,
+                               LANG_SYSTEM_DEFAULT,
+                               buffer,
+                               sizeof(buffer),
+                               nullptr);
     QString line = QString(__FILE__) + "::" + QString::number(__LINE__) + ": ";
     return res == 0 ? QString::number(GetLastError()) : line + buffer;
 }

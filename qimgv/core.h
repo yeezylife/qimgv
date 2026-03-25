@@ -106,7 +106,9 @@ private:
             auto img = getEditableImage(path);
             if(!img)
                 continue;
-            QImage result = editFunc(*img->getImage(), std::forward<Args>(as)...);
+            // 修复警告：移除 std::forward，直接传递参数
+            // 这样可以确保在循环的每次迭代中，参数都是有效的（通过引用或拷贝）
+            QImage result = editFunc(*img->getImage(), as...);
             img->setEditedImage(std::unique_ptr<const QImage>( new QImage(std::move(result)) ));
             model->updateImage(path, std::static_pointer_cast<Image>(img));
             if(save) {

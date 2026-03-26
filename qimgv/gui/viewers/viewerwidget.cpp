@@ -85,28 +85,53 @@ QSize ViewerWidget::sourceSize() {
 
 // hide videoPlayer, show imageViewer
 void ViewerWidget::enableImageViewer() {
-    if(currentWidget != IMAGEVIEWER) {
-        disableVideoPlayer();
-        videoControls->setMode(PLAYBACK_ANIMATION);
-        connect(imageViewer, &ImageViewerV2::durationChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackDuration);
-        connect(imageViewer, &ImageViewerV2::frameChanged,    videoControls, &VideoControlsProxyWrapper::setPlaybackPosition);
-        connect(imageViewer, &ImageViewerV2::animationPaused, videoControls, &VideoControlsProxyWrapper::onPlaybackPaused);
-        imageViewer->show();
-        currentWidget = IMAGEVIEWER;
-    }
+    if(currentWidget == IMAGEVIEWER)
+        return;
+
+    disableVideoPlayer();
+
+    videoControls->setMode(PLAYBACK_ANIMATION);
+
+    // 防止重复连接（Qt::UniqueConnection）
+    connect(imageViewer, &ImageViewerV2::durationChanged,
+            videoControls, &VideoControlsProxyWrapper::setPlaybackDuration,
+            Qt::UniqueConnection);
+
+    connect(imageViewer, &ImageViewerV2::frameChanged,
+            videoControls, &VideoControlsProxyWrapper::setPlaybackPosition,
+            Qt::UniqueConnection);
+
+    connect(imageViewer, &ImageViewerV2::animationPaused,
+            videoControls, &VideoControlsProxyWrapper::onPlaybackPaused,
+            Qt::UniqueConnection);
+
+    imageViewer->show();
+    currentWidget = IMAGEVIEWER;
 }
 
 // hide imageViewer, show videoPlayer
 void ViewerWidget::enableVideoPlayer() {
-    if(currentWidget != VIDEOPLAYER) {
-        disableImageViewer();
-        videoControls->setMode(PLAYBACK_VIDEO);
-        connect(videoPlayer, &VideoPlayer::durationChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackDuration);
-        connect(videoPlayer, &VideoPlayer::positionChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackPosition);
-        connect(videoPlayer, &VideoPlayer::videoPaused,     videoControls, &VideoControlsProxyWrapper::onPlaybackPaused);
-        videoPlayer->show();
-        currentWidget = VIDEOPLAYER;
-    }
+    if(currentWidget == VIDEOPLAYER)
+        return;
+
+    disableImageViewer();
+
+    videoControls->setMode(PLAYBACK_VIDEO);
+
+    connect(videoPlayer, &VideoPlayer::durationChanged,
+            videoControls, &VideoControlsProxyWrapper::setPlaybackDuration,
+            Qt::UniqueConnection);
+
+    connect(videoPlayer, &VideoPlayer::positionChanged,
+            videoControls, &VideoControlsProxyWrapper::setPlaybackPosition,
+            Qt::UniqueConnection);
+
+    connect(videoPlayer, &VideoPlayer::videoPaused,
+            videoControls, &VideoControlsProxyWrapper::onPlaybackPaused,
+            Qt::UniqueConnection);
+
+    videoPlayer->show();
+    currentWidget = VIDEOPLAYER;
 }
 
 void ViewerWidget::disableImageViewer() {
@@ -380,16 +405,26 @@ void ViewerWidget::mouseReleaseEvent(QMouseEvent *event) {
 
 void ViewerWidget::mouseMoveEvent(QMouseEvent *event) {
     mWaylandCursorWorkaround = false;
-    if(!(event->buttons() & Qt::LeftButton) && !(event->buttons() & Qt::RightButton)) {
+
+    const bool noButton =
+        !(event->buttons() & Qt::LeftButton) &&
+        !(event->buttons() & Qt::RightButton);
+
+    if(noButton) {
         showCursor();
         hideCursorTimed(true);
     }
+
     if(currentWidget == VIDEOPLAYER || imageViewer->hasAnimation()) {
-        if(videoControlsArea().contains(event->position().toPoint()))
+        const QPoint pos = event->position().toPoint();
+        const QRect area = videoControlsArea();
+
+        if(area.contains(pos))
             videoControls->show();
         else
             videoControls->hide();
     }
+
     event->ignore();
 }
 
@@ -400,46 +435,44 @@ void ViewerWidget::hideCursorTimed(bool restartTimer) {
 
 void ViewerWidget::hideCursor() {
     cursorTimer.stop();
-    // ignore if we have something else open like settings window
+
     if(!isDisplaying() || !isActiveWindow())
         return;
-    // ignore when menu is up
+
     if(contextMenu && contextMenu->isVisible())
         return;
-    if(settings->cursorAutohide()) {
-        // force hide on wayland until we can get the cursor pos
-        if(mWaylandCursorWorkaround) {
+
+    if(!settings->cursorAutohide())
+        return;
+
+    if(mWaylandCursorWorkaround) {
+        setCursor(QCursor(Qt::BlankCursor));
+        videoControls->hide();
+        return;
+    }
+
+    const QPoint globalPos = QCursor::pos();
+    const QPoint posMapped = mapFromGlobal(globalPos);
+
+    if(clickZoneOverlay->leftZone().contains(posMapped) ||
+       clickZoneOverlay->rightZone().contains(posMapped))
+        return;
+
+    QWidget *w = qApp->widgetAt(globalPos);
+
+    if(w && (w == imageViewer->viewport() || w == videoPlayer->getPlayer().get())) {
+        if(!videoControls->isVisible() || !videoControlsArea().contains(posMapped)) {
             setCursor(QCursor(Qt::BlankCursor));
             videoControls->hide();
-        } else {
-            QPoint posMapped = mapFromGlobal(QCursor::pos());
-            //if(settings->enableClickZoneThing())
-            // ignore when we are hovering the click zone
-            if(clickZoneOverlay->leftZone().contains(posMapped) ||
-                clickZoneOverlay->leftZone().contains(posMapped))
-            {
-                return;
-            }
-
-            // only hide when we are under viewer or player widget
-            QWidget *w = qApp->widgetAt(QCursor::pos());
-            if(w && (w == imageViewer->viewport() || w == videoPlayer->getPlayer().get())) {
-                if(!videoControls->isVisible() || !videoControlsArea().contains(posMapped)) {
-                    setCursor(QCursor(Qt::BlankCursor));
-                    videoControls->hide();
-                }
-            }
         }
     }
 }
 
 QRect ViewerWidget::videoControlsArea() {
-    QRect vcontrolsRect;
     if(settings->panelEnabled() && settings->panelPosition() == PANEL_BOTTOM)
-        vcontrolsRect = QRect(0, 0, width(), 160); // inverted (top)
-    else
-        vcontrolsRect = QRect(0, height() - 160, width(), height());
-    return vcontrolsRect;
+        return QRect(0, 0, width(), 160);
+
+    return QRect(0, height() - 160, width(), 160);
 }
 
 // click zone input crutch
@@ -448,78 +481,85 @@ QRect ViewerWidget::videoControlsArea() {
 // cause they won't propagate to the ImageViewer, only to overlay's container (this widget)
 // so we just grab them before they reach ImageViewer and do the needful
 bool ViewerWidget::eventFilter(QObject *object, QEvent *event) {
-    // catch press and doubleclick
-    // force doubleclick to act as press event for click zones
-        if(event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick) {
-            // disable feature for very small windows
-            if(width() <= 250)
-                return false;
+    const auto type = event->type();
 
-            auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
-            if(mouseEvent->button() != Qt::LeftButton || mouseEvent->modifiers()) {
-                clickZoneOverlay->disableHighlight();
-                return false;
-            }
-            if(clickZoneOverlay->leftZone().contains(mouseEvent->position().toPoint())) {
-                clickZoneOverlay->setPressed(true);
-                clickZoneOverlay->highlightLeft();
-                imageViewer->disableDrags();
-                actionManager->invokeAction("prevImage");
-                return true; // do not pass the event to imageViewer
-            }
-            if(clickZoneOverlay->rightZone().contains(mouseEvent->position().toPoint())) {
-                clickZoneOverlay->setPressed(true);
-                clickZoneOverlay->highlightRight();
-                imageViewer->disableDrags();
-                actionManager->invokeAction("nextImage");
-                return true;
-            }
+    if(type == QEvent::MouseButtonPress || type == QEvent::MouseButtonDblClick) {
+        if(width() <= 250)
+            return false;
+
+        auto *mouseEvent = static_cast<QMouseEvent*>(event);
+
+        if(mouseEvent->button() != Qt::LeftButton || mouseEvent->modifiers()) {
+            clickZoneOverlay->disableHighlight();
+            return false;
         }
-    // right click produces QEvent::ContextMenu instead of QEvent::MouseButtonPress
-    // this is NOT a QMouseEvent
-    if(event->type() == QEvent::ContextMenu) {
+
+        const QPoint pos = mouseEvent->position().toPoint();
+
+        if(clickZoneOverlay->leftZone().contains(pos)) {
+            clickZoneOverlay->setPressed(true);
+            clickZoneOverlay->highlightLeft();
+            imageViewer->disableDrags();
+            actionManager->invokeAction("prevImage");
+            return true;
+        }
+
+        if(clickZoneOverlay->rightZone().contains(pos)) {
+            clickZoneOverlay->setPressed(true);
+            clickZoneOverlay->highlightRight();
+            imageViewer->disableDrags();
+            actionManager->invokeAction("nextImage");
+            return true;
+        }
+    }
+
+    if(type == QEvent::ContextMenu) {
         clickZoneOverlay->disableHighlight();
         return false;
     }
 
-    if(event->type() == QEvent::MouseButtonRelease) {
+    if(type == QEvent::MouseButtonRelease) {
         clickZoneOverlay->setPressed(false);
         imageViewer->enableDrags();
     }
 
-    if(event->type() == QEvent::MouseMove || event->type() == QEvent::Enter) {
-        QPoint mousePos;
-        if(event->type() == QEvent::MouseMove) {
-            auto mouseEvent = dynamic_cast<QMouseEvent*>(event);
-            mousePos = mouseEvent->position().toPoint();
+    if(type == QEvent::MouseMove || type == QEvent::Enter) {
+        QPoint pos;
+
+        if(type == QEvent::MouseMove) {
+            auto *mouseEvent = static_cast<QMouseEvent*>(event);
             if(mouseEvent->buttons())
                 return false;
+            pos = mouseEvent->position().toPoint();
         } else {
-            auto enterEvent = dynamic_cast<QEnterEvent*>(event);
-            mousePos = enterEvent->position().toPoint();
+            auto *enterEvent = static_cast<QEnterEvent*>(event);
+            pos = enterEvent->position().toPoint();
         }
-        if(clickZoneOverlay->leftZone().contains(mousePos)) {
+
+        if(clickZoneOverlay->leftZone().contains(pos)) {
             clickZoneOverlay->setPressed(false);
             clickZoneOverlay->highlightLeft();
             setCursor(Qt::PointingHandCursor);
             return true;
         }
-        if(clickZoneOverlay->rightZone().contains(mousePos)) {
+
+        if(clickZoneOverlay->rightZone().contains(pos)) {
             clickZoneOverlay->setPressed(false);
             clickZoneOverlay->highlightRight();
             setCursor(Qt::PointingHandCursor);
             return true;
         }
+
         clickZoneOverlay->disableHighlight();
         setCursor(Qt::ArrowCursor);
     }
 
-    if(event->type() == QEvent::Leave) {
+    if(type == QEvent::Leave) {
         clickZoneOverlay->disableHighlight();
         setCursor(Qt::ArrowCursor);
     }
 
-    return false; // send event to imageViewer / videoplayer
+    return false;
 }
 
 void ViewerWidget::showCursor() {

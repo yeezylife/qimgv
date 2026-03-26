@@ -70,7 +70,7 @@ public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
     void onScalingFinished(const QPixmap& scaled);
-    void showImage(std::unique_ptr<QPixmap> pixmap);
+    void showImage(const QPixmap& pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& movie);
     void showVideo(QString&& file);
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

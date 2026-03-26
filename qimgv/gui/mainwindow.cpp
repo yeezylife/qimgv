@@ -247,10 +247,11 @@ void MW::preShowResize(QSize sz) {
     // 优化：移除 processEvents，依赖 Qt 自然事件循环
 }
 
-void MW::showImage(std::unique_ptr<QPixmap> pixmap) {
+// 修改后的函数签名
+void MW::showImage(const QPixmap& pixmap) {
     if(settings->autoResizeWindow())
-        preShowResize(pixmap->size());
-    viewerWidget->showImage(*pixmap);
+        preShowResize(pixmap.size());
+    viewerWidget->showImage(pixmap);
     updateCropPanelData();
 }
 
@@ -287,7 +288,10 @@ void MW::onSortingChanged(SortingMode mode) {
 
 void MW::setDirectoryPath(const QString& path) {
     info.directoryPath = path;
-    info.directoryName = path.split(u'/').last();
+
+    int pos = path.lastIndexOf(u'/');
+    info.directoryName = (pos >= 0) ? path.mid(pos + 1) : path;
+
     folderView->setDirectoryPath(path);
     onInfoUpdated();
 }
@@ -408,8 +412,8 @@ void MW::restoreWindowGeometry() {
 }
 
 void MW::updateCurrentDisplay() {
-    auto screens = qApp->screens();
-    currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
+    const auto& screens = qApp->screens();
+    currentDisplay = static_cast<int>(screens.indexOf(window()->screen()));
 }
 
 void MW::onWindowGeometryChanged() {
@@ -418,7 +422,8 @@ void MW::onWindowGeometryChanged() {
 }
 
 void MW::saveCurrentDisplay() {
-    settings->setLastDisplay(qApp->screens().indexOf(this->window()->screen()));
+    const auto& screens = qApp->screens();
+    settings->setLastDisplay(screens.indexOf(window()->screen()));
 }
 
 void MW::showEvent(QShowEvent *event) {
@@ -439,10 +444,16 @@ void MW::mouseMoveEvent(QMouseEvent *event) {
 }
 
 bool MW::event(QEvent *event) {
-    if(event->type() == QEvent::WindowStateChange && this->isVisible() && !this->isFullScreen())
+    const auto type = event->type();
+
+    if(type == QEvent::WindowStateChange && isVisible() && !isFullScreen())
         maximized = isMaximized();
-    if(event->type() == QEvent::Move || event->type() == QEvent::Resize)
-        windowGeometryChangeTimer.start();
+
+    if(type == QEvent::Move || type == QEvent::Resize) {
+        if(!windowGeometryChangeTimer.isActive())
+            windowGeometryChangeTimer.start();
+    }
+
     return QWidget::event(event);
 }
 
@@ -530,17 +541,23 @@ void MW::showSaveDialog(const QString& filePath) {
 
 QString MW::getSaveFileName(const QString & filePath) {
     docWidget->hideFloatingPanel();
+
     QStringList filters;
-    filters.reserve(20);  // 优化：预留空间
-    
+    filters.reserve(20);
+
     const auto writerFormats = QImageWriter::supportedImageFormats();
-    
+
+    // 用 QSet 做去重检测，避免 join O(N²)
+    QSet<QString> addedFormats;
+    addedFormats.reserve(writerFormats.size());
+
     auto addFilter = [&](const QByteArray& format, const QString& description) {
         if(writerFormats.contains(format)) {
             filters.append(description);
+            addedFormats.insert(QString::fromUtf8(format));
         }
     };
-    
+
     addFilter("jpg",  u"JPEG (*.jpg *.jpeg *jpe *jfif)"_s);
     addFilter("png",  u"PNG (*.png)"_s);
     addFilter("webp", u"WebP (*.webp)"_s);
@@ -557,28 +574,35 @@ QString MW::getSaveFileName(const QString & filePath) {
     addFilter("xpm",  u"XPM (*.xpm)"_s);
     addFilter("dds",  u"DDS (*.dds)"_s);
     addFilter("wbmp", u"WBMP (*.wbmp)"_s);
-    
+
     for (const auto& format : writerFormats) {
         QString fmtStr = QString::fromUtf8(format);
-        if (filters.join(u' ').contains(fmtStr))
+        if (addedFormats.contains(fmtStr))
             continue;
+
         filters.append(fmtStr.toUpper() + u" (*." + fmtStr + u")");
     }
-    
+
     QString filterString = filters.join(u";; "_s);
     QString selectedFilter = u"JPEG (*.jpg *.jpeg *jpe *jfif)"_s;
-    
+
     QFileInfo fi(filePath);
     QString suffix = fi.suffix().toLower();
+
     for(const auto& filter : filters) {
         if(filter.contains(suffix)) {
             selectedFilter = filter;
             break;
         }
     }
-    
-    QString newFilePath = QFileDialog::getSaveFileName(this, tr("Save File as..."), filePath, filterString, &selectedFilter);
-    return newFilePath;
+
+    return QFileDialog::getSaveFileName(
+        this,
+        tr("Save File as..."),
+        filePath,
+        filterString,
+        &selectedFilter
+    );
 }
 
 void MW::showOpenDialog(const QString& path) {
@@ -837,32 +861,33 @@ void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
         sizeText.clear();
         return;
     }
-    
-    // 优化：使用 arg 代替 + 拼接
-    infoText = info.fileName + (info.edited ? u"  *"_s : QString());
-    
+
+    infoText = info.fileName;
+    if(info.edited)
+        infoText += u"  *"_s;
+
     QString resString;
     if(info.imageSize.width())
         resString = u"%1 x %2"_s.arg(info.imageSize.width()).arg(info.imageSize.height());
-    
+
     QString sizeString;
     if(info.fileSize)
         sizeString = locale().formattedDataSize(info.fileSize, 1);
-    
-    sizeText = resString + u"  "_s + sizeString;
-    
+
+    sizeText.reserve(resString.size() + sizeString.size() + 16);
+    sizeText = resString;
+    if(!resString.isEmpty() && !sizeString.isEmpty())
+        sizeText += u"  "_s;
+    sizeText += sizeString;
+
     QString states;
-    if(info.slideshow)
-        states.append(u" [slideshow]"_s);
-    if(info.shuffle)
-        states.append(u" [shuffle]"_s);
-    if(viewerWidget->lockZoomEnabled())
-        states.append(u" [zoom lock]"_s);
-    if(viewerWidget->lockViewEnabled())
-        states.append(u" [view lock]"_s);
-    
+    if(info.slideshow) states += u" [slideshow]"_s;
+    if(info.shuffle)   states += u" [shuffle]"_s;
+    if(viewerWidget->lockZoomEnabled()) states += u" [zoom lock]"_s;
+    if(viewerWidget->lockViewEnabled()) states += u" [view lock]"_s;
+
     if(!settings->infoBarWindowed() && !states.isEmpty())
-        sizeText.append(u" "_s + states);
+        sizeText += u" "_s + states;
 }
 
 void MW::onInfoUpdated() {

@@ -63,9 +63,9 @@ bool ImageAnimated::save() {
     return false;
 }
 
-std::unique_ptr<QPixmap> ImageAnimated::getPixmap() const {
+void ImageAnimated::getPixmap(QPixmap& outPixmap) const {
     const QByteArray formatBytes = mDocInfo->format().toLatin1();
-    return std::make_unique<QPixmap>(mPath, formatBytes.constData());
+    outPixmap = QPixmap(mPath, formatBytes.constData());
 }
 
 std::shared_ptr<const QImage> ImageAnimated::getImage() const {

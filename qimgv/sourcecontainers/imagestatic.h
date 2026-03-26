@@ -23,7 +23,7 @@ public:
     using Image::save;
 
     // 使用 std::optional 表示可能失败的操作
-    std::unique_ptr<QPixmap> getPixmap() const override;
+    void getPixmap(QPixmap& outPixmap) const override;
     std::shared_ptr<const QImage> getSourceImage() const noexcept;
     std::shared_ptr<const QImage> getImage() const noexcept override;
 

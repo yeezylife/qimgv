@@ -14,7 +14,7 @@ public:
 
     using Image::save;
 
-    std::unique_ptr<QPixmap> getPixmap() const override;
+    void getPixmap(QPixmap& outPixmap) const override;
     std::shared_ptr<const QImage> getImage() const override;
     std::shared_ptr<QMovie> getMovie();
     int height() const override;

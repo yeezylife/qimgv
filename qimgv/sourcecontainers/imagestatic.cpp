@@ -217,15 +217,14 @@ bool ImageStatic::save() {
     return save(mPath);
 }
 
-std::unique_ptr<QPixmap> ImageStatic::getPixmap() const {
+void ImageStatic::getPixmap(QPixmap& outPixmap) const {
     const QImage *img = isEdited() ? imageEdited.get() : image.get();
     if(!img || img->isNull()) {
-        return nullptr;
+        outPixmap = QPixmap();
+        return;
     }
     
-    auto pix = std::make_unique<QPixmap>();
-    pix->convertFromImage(*img, Qt::NoFormatConversion);
-    return pix;
+    outPixmap = QPixmap::fromImage(*img);
 }
 
 std::shared_ptr<const QImage> ImageStatic::getSourceImage() const noexcept {

@@ -51,7 +51,7 @@ public:
     }
 
     // --- 纯虚函数接口 ---
-    virtual std::unique_ptr<QPixmap> getPixmap() const = 0;
+    virtual void getPixmap(QPixmap& outPixmap) const = 0;
     virtual std::shared_ptr<const QImage> getImage() const = 0;
     virtual int height() const = 0;
     virtual int width() const = 0;

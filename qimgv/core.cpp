@@ -1493,7 +1493,9 @@ void Core::guiSetImage(const std::shared_ptr<Image>& img) {
     }
     DocumentType type = img->type();
     if(type == STATIC) {
-        mw->showImage(img->getPixmap());
+        QPixmap pixmap;
+        img->getPixmap(pixmap);
+        mw->showImage(pixmap);
     } else if(type == ANIMATED) {
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
         mw->showAnimation(animated->getMovie());

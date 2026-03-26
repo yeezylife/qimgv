@@ -56,10 +56,10 @@ bool Video::save() {
     return false;
 }
 
-std::unique_ptr<QPixmap> Video::getPixmap() const {
+void Video::getPixmap(QPixmap& outPixmap) const {
     qDebug() << "[Video] getPixmap() is not implemented.";
     //TODO: find out some easy way to get frames from video source
-    return nullptr;
+    outPixmap = QPixmap(); // 设置为空 pixmap
 }
 
 std::shared_ptr<const QImage> Video::getImage() const {

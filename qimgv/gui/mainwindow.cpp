@@ -289,7 +289,7 @@ void MW::onSortingChanged(SortingMode mode) {
 void MW::setDirectoryPath(const QString& path) {
     info.directoryPath = path;
 
-    int pos = path.lastIndexOf(u'/');
+    qsizetype pos = path.lastIndexOf(u'/');
     info.directoryName = (pos >= 0) ? path.mid(pos + 1) : path;
 
     folderView->setDirectoryPath(path);
@@ -423,7 +423,7 @@ void MW::onWindowGeometryChanged() {
 
 void MW::saveCurrentDisplay() {
     const auto& screens = qApp->screens();
-    settings->setLastDisplay(screens.indexOf(window()->screen()));
+    settings->setLastDisplay(static_cast<int>(screens.indexOf(window()->screen())));
 }
 
 void MW::showEvent(QShowEvent *event) {

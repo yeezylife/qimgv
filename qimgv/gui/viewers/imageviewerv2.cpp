@@ -816,11 +816,16 @@ void ImageViewerV2::doZoom(float newScale)
 
     newScale = qBound(minScale, newScale, maxScale);
 
-    auto tl = pixmapItem.sceneBoundingRect().topLeft().toPoint();
-    pixmapItem.setOffset(tl);
+    // ✅ 关键：保持当前 scene 中心不变
+    const QPoint viewportCenter = viewport()->rect().center();
+    const QPointF sceneCenterBefore = mapToScene(viewportCenter);
+
     pixmapItem.setScale(newScale);
     pixmapItem.setTransformationMode(selectTransformationMode());
     swapToOriginalPixmap();
+
+    // ✅ 恢复中心（防止偏移）
+    centerOn(sceneCenterBefore);
 
     emit scaleChanged(newScale);
 }
@@ -1016,19 +1021,15 @@ void ImageViewerV2::setFitWindowStretch()
 
 void ImageViewerV2::centerOnPixmap()
 {
-    const QRectF imgRect = pixmapItem.sceneBoundingRect();
+    if (!pixmap)
+        return;
 
-    const QRectF vport =
-        mapToScene(viewport()->rect()).boundingRect();
+    const QRectF img = pixmapItem.sceneBoundingRect();
 
-    const qreal x =
-        pixmapItem.offset().x() - (vport.width() - imgRect.width()) * 0.5;
+    const qreal x = img.center().x();
+    const qreal y = img.center().y();
 
-    const qreal y =
-        pixmapItem.offset().y() - (vport.height() - imgRect.height()) * 0.5;
-
-    horizontalScroll->setValue(qRound(x));
-    verticalScroll->setValue(qRound(y));
+    centerOn(x, y);
 }
 
 void ImageViewerV2::centerIfNecessary()
@@ -1037,24 +1038,24 @@ void ImageViewerV2::centerIfNecessary()
         return;
 
     const QSize sz = scaledSizeR();
+    const QRectF img = pixmapItem.sceneBoundingRect();
 
-    const QRectF imgRect = pixmapItem.sceneBoundingRect();
-    const QRectF vport =
-        mapToScene(viewport()->rect()).boundingRect();
+    QPointF center = mapToScene(viewport()->rect().center());
+
+    bool changed = false;
 
     if (sz.width() <= viewport()->width()) {
-        const qreal x =
-            pixmapItem.offset().x() - (vport.width() - imgRect.width()) * 0.5;
-
-        horizontalScroll->setValue(qRound(x));
+        center.setX(img.center().x());
+        changed = true;
     }
 
     if (sz.height() <= viewport()->height()) {
-        const qreal y =
-            pixmapItem.offset().y() - (vport.height() - imgRect.height()) * 0.5;
-
-        verticalScroll->setValue(qRound(y));
+        center.setY(img.center().y());
+        changed = true;
     }
+
+    if (changed)
+        centerOn(center);
 }
 
 void ImageViewerV2::snapToEdges()

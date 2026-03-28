@@ -37,6 +37,7 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     , fitWindowStretchScale(0.125f)
     , expandLimit(1.0f)
     , lockedScale(1.0f)
+    , lastRequestedScale(-1.0f)
     , mViewLock(LOCK_NONE)
     , imageFitMode(FIT_WINDOW)
     , imageFitModeDefault(FIT_WINDOW)
@@ -670,10 +671,7 @@ void ImageViewerV2::requestScaling()
     if (!pixmap)
         return;
 
-    // 修复: 将 float 改为 qreal (double)，避免从 double 到 float 的收缩转换
     const qreal scale = pixmapItem.scale();
-
-    // 建议将 1.0f 改为 1.0 以匹配 qreal 类型
     if (scale == 1.0 || movie)
         return;
 
@@ -683,8 +681,17 @@ void ImageViewerV2::requestScaling()
     if (scaleTimer->isActive())
         scaleTimer->stop();
 
-    if (scale < FAST_SCALE_THRESHOLD)
-        emit scalingRequested(scaledSizeR() * dpr, mScalingFilter);
+    if (scale < FAST_SCALE_THRESHOLD) {
+        const QSize requested = scaledSizeR() * dpr;
+        if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
+            // avoid repeated identical scale requests
+            return;
+        }
+        lastRequestedScale = static_cast<float>(scale);
+        emit scalingRequested(requested, mScalingFilter);
+    } else {
+        lastRequestedScale = -1.0f;
+    }
 }
 
 void ImageViewerV2::enableDrags()
@@ -815,6 +822,10 @@ void ImageViewerV2::doZoom(float newScale)
         return;
 
     newScale = qBound(minScale, newScale, maxScale);
+
+    const float current = currentScaleInternal();
+    if (qFuzzyCompare(1.0f + newScale, 1.0f + current))
+        return;
 
     // ✅ 关键：保持当前 scene 中心不变
     const QPoint viewportCenter = viewport()->rect().center();
@@ -1037,19 +1048,20 @@ void ImageViewerV2::centerIfNecessary()
     if (!pixmap)
         return;
 
-    const QSize sz = scaledSizeR();
     const QRectF img = pixmapItem.sceneBoundingRect();
-
     QPointF center = mapToScene(viewport()->rect().center());
+
+    const int viewportW = viewport()->width();
+    const int viewportH = viewport()->height();
 
     bool changed = false;
 
-    if (sz.width() <= viewport()->width()) {
+    if (qRound(img.width()) <= viewportW) {
         center.setX(img.center().x());
         changed = true;
     }
 
-    if (sz.height() <= viewport()->height()) {
+    if (qRound(img.height()) <= viewportH) {
         center.setY(img.center().y());
         changed = true;
     }
@@ -1060,31 +1072,26 @@ void ImageViewerV2::centerIfNecessary()
 
 void ImageViewerV2::snapToEdges()
 {
-    const QRect imgRect = scaledRectR();
-
-    const QRectF vportScene =
-        mapToScene(viewport()->rect()).boundingRect();
+    const QRectF imgScene = pixmapItem.sceneBoundingRect();
+    const QRectF vportScene = mapToScene(viewport()->rect()).boundingRect();
 
     const QPointF centerTarget = vportScene.center();
 
     qreal xShift = 0.0;
     qreal yShift = 0.0;
 
-    const int viewW = viewport()->width();
-    const int viewH = viewport()->height();
-
-    if (imgRect.width() > viewW) {
-        if (imgRect.left() > 0)
-            xShift = imgRect.left();
-        else if (imgRect.right() < viewW)
-            xShift = imgRect.right() - viewW;
+    if (imgScene.width() > vportScene.width()) {
+        if (imgScene.left() > vportScene.left())
+            xShift = imgScene.left() - vportScene.left();
+        else if (imgScene.right() < vportScene.right())
+            xShift = imgScene.right() - vportScene.right();
     }
 
-    if (imgRect.height() > viewH) {
-        if (imgRect.top() > 0)
-            yShift = imgRect.top();
-        else if (imgRect.bottom() < viewH)
-            yShift = imgRect.bottom() - viewH;
+    if (imgScene.height() > vportScene.height()) {
+        if (imgScene.top() > vportScene.top())
+            yShift = imgScene.top() - vportScene.top();
+        else if (imgScene.bottom() < vportScene.bottom())
+            yShift = imgScene.bottom() - vportScene.bottom();
     }
 
     centerOn(centerTarget + QPointF(xShift, yShift));
@@ -1354,12 +1361,17 @@ void ImageViewerV2::handleTrackpadScroll(QWheelEvent* event)
 
     if (settings->imageScrolling() != SCROLL_NONE) {
         stopPosAnimation();
-        QPoint pixelDelta = event->pixelDelta();   // 局部变量，会被使用
-        QPoint angleDelta = event->angleDelta();
-        int dx = abs(angleDelta.x()) > abs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
-        int dy = abs(angleDelta.y()) > abs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
-        horizontalScroll->setValue(qRound(horizontalScroll->value() - dx * TRACKPAD_SCROLL_MULTIPLIER));
-        verticalScroll->setValue(qRound(verticalScroll->value() - dy * TRACKPAD_SCROLL_MULTIPLIER));
+        const QPoint pixelDelta = event->pixelDelta();
+        const QPoint angleDelta = event->angleDelta();
+        const int dx = qAbs(angleDelta.x()) > qAbs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
+        const int dy = qAbs(angleDelta.y()) > qAbs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
+
+        const int newH = qRound(horizontalScroll->value() - dx * TRACKPAD_SCROLL_MULTIPLIER);
+        const int newV = qRound(verticalScroll->value() - dy * TRACKPAD_SCROLL_MULTIPLIER);
+
+        horizontalScroll->setValue(newH);
+        verticalScroll->setValue(newV);
+
         centerIfNecessary();
         snapToEdges();
     }
@@ -1461,19 +1473,15 @@ QSize ImageViewerV2::scaledSizeR() const
     if (!pixmap)
         return QSize(0, 0);
 
-    const QRectF rect =
-        pixmapItem.mapRectToScene(pixmapItem.boundingRect());
-
-    return sceneRoundRect(rect).size().toSize();
+    const QRectF sceneRect = pixmapItem.sceneBoundingRect();
+    return QSize(qRound(sceneRect.width()), qRound(sceneRect.height()));
 }
 
 QRect ImageViewerV2::scaledRectR() const
 {
-    const QRectF rect =
-        pixmapItem.mapRectToScene(pixmapItem.boundingRect());
-
-    const QPoint topLeft = mapFromScene(rect.topLeft());
-    const QPoint bottomRight = mapFromScene(rect.bottomRight());
+    const QRectF sceneRect = pixmapItem.sceneBoundingRect();
+    const QPoint topLeft = mapFromScene(sceneRect.topLeft());
+    const QPoint bottomRight = mapFromScene(sceneRect.bottomRight());
 
     return QRect(topLeft, bottomRight);
 }

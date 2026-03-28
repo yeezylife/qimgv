@@ -165,6 +165,7 @@ private:
     float fitWindowStretchScale;
     float expandLimit;
     float lockedScale;
+    float lastRequestedScale;
     QPointF savedViewportPos;
     ViewLockMode mViewLock;
     ImageFitMode imageFitMode;

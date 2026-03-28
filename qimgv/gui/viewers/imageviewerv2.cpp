@@ -326,7 +326,8 @@ void ImageViewerV2::onAnimationTimer()
     }
 
     const QPixmap currentPixmap = movie->currentPixmap();
-    if (!pixmap || *pixmap != currentPixmap) {
+    // 使用 cacheKey() 比较，这是 Qt 推荐的轻量级比较方式
+    if (!pixmap || pixmap->cacheKey() != currentPixmap.cacheKey()) {
         updatePixmap(currentPixmap);
     }
 

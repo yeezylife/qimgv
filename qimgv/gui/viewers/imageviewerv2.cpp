@@ -325,8 +325,12 @@ void ImageViewerV2::onAnimationTimer()
         }
     }
 
+    const QPixmap currentPixmap = movie->currentPixmap();
+    if (!pixmap || *pixmap != currentPixmap) {
+        updatePixmap(currentPixmap);
+    }
+
     emit frameChanged(movie->currentFrameNumber());
-    updatePixmap(movie->currentPixmap());
     animationTimer->start(movie->nextFrameDelay());
 }
 
@@ -371,11 +375,15 @@ bool ImageViewerV2::showAnimationFrame(int frame)
 // ============================================================================
 void ImageViewerV2::updatePixmap(const QPixmap& newPixmap)
 {
-    pixmap = std::make_shared<QPixmap>(newPixmap);
+    if (!pixmap)
+        pixmap = std::make_shared<QPixmap>();
+
+    *pixmap = newPixmap;
     pixmap->setDevicePixelRatio(dpr);
+
     pixmapItem.setPixmap(*pixmap);
-    pixmapItem.show();
-    pixmapItem.update();
+    if (!pixmapItem.isVisible())
+        pixmapItem.show();
 }
 
 void ImageViewerV2::showAnimation(const std::shared_ptr<QMovie>& animation)
@@ -518,44 +526,36 @@ void ImageViewerV2::scroll(int dx, int dy, bool animated)
 
 void ImageViewerV2::scrollSmooth(int dx, int dy)
 {
-    if (dx) {
-        int current = horizontalScroll->value();
-        int newEnd = current + dx;
-        bool redirect = false;
+    auto updateTimeline = [](QTimeLine* timeline, QScrollBar* scrollbar, int delta) {
+        if (!delta)
+            return;
 
-        if ((newEnd < current && current < scrollTimeLineX->endFrame()) ||
-            (newEnd > current && current > scrollTimeLineX->endFrame())) {
-            redirect = true;
+        const int current = scrollbar->value();
+        int newEnd = current + delta;
+
+        const bool reversed = ((newEnd < current && current < timeline->endFrame()) ||
+                               (newEnd > current && current > timeline->endFrame()));
+
+        if (timeline->state() == QTimeLine::Running && !reversed) {
+            newEnd = timeline->endFrame() + delta;
+            timeline->setFrameRange(current, newEnd);
+            return;
         }
 
-        if (scrollTimeLineX->state() == QTimeLine::Running && !redirect)
-            newEnd = scrollTimeLineX->endFrame() + dx;
+        timeline->stop();
+        timeline->setFrameRange(current, newEnd);
+        timeline->start();
+    };
 
-        scrollTimeLineX->stop();
-        scrollTimeLineX->setFrameRange(current, newEnd);
-        scrollTimeLineX->start();
-    }
+    if (dx)
+        updateTimeline(scrollTimeLineX, horizontalScroll, dx);
 
-    if (dy) {
-        int current = verticalScroll->value();
-        int newEnd = current + dy;
-        bool redirect = false;
-
-        if ((newEnd < current && current < scrollTimeLineY->endFrame()) ||
-            (newEnd > current && current > scrollTimeLineY->endFrame())) {
-            redirect = true;
-        }
-
-        if (scrollTimeLineY->state() == QTimeLine::Running && !redirect)
-            newEnd = scrollTimeLineY->endFrame() + dy;
-
-        scrollTimeLineY->stop();
-        scrollTimeLineY->setFrameRange(current, newEnd);
-        scrollTimeLineY->start();
-    }
+    if (dy)
+        updateTimeline(scrollTimeLineY, verticalScroll, dy);
 
     saveViewportPos();
 }
+
 
 void ImageViewerV2::scrollPrecise(int dx, int dy)
 {

@@ -19,29 +19,31 @@ ImageInfoOverlay::ImageInfoOverlay(FloatingWidgetContainer *parent) :
 
 ImageInfoOverlay::~ImageInfoOverlay() {
     delete ui;
-    while (!entries.isEmpty()) {
-        delete entries.takeLast();
-    }
+    entries.clear();
 }
 
 void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
-    // remove/add entries
+    // existing widgets are owned by QWidget hierarchy; we keep pool to avoid frequent realloc
+    for (EntryInfoItem *entry : qAsConst(entries)) {
+        ui->entryLayout->removeWidget(entry);
+        entry->hide();
+    }
+
     qsizetype entryCount = entries.count();
-    if(entryCount > info.count()) {
-        for(qsizetype i = entryCount - 1; i >= info.count(); i--) {
-            ui->entryLayout->removeWidget(entries.last());
-            delete entries.takeLast();
-        }
-    } else if(entryCount < info.count()) {
+    if(entryCount < info.count()) {
         for(qsizetype i = entryCount; i < info.count(); i++) {
             entries.append(new EntryInfoItem(this));
-            ui->entryLayout->addWidget(entries.last());
         }
+        entryCount = entries.count();
     }
+
     QHash<QString, QString>::const_iterator i = info.constBegin();
     qsizetype entryIdx = 0;
     while(i != info.constEnd()) {
-        entries.at(entryIdx)->setInfo(i.key(), i.value());
+        EntryInfoItem *item = entries.at(entryIdx);
+        item->setInfo(i.key(), i.value());
+        ui->entryLayout->addWidget(item);
+        item->show();
         ++i;
         ++entryIdx;
     }
@@ -49,12 +51,14 @@ void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
     // Hiding/showing entryStub causes flicker,
     // so we just remove it from layout and clear the text.
     // It's still there but basically not visible
-    if(entries.count()) {
+    if(info.count()) {
         ui->entryLayout->removeWidget(&entryStub);
         entryStub.setText("");
+        entryStub.hide();
     } else {
         ui->entryLayout->addWidget(&entryStub);
         entryStub.setText("<no metadata found>");
+        entryStub.show();
     }
 
     if(!isHidden() && entryCount != info.count()) {

@@ -12,14 +12,12 @@ class EntryInfoItem : public QWidget
     Q_OBJECT
 public:
     explicit EntryInfoItem(QWidget *parent = nullptr);
-    void setInfo(QString _name, QString _value);
+    void setInfo(const QString& _name, const QString& _value);
 
 protected:
     void paintEvent(QPaintEvent *event);
 
 private:
-    QString name;
-    QString value;
     QHBoxLayout layout;
     QLabel nameLabel, valueLabel;
 };

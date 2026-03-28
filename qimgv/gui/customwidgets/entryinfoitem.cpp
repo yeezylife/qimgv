@@ -17,12 +17,10 @@ EntryInfoItem::EntryInfoItem(QWidget *parent) : QWidget(parent) {
     valueLabel.setCursor(Qt::IBeamCursor);
 }
 
-void EntryInfoItem::setInfo(QString _name, QString _value) {
-    name = std::move(_name);
-    value = std::move(_value);
-    nameLabel.setText(name);
-    valueLabel.setText(value);
-};
+void EntryInfoItem::setInfo(const QString& _name, const QString& _value) {
+    nameLabel.setText(_name);
+    valueLabel.setText(_value);
+}
 
 void EntryInfoItem::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)

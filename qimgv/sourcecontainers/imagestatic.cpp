@@ -32,38 +32,35 @@ void ImageStatic::load() {
 }
 
 void ImageStatic::loadGeneric() {
-    /* QImageReader::read() seems more reliable than just reading via QImage.
-     * For example: "Invalid JPEG file structure: two SOF markers"
-     * QImageReader::read() returns false, but still reads an image. Meanwhile QImage just fails.
-     *
-     * tldr: qimage bad
-     */
-    // 使用 UTF-8 而不是 Latin1，以兼容 Windows 上的中文路径和元数据
     QImageReader reader(mPath);
-    
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     reader.setAllocationLimit(settings->memoryAllocationLimit());
 #endif
-    
-    // Qt 6: 使用 auto 和更简洁的 API
-    auto imagePtr = std::make_unique<QImage>();
-    
-    if(!reader.read(imagePtr.get())) {
-        qWarning() << "ImageStatic::loadGeneric() - Failed to read image:" << mPath 
-                   << "Error:" << reader.errorString();
-        // 即使失败也尝试使用已读取的数据
-        if(imagePtr->isNull()) {
+
+    // 禁用 Qt 自动方向处理，统一由我们自己控制
+    reader.setAutoTransform(false);
+
+    QImage imageData;
+    if(!reader.read(&imageData)) {
+        // reader 失败但 imageData 可能仍然有效（Qt 的特性）
+        if(imageData.isNull()) {
             return;
         }
     }
-    
-    // EXIF 旋转处理
-    imagePtr = ImageLib::exifRotated(std::move(imagePtr), mDocInfo->exifOrientation());
-    if(!imagePtr) {
-        return;
+
+    auto imagePtr = std::make_unique<QImage>(std::move(imageData));
+
+    // ✅ 修复：只在合法 EXIF 范围内处理
+    const int orientation = mDocInfo->exifOrientation();
+    if(orientation >= 2 && orientation <= 8) {
+        imagePtr = ImageLib::exifRotated(std::move(imagePtr), orientation);
+        if(!imagePtr || imagePtr->isNull()) {
+            return;
+        }
     }
-    
-    // Format_Mono 转换 - Qt 6 使用更现代的写法
+
+    // Format_Mono 转换
     if(imagePtr->format() == QImage::Format_Mono) {
         image = std::make_shared<const QImage>(
             imagePtr->convertToFormat(QImage::Format_Grayscale8)
@@ -71,25 +68,24 @@ void ImageStatic::loadGeneric() {
     } else {
         image = std::shared_ptr<const QImage>(imagePtr.release());
     }
-    
+
     mLoaded = true;
 }
 
 void ImageStatic::loadICO() {
     // ICO 加载逻辑
     const QIcon icon(mPath);
-    if(icon.availableSizes().isEmpty()) {
+    const auto sizes = icon.availableSizes();
+    if(sizes.isEmpty()) {
         qWarning() << "ImageStatic::loadICO() - No sizes available in ICO file:" << mPath;
         return;
     }
-    
-    // Qt 6: 使用 std::max_element 更优雅
-    const auto sizes = icon.availableSizes();
+
     const auto maxSizeIt = std::max_element(
-        sizes.begin(), sizes.end(),
+        sizes.constBegin(), sizes.constEnd(),
         [](const QSize &a, const QSize &b) { return a.width() < b.width(); }
     );
-    
+
     const QPixmap iconPix = icon.pixmap(*maxSizeIt);
     if(!iconPix.isNull()) {
         image = std::make_shared<const QImage>(iconPix.toImage());
@@ -217,13 +213,17 @@ bool ImageStatic::save() {
     return save(mPath);
 }
 
+const QImage* ImageStatic::currentImage() const noexcept {
+    return imageEdited ? imageEdited.get() : image.get();
+}
+
 void ImageStatic::getPixmap(QPixmap& outPixmap) const {
-    const QImage *img = isEdited() ? imageEdited.get() : image.get();
+    const QImage *img = currentImage();
     if(!img || img->isNull()) {
         outPixmap = QPixmap();
         return;
     }
-    
+
     outPixmap = QPixmap::fromImage(*img);
 }
 
@@ -236,17 +236,17 @@ std::shared_ptr<const QImage> ImageStatic::getImage() const noexcept {
 }
 
 int ImageStatic::height() const noexcept {
-    const QImage *img = isEdited() ? imageEdited.get() : image.get();
+    const QImage *img = currentImage();
     return img ? img->height() : 0;
 }
 
 int ImageStatic::width() const noexcept {
-    const QImage *img = isEdited() ? imageEdited.get() : image.get();
+    const QImage *img = currentImage();
     return img ? img->width() : 0;
 }
 
 QSize ImageStatic::size() const noexcept {
-    const QImage *img = isEdited() ? imageEdited.get() : image.get();
+    const QImage *img = currentImage();
     return img ? img->size() : QSize();
 }
 
@@ -271,18 +271,22 @@ bool ImageStatic::discardEditedImage() noexcept {
 }
 
 void ImageStatic::crop(QRect newRect) {
-    if(!image || image->isNull() || !newRect.isValid()) {
+    const QImage *src = currentImage();  // ✅ 使用当前图像（原图 / 编辑图）
+
+    if(!src || src->isNull() || !newRect.isValid()) {
         return;
     }
     
     // 确保裁剪区域在图像范围内
-    newRect = newRect.intersected(image->rect());
+    newRect = newRect.intersected(src->rect());
     if(newRect.isEmpty()) {
         return;
     }
     
     // 创建裁剪后的图像
-    std::unique_ptr<const QImage> croppedImage = std::make_unique<QImage>(image->copy(newRect));
+    std::unique_ptr<const QImage> croppedImage =
+        std::make_unique<QImage>(src->copy(newRect));
+
     if(!croppedImage || croppedImage->isNull()) {
         return;
     }

@@ -46,6 +46,7 @@ private:
     void load() override;
     void loadGeneric();
     void loadICO();
+    const QImage* currentImage() const noexcept;
     static QString generateHash(QStringView str) noexcept;
     static int getSaveQuality(QStringView ext) noexcept;
     

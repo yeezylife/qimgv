@@ -1,5 +1,4 @@
 #include "imageanimated.h"
-#include <QDebug>
 #include <QFile>
 #include <utility>
 
@@ -28,11 +27,17 @@ void ImageAnimated::load() {
 }
 
 void ImageAnimated::loadMovie() {
-    movie = std::make_shared<QMovie>();
-    movie->setFileName(mPath);
+    if (movie && movie->fileName() == mPath && movie->isValid()) {
+        return;
+    }
 
-    // ❌ 不再手动设置 format（让 Qt 自动识别）
-    // movie->setFormat(...);
+    movie = std::make_shared<QMovie>(mPath);
+    movie->setCacheMode(QMovie::CacheAll);
+    if (!movie->isValid()) {
+        mSize = QSize(0, 0);
+        mFrameCount = 0;
+        return;
+    }
 
     movie->jumpToFrame(0);
     mSize = movie->frameRect().size();
@@ -45,18 +50,18 @@ int ImageAnimated::frameCount() {
 
 bool ImageAnimated::save(QString destPath) {
     QFile file(mPath);
-    if (file.exists()) {
-        if (!file.copy(destPath)) {
-            qDebug() << "Unable to save file.";
-            return false;
-        }
-        if (destPath == this->filePath()) {
-            mDocInfo->refresh();
-        }
-        return true;
+    if (!file.exists()) {
+        return false;
     }
-    qDebug() << "Unable to save file. Perhaps the source file was deleted?";
-    return false;
+
+    if (!file.copy(destPath)) {
+        return false;
+    }
+
+    if (destPath == this->filePath()) {
+        mDocInfo->refresh();
+    }
+    return true;
 }
 
 bool ImageAnimated::save() {
@@ -64,13 +69,25 @@ bool ImageAnimated::save() {
 }
 
 void ImageAnimated::getPixmap(QPixmap& outPixmap) const {
+    if (movie && movie->isValid()) {
+        outPixmap = movie->currentPixmap();
+        if (!outPixmap.isNull())
+            return;
+    }
+
     const QByteArray formatBytes = mDocInfo->format().toLatin1();
     outPixmap = QPixmap(mPath, formatBytes.constData());
 }
 
 std::shared_ptr<const QImage> ImageAnimated::getImage() const {
+    if (movie && movie->isValid()) {
+        const QImage img = movie->currentImage();
+        if (!img.isNull()) {
+            return std::make_shared<const QImage>(img);
+        }
+    }
+
     const QByteArray formatBytes = mDocInfo->format().toLatin1();
-    // 显式指明类型以匹配 shared_ptr<const QImage>
     return std::make_shared<const QImage>(mPath, formatBytes.constData());
 }
 

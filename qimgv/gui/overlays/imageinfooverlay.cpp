@@ -19,8 +19,9 @@ ImageInfoOverlay::ImageInfoOverlay(FloatingWidgetContainer *parent) :
 
 ImageInfoOverlay::~ImageInfoOverlay() {
     delete ui;
-    for(qsizetype i = entries.count() - 1; i >= 0; i--)
-        delete entries.takeAt(i);
+    while (!entries.isEmpty()) {
+        delete entries.takeLast();
+    }
 }
 
 void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
@@ -57,9 +58,12 @@ void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
     }
 
     if(!isHidden() && entryCount != info.count()) {
-        // wait for layout change
-        qApp->processEvents();
-        // reposition
+        // ensure layout size is recalculated before reposition
+        if (ui->entryLayout) {
+            ui->entryLayout->invalidate();
+            ui->entryLayout->activate();
+        }
+        adjustSize();
         recalculateGeometry();
     }
 }

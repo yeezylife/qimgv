@@ -231,7 +231,7 @@ private:
     void applySavedViewportPos();
     void lockZoom();
 
-    void updatePixmap(std::unique_ptr<QPixmap> newPixmap);
+    void updatePixmap(const QPixmap& newPixmap);
     void swapToOriginalPixmap();
     Qt::TransformationMode selectTransformationMode();
 

@@ -326,8 +326,7 @@ void ImageViewerV2::onAnimationTimer()
     }
 
     emit frameChanged(movie->currentFrameNumber());
-    auto newFrame = std::make_unique<QPixmap>(movie->currentPixmap());
-    updatePixmap(std::move(newFrame));
+    updatePixmap(movie->currentPixmap());
     animationTimer->start(movie->nextFrameDelay());
 }
 
@@ -359,26 +358,20 @@ bool ImageViewerV2::showAnimationFrame(int frame)
     if (movie->currentFrameNumber() == frame)
         return true;
 
-    if (frame < movie->currentFrameNumber())
-        movie->jumpToFrame(0);
-
-    while (frame != movie->currentFrameNumber()) {
-        if (!movie->jumpToNextFrame())
-            break;
-    }
+    if (!movie->jumpToFrame(frame))
+        return false;
 
     emit frameChanged(movie->currentFrameNumber());
-    auto newFrame = std::make_unique<QPixmap>(movie->currentPixmap());
-    updatePixmap(std::move(newFrame));
+    updatePixmap(movie->currentPixmap());
     return true;
 }
 
 // ============================================================================
 // Display Operations
 // ============================================================================
-void ImageViewerV2::updatePixmap(std::unique_ptr<QPixmap> newPixmap)
+void ImageViewerV2::updatePixmap(const QPixmap& newPixmap)
 {
-    pixmap = std::move(newPixmap);
+    pixmap = std::make_shared<QPixmap>(newPixmap);
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
     pixmapItem.show();
@@ -672,11 +665,15 @@ void ImageViewerV2::requestScaling()
         return;
 
     const qreal scale = pixmapItem.scale();
-    if (scale == 1.0 || movie)
+    if (scale == 1.0 || movie) {
+        lastRequestedScale = -1.0f;
         return;
+    }
 
-    if (!smoothUpscaling && scale >= 1.0)
+    if (!smoothUpscaling && scale >= 1.0) {
+        lastRequestedScale = -1.0f;
         return;
+    }
 
     if (scaleTimer->isActive())
         scaleTimer->stop();

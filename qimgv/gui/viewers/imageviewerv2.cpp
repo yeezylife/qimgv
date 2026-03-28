@@ -1435,10 +1435,15 @@ void ImageViewerV2::resizeEvent(QResizeEvent* event)
 void ImageViewerV2::showEvent(QShowEvent* event)
 {
     QGraphicsView::showEvent(event);
-    qApp->processEvents();
 
-    if (imageFitMode == FIT_ORIGINAL)
-        applyFitMode();
+    // 延迟执行 FIT_ORIGINAL 计算，避免嵌套事件循环和潜在的性能/递归问题。
+    // 这和原来的 processEvents 目的一致：在控件显示后再重新布局/缩放。
+    if (imageFitMode == FIT_ORIGINAL) {
+        QTimer::singleShot(0, this, [this]() {
+            if (imageFitMode == FIT_ORIGINAL)
+                applyFitMode();
+        });
+    }
 }
 
 void ImageViewerV2::drawBackground(QPainter* painter, const QRectF& rect)

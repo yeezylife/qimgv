@@ -135,9 +135,7 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
     bool isDir = dirManager.isDir(oldPath);
     FileOperations::rename(oldPath, newName, force, result);
 
-    // chew through watcher events so they wont be processed out of order
-    qApp->processEvents();
-
+    // Keep model state consistent with FS operations; avoid forced event pumping.
     if(result != FileOpResult::SUCCESS)
         return;
 
@@ -147,8 +145,8 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
     } else {
         dirManager.renameFileEntry(FilePath(oldPath),
                                    FileName(newName));
-    } 
-} 
+    }
+}
 
 void DirectoryModel::removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result) {
     if(trash) {
@@ -168,8 +166,6 @@ void DirectoryModel::copyFileTo(const QString &srcFile, const QString &destDirPa
 
 void DirectoryModel::moveFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result) {
     FileOperations::moveFileTo(srcFile, destDirPath, force, result);
-    // chew through watcher events so they wont be processed out of order
-    qApp->processEvents();
     if(result == FileOpResult::SUCCESS) {
         if(destDirPath != this->directoryPath())
             dirManager.removeFileEntry(srcFile);
@@ -289,33 +285,35 @@ std::shared_ptr<Image> DirectoryModel::getImage(const QString &filePath) {
 }
 
 void DirectoryModel::updateImage(const QString &filePath, const std::shared_ptr<Image> &img) {
-    if(containsFile(filePath) /*& cache.contains(filePath)*/) {
-        if(!cache.contains(filePath)) {
-            cache.insert(img);
-        } else {
-            cache.insert(img);
-            emit imageUpdated(filePath);
-        }
-    }
+    if(!containsFile(filePath))
+        return;
+
+    bool inCache = cache.contains(filePath);
+    cache.insert(img);
+    if(inCache)
+        emit imageUpdated(filePath);
 }
 
 void DirectoryModel::load(const QString &filePath, bool asyncHint) {
     if(!containsFile(filePath) || loader.isLoading(filePath))
         return;
-    if(!cache.contains(filePath)) {
-        if(asyncHint) {
-            loader.loadAsyncPriority(filePath);
-        } else {
-            auto img = loader.load(filePath);
-            if(img) {
-                cache.insert(img);
-                emit imageReady(img, filePath);
-            } else {
-                emit loadFailed(filePath);
-            }
-        }
-    } else {
+
+    if(cache.contains(filePath)) {
         emit imageReady(cache.get(filePath), filePath);
+        return;
+    }
+
+    if(asyncHint) {
+        loader.loadAsyncPriority(filePath);
+        return;
+    }
+
+    auto img = loader.load(filePath);
+    if(img) {
+        cache.insert(img);
+        emit imageReady(img, filePath);
+    } else {
+        emit loadFailed(filePath);
     }
 }
 

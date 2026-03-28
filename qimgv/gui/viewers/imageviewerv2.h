@@ -5,7 +5,7 @@
 #include <QGraphicsPixmapItem>
 #include <QElapsedTimer>
 #include <QWheelEvent>
-#include <QTimeLine>
+#include <QPropertyAnimation>
 #include <QScrollBar>
 #include <QMovie>
 #include <QColor>
@@ -121,6 +121,14 @@ private slots:
     void onDPRChanged();
 
 private:
+    Q_PROPERTY(int scrollX READ scrollX WRITE setScrollX)
+    Q_PROPERTY(int scrollY READ scrollY WRITE setScrollY)
+
+    int scrollX() const;
+    void setScrollX(int x);
+    int scrollY() const;
+    void setScrollY(int y);
+
     QGraphicsScene* scene;
     std::shared_ptr<QPixmap> pixmap;
     QPixmap pixmapScaled;
@@ -133,8 +141,8 @@ private:
     QTimer* scaleTimer;
     QScrollBar* horizontalScroll;
     QScrollBar* verticalScroll;
-    QTimeLine* scrollTimeLineX;
-    QTimeLine* scrollTimeLineY;
+    QPropertyAnimation* scrollAnimationX;
+    QPropertyAnimation* scrollAnimationY;
     QElapsedTimer lastTouchpadScroll;
 
     QPoint mouseMoveStartPos;

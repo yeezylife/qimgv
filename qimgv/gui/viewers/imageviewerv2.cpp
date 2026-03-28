@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QPainter>
 #include <QProcess>
+#include <QPropertyAnimation>
 #include <QScreen>
 
 ImageViewerV2::ImageViewerV2(QWidget* parent)
@@ -13,8 +14,8 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     , scaleTimer(nullptr)
     , horizontalScroll(nullptr)
     , verticalScroll(nullptr)
-    , scrollTimeLineX(nullptr)
-    , scrollTimeLineY(nullptr)
+    , scrollAnimationX(nullptr)
+    , scrollAnimationY(nullptr)
     , mouseInteraction(MOUSE_NONE)
     , transparencyGrid(false)
     , expandImage(false)
@@ -103,15 +104,13 @@ void ImageViewerV2::initializeTimers()
     scaleTimer->setSingleShot(true);
     scaleTimer->setInterval(80);
 
-    scrollTimeLineX = new QTimeLine();
-    scrollTimeLineX->setEasingCurve(QEasingCurve::OutSine);
-    scrollTimeLineX->setDuration(ANIMATION_SPEED);
-    scrollTimeLineX->setUpdateInterval(SCROLL_UPDATE_RATE);
+    scrollAnimationX = new QPropertyAnimation(this, "scrollX");
+    scrollAnimationX->setEasingCurve(QEasingCurve::OutSine);
+    scrollAnimationX->setDuration(ANIMATION_SPEED);
 
-    scrollTimeLineY = new QTimeLine();
-    scrollTimeLineY->setEasingCurve(QEasingCurve::OutSine);
-    scrollTimeLineY->setDuration(ANIMATION_SPEED);
-    scrollTimeLineY->setUpdateInterval(SCROLL_UPDATE_RATE);
+    scrollAnimationY = new QPropertyAnimation(this, "scrollY");
+    scrollAnimationY->setEasingCurve(QEasingCurve::OutSine);
+    scrollAnimationY->setDuration(ANIMATION_SPEED);
 }
 
 void ImageViewerV2::initializeScrollBars()
@@ -122,10 +121,8 @@ void ImageViewerV2::initializeScrollBars()
 
 void ImageViewerV2::setupConnections()
 {
-    connect(scrollTimeLineX, &QTimeLine::frameChanged, this, &ImageViewerV2::scrollToX);
-    connect(scrollTimeLineY, &QTimeLine::frameChanged, this, &ImageViewerV2::scrollToY);
-    connect(scrollTimeLineX, &QTimeLine::finished, this, &ImageViewerV2::onScrollTimelineFinished);
-    connect(scrollTimeLineY, &QTimeLine::finished, this, &ImageViewerV2::onScrollTimelineFinished);
+    connect(scrollAnimationX, &QPropertyAnimation::finished, this, &ImageViewerV2::onScrollTimelineFinished);
+    connect(scrollAnimationY, &QPropertyAnimation::finished, this, &ImageViewerV2::onScrollTimelineFinished);
     connect(animationTimer, &QTimer::timeout, this, &ImageViewerV2::onAnimationTimer, Qt::UniqueConnection);
     connect(scaleTimer, &QTimer::timeout, this, &ImageViewerV2::requestScaling);
     connect(settings, &Settings::settingsChanged, this, &ImageViewerV2::readSettings);
@@ -160,6 +157,26 @@ void ImageViewerV2::onDPRChanged()
         requestScaling();
         update();
     }
+}
+
+int ImageViewerV2::scrollX() const
+{
+    return horizontalScroll ? horizontalScroll->value() : 0;
+}
+
+void ImageViewerV2::setScrollX(int x)
+{
+    scrollToX(x);
+}
+
+int ImageViewerV2::scrollY() const
+{
+    return verticalScroll ? verticalScroll->value() : 0;
+}
+
+void ImageViewerV2::setScrollY(int y)
+{
+    scrollToY(y);
 }
 
 // ----------------------------------------------------------------------------
@@ -527,32 +544,32 @@ void ImageViewerV2::scroll(int dx, int dy, bool animated)
 
 void ImageViewerV2::scrollSmooth(int dx, int dy)
 {
-    auto updateTimeline = [](QTimeLine* timeline, QScrollBar* scrollbar, int delta) {
+    auto updateAnimation = [this](QPropertyAnimation* animation, QScrollBar* scrollbar, int delta) {
         if (!delta)
             return;
 
         const int current = scrollbar->value();
         int newEnd = current + delta;
 
-        const bool reversed = ((newEnd < current && current < timeline->endFrame()) ||
-                               (newEnd > current && current > timeline->endFrame()));
+        const bool reversed = ((newEnd < current && current < animation->endValue().toInt()) ||
+                               (newEnd > current && current > animation->endValue().toInt()));
 
-        if (timeline->state() == QTimeLine::Running && !reversed) {
-            newEnd = timeline->endFrame() + delta;
-            timeline->setFrameRange(current, newEnd);
-            return;
+        if (animation->state() == QAbstractAnimation::Running && !reversed) {
+            newEnd = animation->endValue().toInt() + delta;
         }
 
-        timeline->stop();
-        timeline->setFrameRange(current, newEnd);
-        timeline->start();
+        animation->stop();
+        animation->setStartValue(current);
+        animation->setEndValue(newEnd);
+        animation->setDuration(ANIMATION_SPEED);
+        animation->start();
     };
 
     if (dx)
-        updateTimeline(scrollTimeLineX, horizontalScroll, dx);
+        updateAnimation(scrollAnimationX, horizontalScroll, dx);
 
     if (dy)
-        updateTimeline(scrollTimeLineY, verticalScroll, dy);
+        updateAnimation(scrollAnimationY, verticalScroll, dy);
 
     saveViewportPos();
 }
@@ -591,10 +608,10 @@ void ImageViewerV2::onScrollTimelineFinished()
 
 void ImageViewerV2::stopPosAnimation()
 {
-    if (scrollTimeLineX->state() == QTimeLine::Running)
-        scrollTimeLineX->stop();
-    if (scrollTimeLineY->state() == QTimeLine::Running)
-        scrollTimeLineY->stop();
+    if (scrollAnimationX->state() == QAbstractAnimation::Running)
+        scrollAnimationX->stop();
+    if (scrollAnimationY->state() == QAbstractAnimation::Running)
+        scrollAnimationY->stop();
 }
 
 // ============================================================================

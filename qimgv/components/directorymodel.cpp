@@ -1,6 +1,6 @@
 #include "directorymodel.h"
 #include "sourcecontainers/fsentry.h"
-#include <scope>
+#include <QScopeGuard>
 
 DirectoryModel::DirectoryModel(QObject *parent)
     : QObject(parent), fileListSource(SOURCE_DIRECTORY) {
@@ -124,16 +124,19 @@ void DirectoryModel::setSortingMode(SortingMode mode) {
 void DirectoryModel::removeFile(const QString &filePath, bool trash, FileOpResult &result) {
     bool prevIgnore = dirManager.ignoreWatcherEvents();
     dirManager.setIgnoreWatcherEvents(true);
-    auto watcherGuard = std::scope_exit([&]() { dirManager.setIgnoreWatcherEvents(prevIgnore); });
+    auto watcherGuard = qScopeGuard([&]() {
+        dirManager.setIgnoreWatcherEvents(prevIgnore);
+    });
 
     if(trash)
         FileOperations::moveToTrash(filePath, result);
     else
         FileOperations::removeFile(filePath, result);
+
     if(result != FileOpResult::SUCCESS)
         return;
+
     dirManager.removeFileEntry(filePath);
-    return;
 }
 
 void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName, bool force, FileOpResult &result) {
@@ -141,7 +144,9 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
 
     bool prevIgnore = dirManager.ignoreWatcherEvents();
     dirManager.setIgnoreWatcherEvents(true);
-    auto watcherGuard = std::scope_exit([&]() { dirManager.setIgnoreWatcherEvents(prevIgnore); });
+    auto watcherGuard = qScopeGuard([&]() {
+        dirManager.setIgnoreWatcherEvents(prevIgnore);
+    });
 
     FileOperations::rename(oldPath, newName, force, result);
 
@@ -150,27 +155,30 @@ void DirectoryModel::renameEntry(const QString &oldPath, const QString &newName,
 
     if (isDir) {
         dirManager.renameDirEntry(DirPath(oldPath),
-                                  DirName(newName));
+                                 DirName(newName));
     } else {
         dirManager.renameFileEntry(FilePath(oldPath),
-                                   FileName(newName));
+                                  FileName(newName));
     }
 }
 
 void DirectoryModel::removeDir(const QString &dirPath, bool trash, bool recursive, FileOpResult &result) {
     bool prevIgnore = dirManager.ignoreWatcherEvents();
     dirManager.setIgnoreWatcherEvents(true);
-    auto watcherGuard = std::scope_exit([&]() { dirManager.setIgnoreWatcherEvents(prevIgnore); });
+    auto watcherGuard = qScopeGuard([&]() {
+        dirManager.setIgnoreWatcherEvents(prevIgnore);
+    });
 
     if(trash) {
         FileOperations::moveToTrash(dirPath, result);
     } else {
         FileOperations::removeDir(dirPath, recursive, result);
     }
+
     if(result != FileOpResult::SUCCESS)
         return;
+
     dirManager.removeDirEntry(dirPath);
-    return;
 }
 
 void DirectoryModel::copyFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result) {
@@ -180,9 +188,12 @@ void DirectoryModel::copyFileTo(const QString &srcFile, const QString &destDirPa
 void DirectoryModel::moveFileTo(const QString &srcFile, const QString &destDirPath, bool force, FileOpResult &result) {
     bool prevIgnore = dirManager.ignoreWatcherEvents();
     dirManager.setIgnoreWatcherEvents(true);
-    auto watcherGuard = std::scope_exit([&]() { dirManager.setIgnoreWatcherEvents(prevIgnore); });
+    auto watcherGuard = qScopeGuard([&]() {
+        dirManager.setIgnoreWatcherEvents(prevIgnore);
+    });
 
     FileOperations::moveFileTo(srcFile, destDirPath, force, result);
+
     if(result == FileOpResult::SUCCESS) {
         if(destDirPath != this->directoryPath())
             dirManager.removeFileEntry(srcFile);

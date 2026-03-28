@@ -86,7 +86,7 @@ void SlidePanel::show() {
     if (hasWidget()) {
         timeline.stop();
         fadeEffect->setOpacity(panelVisibleOpacity);
-        setProperty("pos", startPosition);
+        move(startPosition);
         QWidget::show();
         QWidget::raise();
     } else {
@@ -102,20 +102,31 @@ QRect SlidePanel::staticGeometry() {
     return mStaticGeometry;
 }
 
-void SlidePanel::animationUpdate(int frame) {
-    QPoint adjustedPos = mapFromGlobal(QCursor::pos()) + this->pos();
-    if (triggerRect().contains(adjustedPos, true)) {
+void SlidePanel::animationUpdate(int /*frame*/) {
+    // 使用 Qt 内部已经计算好的进度（避免重复计算）
+    const qreal value = outCurve.valueForProgress(timeline.currentValue());
+
+    // 仅在必要时检查鼠标（避免频繁 mapFromGlobal）
+    const QPoint globalPos = QCursor::pos();
+    const QPoint localPos = mapFromGlobal(globalPos);
+
+    if (mTriggerRect.contains(localPos)) {
         timeline.stop();
         fadeEffect->setOpacity(panelVisibleOpacity);
-        setProperty("pos", startPosition);
-    } else {
-        qreal value = outCurve.valueForProgress(static_cast<qreal>(frame) / ANIMATION_DURATION);
-        QPoint newPosOffset = QPoint(static_cast<int>((endPosition.x() - startPosition.x()) * value),
-                                     static_cast<int>((endPosition.y() - startPosition.y()) * value));
-        setProperty("pos", startPosition + newPosOffset);
-        fadeEffect->setOpacity(1 - value);
+        move(startPosition);
+        return;
     }
-    qApp->processEvents();
+
+    const QPoint delta = endPosition - startPosition;
+    const QPoint newPos = startPosition + QPoint(
+        static_cast<int>(delta.x() * value),
+        static_cast<int>(delta.y() * value)
+    );
+
+    move(newPos);
+    fadeEffect->setOpacity(1.0 - value);
+
+    // ❌ 删除 qApp->processEvents(); （严重影响性能+可能引发递归）
 }
 
 void SlidePanel::setAnimationRange(QPoint start, QPoint end) {
@@ -126,7 +137,7 @@ void SlidePanel::setAnimationRange(QPoint start, QPoint end) {
 void SlidePanel::onAnimationFinish() {
     QWidget::hide();
     fadeEffect->setOpacity(panelVisibleOpacity);
-    setProperty("pos", startPosition);
+    move(startPosition);
 }
 
 QRect SlidePanel::triggerRect() {
@@ -156,25 +167,38 @@ void SlidePanel::recalculateGeometryInternal() {
     if (layoutManaged())
         return;
 
-    if (mPosition == PANEL_TOP) {
-        setAnimationRange(QPoint(0, 0), QPoint(0, 0) - QPoint(0, slideAmount));
-        saveStaticGeometry(QRect(QPoint(0, 0),
-                                 QPoint(containerSize().width() - 1, height() - 1)));
-    } else if (mPosition == PANEL_BOTTOM) {
-        setAnimationRange(QPoint(0, containerSize().height() - height()),
-                          QPoint(0, containerSize().height() - height() + slideAmount));
-        saveStaticGeometry(QRect(QPoint(0, containerSize().height() - height()),
-                                 QPoint(containerSize().width() - 1, containerSize().height())));
-    } else if (mPosition == PANEL_LEFT) {
-        setAnimationRange(QPoint(0, 0), QPoint(0, 0) - QPoint(slideAmount, 0));
-        saveStaticGeometry(QRect(0, 0, width(), containerSize().height()));
-    } else { // right
-        setAnimationRange(QPoint(containerSize().width() - width(), 0),
-                          QPoint(containerSize().width() - width(), 0) + QPoint(slideAmount, 0));
-        saveStaticGeometry(QRect(containerSize().width() - width(), 0,
-                                 containerSize().width(), containerSize().height()));
+    const QSize cSize = containerSize();
+    const int w = width();
+    const int h = height();
+
+    switch (mPosition) {
+    case PANEL_TOP:
+        setAnimationRange(QPoint(0, 0), QPoint(0, -slideAmount));
+        saveStaticGeometry(QRect(0, 0, cSize.width(), h));
+        break;
+
+    case PANEL_BOTTOM:
+        setAnimationRange(QPoint(0, cSize.height() - h),
+                          QPoint(0, cSize.height() - h + slideAmount));
+        saveStaticGeometry(QRect(0, cSize.height() - h,
+                                 cSize.width(), h));
+        break;
+
+    case PANEL_LEFT:
+        setAnimationRange(QPoint(0, 0), QPoint(-slideAmount, 0));
+        saveStaticGeometry(QRect(0, 0, w, cSize.height()));
+        break;
+
+    case PANEL_RIGHT:
+    default:
+        setAnimationRange(QPoint(cSize.width() - w, 0),
+                          QPoint(cSize.width() - w + slideAmount, 0));
+        saveStaticGeometry(QRect(cSize.width() - w, 0,
+                                 w, cSize.height()));
+        break;
     }
-    this->setGeometry(staticGeometry());
+
+    setGeometry(mStaticGeometry);
     updateTriggerRectInternal();
 }
 
@@ -183,7 +207,7 @@ void SlidePanel::updateTriggerRect() {
 }
 
 void SlidePanel::updateTriggerRectInternal() {
-    mTriggerRect = staticGeometry();
+    mTriggerRect = mStaticGeometry;
 }
 
 void SlidePanel::setOrientation() {

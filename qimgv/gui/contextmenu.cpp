@@ -101,36 +101,19 @@ void ContextMenu::initActions()
     ui->resize->setTriggerMode(TriggerMode::PressTrigger);
 
     // generic entries
-    ui->print->setAction("print");
-    ui->print->setText(tr("Print"));
-    ui->print->setIconPath(":/res/icons/common/menuitem/print16.png");
-
-    ui->copy->setAction("copyFile");
-    ui->copy->setText(tr("Quick copy"));
-    ui->copy->setIconPath(":/res/icons/common/menuitem/copy16.png");
-
-    ui->move->setAction("moveFile");
-    ui->move->setText(tr("Quick move"));
-    ui->move->setIconPath(":/res/icons/common/menuitem/move16.png");
-
-    ui->trash->setAction("moveToTrash");
-    ui->trash->setText(tr("Move to trash"));
-    ui->trash->setIconPath(":/res/icons/common/menuitem/trash16.png");
-    ui->trash->setShortcutText("");
-
     ui->open->setAction("open");
     ui->open->setText(tr("Open"));
     ui->open->setIconPath(":/res/icons/common/menuitem/open16.png");
     ui->open->setShortcutText("");
 
-    ui->settings->setAction("openSettings");
-    ui->settings->setText(tr("Settings"));
-    ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");
-
     ui->openWith->setText(tr("Open with..."));
     ui->openWith->setIconPath(":/res/icons/common/menuitem/run16.png");
     ui->openWith->setPassthroughClicks(false);
     connect(ui->openWith, &ContextMenuItem::pressed, this, &ContextMenu::switchToScriptsPage);
+
+    ui->settings->setAction("openSettings");
+    ui->settings->setText(tr("Settings"));
+    ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");
 
     ui->showLocation->setAction("showInDirectory");
     ui->showLocation->setText(tr("Show in folder"));

@@ -167,10 +167,8 @@ int main(int argc, char *argv[]) {
     else if(settings->defaultViewMode() == MODE_FOLDERVIEW)
         core.loadPath(QDir::homePath());
 
-    // wait for event queue to catch up before showing window
-    // this avoids white background flicker on windows (or not?)
-    qApp->processEvents();
+    // defer GUI show until the event loop is running, avoiding manual processEvents call
+    QTimer::singleShot(0, &core, &Core::showGui);
 
-    core.showGui();
     return a.exec();
 }

@@ -619,12 +619,16 @@ QStringList DirectoryManager::fileList() const {
 }
 
 void DirectoryManager::onFileRemovedExternal(const QString &fileName) {
+    if(mIgnoreWatcherEvents)
+        return;
     QString fullPath = watcher->watchPath() + "/" + fileName;
     removeDirEntry(fullPath);
     removeFileEntry(fullPath);
 }
 
 void DirectoryManager::onFileAddedExternal(const QString &fileName) {
+    if(mIgnoreWatcherEvents)
+        return;
     QString fullPath = watcher->watchPath() + "/" + fileName;
     if(isDir(fullPath))
         insertDirEntry(fullPath);
@@ -633,6 +637,8 @@ void DirectoryManager::onFileAddedExternal(const QString &fileName) {
 }
 
 void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QString &newName) {
+    if(mIgnoreWatcherEvents)
+        return;
     QString oldPath = watcher->watchPath() + "/" + oldName;
     QString newPath = watcher->watchPath() + "/" + newName;
     if(isDir(newPath))
@@ -642,5 +648,7 @@ void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QStri
 }
 
 void DirectoryManager::onFileModifiedExternal(const QString &fileName) {
+    if(mIgnoreWatcherEvents)
+        return;
     updateFileEntry(watcher->watchPath() + "/" + fileName);
 }

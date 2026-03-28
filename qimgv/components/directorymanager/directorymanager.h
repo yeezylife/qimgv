@@ -113,6 +113,10 @@ public:
 
     QStringList fileList() const;
 
+    // watcher events guard to avoid race when DirectoryModel does local rename/move/remove
+    inline void setIgnoreWatcherEvents(bool ignore) { mIgnoreWatcherEvents = ignore; }
+    inline bool ignoreWatcherEvents() const { return mIgnoreWatcherEvents; }
+
 private:
     // 增量排序优化：记录上次排序的比较函数，避免不必要的重新排序
     CompareFunction mLastCompareFunction = nullptr;
@@ -146,6 +150,7 @@ private:
     FileListSource mListSource = SOURCE_DIRECTORY;
     // 替代 static const QString emptyString - 线程安全且性能更好
     QString mEmptyString;
+    bool mIgnoreWatcherEvents = false;
 
     void readSettings();
     void loadEntryList(const QString &directoryPath, bool recursive);

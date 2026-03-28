@@ -50,9 +50,6 @@ void ContextMenu::setImageEntriesEnabled(bool mode) {
     ui->crop->setEnabled(mode);
     ui->resize->setEnabled(mode);
 
-    ui->copy->setEnabled(mode);
-    ui->move->setEnabled(mode);
-    ui->trash->setEnabled(mode);
     ui->openWith->setEnabled(mode);
     ui->showLocation->setEnabled(mode);
 }

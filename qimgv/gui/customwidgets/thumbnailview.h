@@ -10,9 +10,7 @@
 #include <QHBoxLayout>
 #include <QScrollBar>
 #include <QWheelEvent>
-#include <QTimeLine>
 #include <QTimer>
-#include <QElapsedTimer>
 #include <QScreen>
 #include <functional>
 
@@ -74,47 +72,24 @@ signals:
 
 private:
     QTimer loadTimer;
-    bool blockThumbnailLoading = false;
 
-    bool mDrawScrollbarIndicator = true;
-    int lastScrollFrameTime = 0;
     QList<int> mSelection;
-
-    bool mCropThumbnails = false;
-    bool mouseReleaseSelect = false;
+    bool mDrawScrollbarIndicator = true;
     ThumbnailSelectMode selectMode = ACTIVATE_BY_PRESS;
-    QPoint dragStartPos;
 
-    void createScrollTimeLine();
-    QElapsedTimer scrollFrameTimer;
-    std::function<void(int)> centerOn;
-    QElapsedTimer lastTouchpadScroll;
     Qt::Orientation mOrientation = Qt::Horizontal;
 
 protected:
     QGraphicsScene scene;
     QList<ThumbnailWidget*> thumbnails;
     QScrollBar *scrollBar = nullptr;
-    QTimeLine *scrollTimeLine = nullptr;
     QPointF viewportCenter;
     int mThumbnailSize = 120;
-    int offscreenPreloadArea = 0; // Disabled
-
-    QList<int> rangeSelectionSnapshot;
-    bool rangeSelection = false; 
-    bool wayland = false;
+    int scrollRefreshRate = 1000;
 
     QRect indicator;
-    const int indicatorSize = 2;
-
-    int scrollRefreshRate = 16;
-    const int SCROLL_DURATION = 120;
-    const float WHEEL_SCROLL_MULTIPLIER = 2.5f;
-    const float SCROLL_ACCELERATION = 1.4f;
-    const int SCROLL_ACCELERATION_THRESHOLD = 50;
 
     const uint LOAD_DELAY = 150;
-    ScrollDirection lastScrollDirection = SCROLL_FORWARDS;
 
     bool atSceneStart();
     bool atSceneEnd();

@@ -1,71 +1,40 @@
 #include "video.h"
-#include <ctime>
 
 Video::Video(QString _path) : Image(std::move(_path)) {
-    Video::load();
+    load();
 }
 
 Video::Video(std::unique_ptr<DocumentInfo> _info) : Image(std::move(_info)) {
-    Video::load();
+    load();
 }
 
 void Video::load() {
-    if(isLoaded())
+    if (isLoaded())
         return;
 
-    /*
-    auto mpvBinary = settings->mpvBinary();
-    if(mpvBinary.isEmpty())
-        return;
-    // Get resolution from ffmpeg (so we don't have to ask videoplayer)
-    QString command = "\"" + mpvBinary + "\"" + " -i " + "\"" + mDocInfo->filePath() + "\"";
-    QString filePathEsc = mDocInfo->filePath();
-    filePathEsc.replace("%", "%%");
-    QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start(settings->mpvBinary(), QStringList() << "-i" << filePathEsc);
-    process.waitForFinished(100);
-    QByteArray out = process.readAllStandardOutput();
-
-    QRegExp expResolution("[0-9]+x[0-9]+");
-    QRegExp expWidth("[0-9]+\\B");
-    QRegExp expHeight("\\B+[0-9]+$");
-    expResolution.indexIn(out);
-    QString res = expResolution.cap();
-    expWidth.indexIn(res);
-    expHeight.indexIn(res);
-    QString wt = expWidth.cap();
-    QString ht = expHeight.cap();
-
-    srcWidth = wt.toUInt();
-    srcHeight = ht.toUInt();
-
-    qDebug() << "zzzz" << wt << ht << filePathEsc << settings->mpvBinary();
-    */
+    // Video metadata resolution is not available here without an external decoder.
+    // Keep the loader lightweight and avoid expensive external calls during container creation.
+    srcWidth = 0;
+    srcHeight = 0;
     mLoaded = true;
 }
 
-bool Video::save(QString destPath) {
-    Q_UNUSED(destPath)
-    qDebug() << "Saving video is unsupported.";
+bool Video::save(QString /*destPath*/) {
     return false;
 }
 
 bool Video::save() {
-    qDebug() << "Saving video is unsupported.";
     return false;
 }
 
 void Video::getPixmap(QPixmap& outPixmap) const {
-    qDebug() << "[Video] getPixmap() is not implemented.";
-    //TODO: find out some easy way to get frames from video source
-    outPixmap = QPixmap(); // 设置为空 pixmap
+    static const QPixmap emptyPixmap;
+    outPixmap = emptyPixmap;
 }
 
 std::shared_ptr<const QImage> Video::getImage() const {
-    qDebug() << "[Video] getImage() is not implemented.";
-    //TODO: find out some easy way to get frames from video source
-    return nullptr;
+    static const std::shared_ptr<const QImage> emptyImage = std::make_shared<const QImage>();
+    return emptyImage;
 }
 
 int Video::height() const {

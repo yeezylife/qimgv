@@ -48,10 +48,9 @@ void Core::readSettings() {
 void Core::showGui() {
     if(mw && !mw->isVisible())
         mw->showDefault();
-    // TODO: this is unreliable.
-    // how to make it wait until a window is shown?
-    qApp->processEvents();
-    QTimer::singleShot(50, mw, SLOT(setupFullUi()));
+    // avoid calling qApp->processEvents() for UI timing; use queued invocation
+    // so setupFullUi runs when the event loop is active and the window is shown.
+    QTimer::singleShot(0, mw, &MW::setupFullUi);
 }
 
 // create MainWindow and all widgets

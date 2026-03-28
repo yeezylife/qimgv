@@ -455,7 +455,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="ContextMenuItem" name="settings" native="true"/>
+          <widget class="ContextMenuItem" name="openWith" native="true"/>
          </item>
          <item>
           <spacer name="verticalSpacer_5">
@@ -474,7 +474,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="ContextMenuItem" name="openWith" native="true"/>
+          <widget class="ContextMenuItem" name="settings" native="true"/>
          </item>
          <item>
           <spacer name="verticalSpacer_6">

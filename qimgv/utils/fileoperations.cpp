@@ -102,11 +102,15 @@ void FileOperations::copyFileTo(const QString &srcPath,
         return;
     }
 
-    QDir targetDir(destDirPath);
-    if (!targetDir.exists() || !targetDir.isWritable()) {
+    // 🔧 修复开始
+    QFileInfo dirInfo(destDirPath);
+    if (!dirInfo.exists() || !dirInfo.isDir() || !dirInfo.isWritable()) {
         result = DESTINATION_NOT_WRITABLE;
         return;
     }
+
+    QDir targetDir(destDirPath);
+    // 🔧 修复结束
 
     const QString destPath = targetDir.filePath(src.fileName());
     QFileInfo dest(destPath);
@@ -127,7 +131,6 @@ void FileOperations::copyFileTo(const QString &srcPath,
             return;
         }
 
-        // 无回滚策略：直接删除
         if (!QFile::remove(destPath)) {
             result = OTHER_ERROR;
             return;
@@ -163,11 +166,15 @@ void FileOperations::moveFileTo(const QString &srcPath,
         return;
     }
 
-    QDir targetDir(destDirPath);
-    if (!targetDir.exists() || !targetDir.isWritable()) {
+    // 🔧 修复开始
+    QFileInfo dirInfo(destDirPath);
+    if (!dirInfo.exists() || !dirInfo.isDir() || !dirInfo.isWritable()) {
         result = DESTINATION_NOT_WRITABLE;
         return;
     }
+
+    QDir targetDir(destDirPath);
+    // 🔧 修复结束
 
     const QString destPath = targetDir.filePath(src.fileName());
     QFileInfo dest(destPath);

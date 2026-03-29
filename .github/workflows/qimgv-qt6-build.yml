@@ -232,6 +232,23 @@ jobs:
     if: success()
 
     steps:
+      - name: Delete all existing releases and tags
+        run: |
+          echo "Fetching all release tags..."
+          TAGS=$(gh release list --limit 200 --json tagName -q '.[].tagName')
+
+          if [ -z "$TAGS" ]; then
+            echo "No releases found."
+            exit 0
+          fi
+
+          for tag in $TAGS; do
+            echo "Deleting release + tag: $tag"
+            gh release delete "$tag" --cleanup-tag -y || true
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/download-artifact@v8
         with:
           name: qimgv-binary
@@ -240,14 +257,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ needs.build.outputs.build_file_name }}
-
           tag_name: auto-qt6-${{ github.run_number }}-${{ github.run_id }}
           name: "自动编译 Qt6 版 - ${{ github.run_date }}"
           prerelease: true
           make_latest: true
           body: |
-            自动编译发布，拉取上游插件最新代码。  Automatically compiled and published, pulling the latest version of upstream plugins.
-            
+            自动编译发布，拉取上游插件最新代码。
+
             - 触发方式：${{ github.event_name == 'schedule' && '定时（每6个月）' || '手动触发' }}
             - 提交：${{ github.sha }}
             - GitHub Actions 日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

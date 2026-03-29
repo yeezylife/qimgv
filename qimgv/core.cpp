@@ -1042,16 +1042,14 @@ bool Core::saveFile(const QString &filePath, const QString &newPath) {
 
     mw->hideSaveOverlay();
 
-    // 只刷新当前文件，不跳转
-    if(model->containsFile(newPath)) {
-        state.currentFilePath = newPath;   // 确保 currentFilePath 指向保存后的文件
-        discardEdits();                    // 重置编辑状态
-        if(mw->currentViewMode() == MODE_DOCUMENT) {
-            // 强制刷新当前显示，不切换到下一个
-            std::shared_ptr<Image> img = model->getImage(newPath);
-            if(img)
-                mw->refreshCurrentImage(img); // 需要 mw 提供刷新函数
-        }
+    discardEdits();
+    state.currentFilePath = newPath;
+
+    if(mw->currentViewMode() == MODE_DOCUMENT) {
+        // ⭐ 延迟执行，避免被 fileModified 覆盖
+        QTimer::singleShot(0, this, [this, newPath]() {
+            loadPath(newPath);
+        });
     }
 
     return true;

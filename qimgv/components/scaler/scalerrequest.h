@@ -24,14 +24,11 @@ public:
     ScalerRequest& operator=(const ScalerRequest&) = default;
     ScalerRequest& operator=(ScalerRequest&&) = default;
 
-    // 访问器（保持兼容接口，新增引用版本供高频路径使用）
-    [[nodiscard]] std::shared_ptr<Image> image() const { return m_image; }
+    // 访问器（仅高频路径引入引用版本）
     [[nodiscard]] const std::shared_ptr<Image>& imageRef() const noexcept { return m_image; }
 
-    [[nodiscard]] QSize size() const { return m_size; }
     [[nodiscard]] const QSize& sizeRef() const noexcept { return m_size; }
 
-    [[nodiscard]] QString path() const { return m_path; }
     [[nodiscard]] const QString& pathRef() const noexcept { return m_path; }
 
     [[nodiscard]] ScalingFilter filter() const noexcept { return m_filter; }

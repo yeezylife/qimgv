@@ -1179,7 +1179,7 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
 
 // TODO: don't use connect? otherwise there is no point using unique_ptr
 void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
-    if (state.hasActiveImage && req.path() == state.currentFilePath) {
+    if (state.hasActiveImage && req.pathRef() == state.currentFilePath) {
         // 修复：去掉 std::move，直接传入 scaled
         // 前提是 mw->onScalingFinished 的参数也改成了 const QPixmap&
         mw->onScalingFinished(scaled); 

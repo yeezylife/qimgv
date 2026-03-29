@@ -213,18 +213,25 @@ bool ImageStatic::save() {
     return save(mPath);
 }
 
-const QImage* ImageStatic::currentImage() const noexcept {
-    return imageEdited ? imageEdited.get() : image.get();
+const QImage& ImageStatic::currentImage() const noexcept {
+    static const QImage nullImage;
+    if(imageEdited) {
+        return *imageEdited;
+    }
+    if(image) {
+        return *image;
+    }
+    return nullImage;
 }
 
 void ImageStatic::getPixmap(QPixmap& outPixmap) const {
-    const QImage *img = currentImage();
-    if(!img || img->isNull()) {
+    const QImage &img = currentImage();
+    if(img.isNull()) {
         outPixmap = QPixmap();
         return;
     }
 
-    outPixmap = QPixmap::fromImage(*img);
+    outPixmap = QPixmap::fromImage(img);
 }
 
 std::shared_ptr<const QImage> ImageStatic::getSourceImage() const noexcept {
@@ -236,18 +243,18 @@ std::shared_ptr<const QImage> ImageStatic::getImage() const noexcept {
 }
 
 int ImageStatic::height() const noexcept {
-    const QImage *img = currentImage();
-    return img ? img->height() : 0;
+    const QImage &img = currentImage();
+    return img.isNull() ? 0 : img.height();
 }
 
 int ImageStatic::width() const noexcept {
-    const QImage *img = currentImage();
-    return img ? img->width() : 0;
+    const QImage &img = currentImage();
+    return img.isNull() ? 0 : img.width();
 }
 
 QSize ImageStatic::size() const noexcept {
-    const QImage *img = currentImage();
-    return img ? img->size() : QSize();
+    const QImage &img = currentImage();
+    return img.isNull() ? QSize() : img.size();
 }
 
 bool ImageStatic::setEditedImage(std::unique_ptr<const QImage> imageEditedNew) {
@@ -271,26 +278,22 @@ bool ImageStatic::discardEditedImage() noexcept {
 }
 
 void ImageStatic::crop(QRect newRect) {
-    const QImage *src = currentImage();  // ✅ 使用当前图像（原图 / 编辑图）
+    const QImage &src = currentImage();
 
-    if(!src || src->isNull() || !newRect.isValid()) {
+    if (src.isNull() || !newRect.isValid()) {
         return;
     }
-    
-    // 确保裁剪区域在图像范围内
-    newRect = newRect.intersected(src->rect());
-    if(newRect.isEmpty()) {
-        return;
-    }
-    
-    // 创建裁剪后的图像
-    std::unique_ptr<const QImage> croppedImage =
-        std::make_unique<QImage>(src->copy(newRect));
 
-    if(!croppedImage || croppedImage->isNull()) {
+    newRect = newRect.intersected(src.rect());
+    if (newRect.isEmpty()) {
         return;
     }
-    
-    // 设置为编辑后的图像
+
+    auto croppedImage = std::make_unique<QImage>(src.copy(newRect));
+
+    if (!croppedImage || croppedImage->isNull()) {
+        return;
+    }
+
     setEditedImage(std::move(croppedImage));
 }

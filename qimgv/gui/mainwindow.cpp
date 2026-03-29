@@ -584,7 +584,7 @@ QString MW::getSaveFileName(const QString & filePath) {
     }
 
     QString filterString = filters.join(u";; "_s);
-    QString selectedFilter = u"JPEG (*.jpg *.jpeg *jpe *jfif)"_s;
+    QString selectedFilter = u"JPEG-XL (*.jxl)"_s;
 
     QFileInfo fi(filePath);
     QString suffix = fi.suffix().toLower();

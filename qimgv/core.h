@@ -70,6 +70,8 @@ private:
 
     DirectoryPresenter thumbPanelPresenter, folderViewPresenter;
 
+    QString lastClipboardSaveFormat = "jxl";
+
     void rotateByDegrees(int degrees);
     void reset();
     bool setDirectory(const QString& path);

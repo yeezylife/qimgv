@@ -6,6 +6,7 @@
  */
 
 #include "core.h"
+#include <QSettings>
 
 #ifdef __WIN32
 #include <tchar.h>
@@ -26,6 +27,11 @@ Core::Core()
     readSettings();
     slideshowTimer.setSingleShot(true);
     connect(settings, &Settings::settingsChanged, this, &Core::readSettings);
+
+    QSettings qsettings;
+    lastClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
+    if(lastClipboardSaveFormat.isEmpty())
+        lastClipboardSaveFormat = "jxl";
 
     QVersionNumber lastVersion = settings->lastVersion();
     if(settings->firstRun())
@@ -506,10 +512,19 @@ void Core::openFromClipboard() {
             destPath = model->directoryPath() + "/";
         else
             destPath = QDir::homePath() + "/";
-        destPath.append("clipboard.png");
+        // 记住上次保存格式，默认使用 jxl
+        destPath.append("clipboard." + lastClipboardSaveFormat);
         destPath = mw->getSaveFileName(destPath);
         if(destPath.isEmpty())
             return;
+
+        // 记录实际保存格式，供下次 clipboard 默认后缀使用
+        QFileInfo destFi(destPath);
+        if(!destFi.suffix().isEmpty()) {
+            lastClipboardSaveFormat = destFi.suffix().toLower();
+            QSettings qsettings;
+            qsettings.setValue("clipboard/saveFormat", lastClipboardSaveFormat);
+        }
 
 
         // ------- temporarily copypasted from ImageStatic (needs refactoring)

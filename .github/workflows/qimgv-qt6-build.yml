@@ -232,6 +232,11 @@ jobs:
     if: success()
 
     steps:
+      # 关键修复：先 checkout 仓库，让 gh 命令能访问 git 信息
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Delete all existing releases and tags
         run: |
           echo "Fetching all release tags..."

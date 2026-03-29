@@ -224,7 +224,10 @@ void DirectoryModel::onImageReady(const std::shared_ptr<Image> &img, const QStri
         emit loadFailed(path);
         return;
     }
+
+    // 直接调用 remove 即可，它会自动处理“不存在”的情况
     cache.remove(path);
+    
     cache.insert(img);
     emit imageReady(img, path);
 }
@@ -269,15 +272,15 @@ void DirectoryModel::onFileAdded(const QString &filePath) {
 
 void DirectoryModel::onFileModified(const QString &filePath) {
     QDateTime modTime = lastModified(filePath);
-    if(modTime.isValid()) {
-        auto img = cache.get(filePath);
-        if(img) {
-            // check if file on disk is different
-            if(modTime != img->lastModified())
-                reload(filePath);
-        }
-        emit fileModified(filePath);
+    if(!modTime.isValid())
+        return;
+
+    if (auto img = cache.get(filePath)) {
+        if(modTime != img->lastModified())
+            reload(filePath);
     }
+
+    emit fileModified(filePath);
 }
 
 void DirectoryModel::onFileRemoved(const QString &filePath, int index) {
@@ -306,10 +309,9 @@ std::shared_ptr<Image> DirectoryModel::getImageAt(int index) {
 // if image is not cached, loads it in the main thread
 // for async access use loadAsync(), then catch onImageReady()
 std::shared_ptr<Image> DirectoryModel::getImage(const QString &filePath) {
-    std::shared_ptr<Image> img = cache.get(filePath);
-    if(!img)
-        img = loader.load(filePath);
-    return img;
+    if (auto img = cache.get(filePath))
+        return img;
+    return loader.load(filePath);
 }
 
 void DirectoryModel::updateImage(const QString &filePath, const std::shared_ptr<Image> &img) {
@@ -328,8 +330,8 @@ void DirectoryModel::load(const QString &filePath, bool asyncHint) {
     if(!containsFile(filePath) || loader.isLoading(filePath))
         return;
 
-    if(cache.contains(filePath)) {
-        emit imageReady(cache.get(filePath), filePath);
+    if (auto img = cache.get(filePath)) {
+        emit imageReady(img, filePath);
         return;
     }
 

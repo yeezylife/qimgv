@@ -38,9 +38,5 @@ public:
     // EXIF 处理：也改为返回 QImage 以保持一致性
     static QImage exifRotated(QImage src, int orientation);
 
-    // 保留 unique_ptr 版本以保持向后兼容
-    static std::unique_ptr<const QImage> exifRotated(std::unique_ptr<const QImage> src, int orientation);
-    static std::unique_ptr<QImage> exifRotated(std::unique_ptr<QImage> src, int orientation);
-
     static void recolor(QPixmap &pixmap, const QColor &color);
 };

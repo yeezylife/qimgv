@@ -49,26 +49,27 @@ void ImageStatic::loadGeneric() {
         }
     }
 
-    auto imagePtr = std::make_unique<QImage>(std::move(imageData));
+    QImage image = std::move(imageData);
 
     // ✅ 修复：只在合法 EXIF 范围内处理
     const int orientation = mDocInfo->exifOrientation();
-    if(orientation >= 2 && orientation <= 8) {
-        imagePtr = ImageLib::exifRotated(std::move(imagePtr), orientation);
-        if(!imagePtr || imagePtr->isNull()) {
+    if (orientation >= 2 && orientation <= 8) {
+        image = ImageLib::exifRotated(std::move(image), orientation);
+        if (image.isNull()) {
             return;
         }
     }
 
     // Format_Mono 转换
-    if(imagePtr->format() == QImage::Format_Mono) {
-        image = std::make_shared<const QImage>(
-            imagePtr->convertToFormat(QImage::Format_Grayscale8)
-        );
-    } else {
-        image = std::shared_ptr<const QImage>(imagePtr.release());
+    if (image.format() == QImage::Format_Mono) {
+        image = image.convertToFormat(QImage::Format_Grayscale8);
     }
 
+    if (image.isNull()) {
+        return;
+    }
+
+    this->image = std::make_shared<const QImage>(std::move(image));
     mLoaded = true;
 }
 

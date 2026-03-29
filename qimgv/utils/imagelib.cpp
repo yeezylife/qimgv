@@ -94,60 +94,6 @@ QImage ImageLib::exifRotated(QImage src, int orientation) {
     return needsTransform ? src.transformed(trans, Qt::SmoothTransformation) : src;
 }
 
-// unique_ptr 版本 - const QImage
-std::unique_ptr<const QImage> ImageLib::exifRotated(std::unique_ptr<const QImage> src, int orientation) {
-    if (!src || src->isNull() || orientation <= 1) return src;
-
-    QTransform trans;
-    bool needsTransform = true;
-
-    switch (orientation) {
-        case 2: trans.scale(-1, 1); break;
-        case 3: trans.rotate(180); break;
-        case 4: trans.scale(1, -1); break;
-        case 5: trans.scale(-1, 1); trans.rotate(90); break;
-        case 6: trans.rotate(90); break;
-        case 7: trans.scale(1, -1); trans.rotate(90); break;
-        case 8: trans.rotate(-90); break;
-        default: needsTransform = false; break;
-    }
-
-    if (needsTransform) {
-        return std::make_unique<const QImage>(
-            src->transformed(trans, Qt::SmoothTransformation)
-        );
-    }
-
-    return src;
-}
-
-// unique_ptr 版本 - 非 const QImage
-std::unique_ptr<QImage> ImageLib::exifRotated(std::unique_ptr<QImage> src, int orientation) {
-    if (!src || src->isNull() || orientation <= 1) return src;
-
-    QTransform trans;
-    bool needsTransform = true;
-
-    switch (orientation) {
-        case 2: trans.scale(-1, 1); break;
-        case 3: trans.rotate(180); break;
-        case 4: trans.scale(1, -1); break;
-        case 5: trans.scale(-1, 1); trans.rotate(90); break;
-        case 6: trans.rotate(90); break;
-        case 7: trans.scale(1, -1); trans.rotate(90); break;
-        case 8: trans.rotate(-90); break;
-        default: needsTransform = false; break;
-    }
-
-    if (needsTransform) {
-        return std::make_unique<QImage>(
-            src->transformed(trans, Qt::SmoothTransformation)
-        );
-    }
-
-    return src;
-}
-
 // --- 缩放：Qt 路径 ---
 
 QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {

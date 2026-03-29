@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QCryptographicHash>
-#include <QDebug>
 #include <QString>
 #include <QFileInfo>
 #include <QDir>
@@ -22,17 +21,14 @@ enum FileOpResult {
     SOURCE_DOES_NOT_EXIST,
     DESTINATION_DOES_NOT_EXIST,
     DIRECTORY_NOT_EMPTY,
-    NOTHING_TO_DO, // todo: maybe just return SUCCESS?
+    NOTHING_TO_DO,
     OTHER_ERROR
 };
 
 class FileOperations {
 public:
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void copyFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result);
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void moveFileTo(const QString &srcFilePath, const QString &destDirPath, bool force, FileOpResult &result);
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     static void rename(const QString &srcFilePath, const QString &newName, bool force, FileOpResult &result);
     static void removeFile(const QString &filePath, FileOpResult &result);
     static void removeDir(const QString &dirPath, bool recursive, FileOpResult &result);

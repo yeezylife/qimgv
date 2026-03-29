@@ -439,7 +439,7 @@
           <widget class="ContextMenuItem" name="open" native="true"/>
          </item>
          <item>
-          <spacer name="verticalSpacer_4">
+          <spacer name="verticalSpacer_3">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
@@ -458,7 +458,7 @@
           <widget class="ContextMenuItem" name="openWith" native="true"/>
          </item>
          <item>
-          <spacer name="verticalSpacer_5">
+          <spacer name="verticalSpacer_4">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
@@ -477,7 +477,7 @@
           <widget class="ContextMenuItem" name="settings" native="true"/>
          </item>
          <item>
-          <spacer name="verticalSpacer_6">
+          <spacer name="verticalSpacer_5">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>

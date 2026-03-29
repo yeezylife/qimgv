@@ -24,7 +24,7 @@ ImageInfoOverlay::~ImageInfoOverlay() {
 
 void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
     // existing widgets are owned by QWidget hierarchy; we keep pool to avoid frequent realloc
-    for (EntryInfoItem *entry : qAsConst(entries)) {
+    for (EntryInfoItem *entry : std::as_const(entries)) {
         ui->entryLayout->removeWidget(entry);
         entry->hide();
     }

@@ -23,6 +23,7 @@ public slots:
 
 
 private:
+    void loadInternal();
     void load() override;
 
     uint srcWidth = 0;

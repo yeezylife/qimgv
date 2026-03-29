@@ -103,13 +103,13 @@ QString ImageStatic::generateHash(QStringView str) noexcept {
 int ImageStatic::getSaveQuality(QStringView ext) noexcept {
     // Qt 6: 使用 QStringView 避免字符串复制
     if (ext.compare(u"png", Qt::CaseInsensitive) == 0) {
-        return 30;  // PNG 压缩级别 3-6 通常与 9 性能相当
+        return 70;  // PNG 压缩级别 3-6 通常与 9 性能相当
     }
     if (ext.compare(u"jpg", Qt::CaseInsensitive) == 0 ||
         ext.compare(u"jpeg", Qt::CaseInsensitive) == 0) {
         return settings->JPEGSaveQuality();
     }
-    return 95;  // 默认质量
+    return 96;  // 默认质量
 }
 
 bool ImageStatic::save(QString destPath) {

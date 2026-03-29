@@ -21,7 +21,7 @@ void Scaler::requestScaled(const ScalerRequest &req) {
     QString toRelease;
     bool needImmediateStart = false;
 
-    const auto requestedImage = req.image();
+    const auto& requestedImage = req.imageRef();
     const QString requestedFileName = requestedImage ? requestedImage->fileName() : QString();
 
     {
@@ -34,7 +34,7 @@ void Scaler::requestScaled(const ScalerRequest &req) {
                 toReserve = requestedFileName;
                 needImmediateStart = true;
             } else {
-                const auto existingImage = bufferedRequest.image();
+                const auto& existingImage = bufferedRequest.imageRef();
                 if (existingImage != requestedImage) {
                     toRelease = existingImage ? existingImage->fileName() : QString();
                     toReserve = requestedFileName;
@@ -45,16 +45,16 @@ void Scaler::requestScaled(const ScalerRequest &req) {
             if (!buffered) {
                 bufferedRequest = req;
                 buffered = true;
-                if (requestedImage != startedRequest.image()) {
+                if (requestedImage != startedRequest.imageRef()) {
                     toReserve = requestedFileName;
                 }
             } else {
-                const auto existingImage = bufferedRequest.image();
+                const auto& existingImage = bufferedRequest.imageRef();
                 if (existingImage != requestedImage) {
-                    if (existingImage != startedRequest.image()) {
+                    if (existingImage != startedRequest.imageRef()) {
                         toRelease = existingImage ? existingImage->fileName() : QString();
                     }
-                    if (requestedImage != startedRequest.image()) {
+                    if (requestedImage != startedRequest.imageRef()) {
                         toReserve = requestedFileName;
                     }
                     bufferedRequest = req;
@@ -101,13 +101,13 @@ void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
     QImage resultImage;
     ScalerRequest resultReq;
 
-    const auto finishedImage = req.image();
+    const auto& finishedImage = req.imageRef();
 
     {
         QMutexLocker locker(&mutex);
         running = false;
 
-        if (!(buffered && bufferedRequest.image() == finishedImage)) {
+        if (!(buffered && bufferedRequest.imageRef() == finishedImage)) {
             toRelease = finishedImage ? finishedImage->fileName() : QString();
         }
 

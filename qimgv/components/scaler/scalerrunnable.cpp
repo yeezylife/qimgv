@@ -13,7 +13,7 @@ void ScalerRunnable::run()
     // 1. 发送开始信号 (由于后续还要用 m_request，这里不能 move)
     emit started(m_request);
 
-    auto imageContainer = m_request.image();
+    const auto& imageContainer = m_request.imageRef();
     if (!imageContainer)
     {
         emit finished(QImage(), m_request);
@@ -30,16 +30,17 @@ void ScalerRunnable::run()
     // 2. 缩放逻辑
     const QImage& sourceImage = *imgPtr;
     ScalingFilter effectiveFilter = m_request.filter();
+    const QSize& targetSize = m_request.sizeRef();
 
     bool useNearest = (effectiveFilter == QI_FILTER_NEAREST) ||
-                      ((m_request.size().width()  > sourceImage.width() ||
-                        m_request.size().height() > sourceImage.height()) &&
+                      ((targetSize.width()  > sourceImage.width() ||
+                        targetSize.height() > sourceImage.height()) &&
                        !settings->smoothUpscaling());
 
     ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
 
     QImage scaled = ImageLib::scaled(sourceImage,
-                                     m_request.size(),
+                                     targetSize,
                                      filterToUse);
 
     // 3. 发送完成信号

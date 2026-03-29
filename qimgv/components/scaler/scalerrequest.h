@@ -24,20 +24,26 @@ public:
     ScalerRequest& operator=(const ScalerRequest&) = default;
     ScalerRequest& operator=(ScalerRequest&&) = default;
 
-    // 访问器
-    std::shared_ptr<Image> image() const { return m_image; }
-    QSize size() const { return m_size; }
-    QString path() const { return m_path; }
-    ScalingFilter filter() const { return m_filter; }
+    // 访问器（保持兼容接口，新增引用版本供高频路径使用）
+    [[nodiscard]] std::shared_ptr<Image> image() const { return m_image; }
+    [[nodiscard]] const std::shared_ptr<Image>& imageRef() const noexcept { return m_image; }
+
+    [[nodiscard]] QSize size() const { return m_size; }
+    [[nodiscard]] const QSize& sizeRef() const noexcept { return m_size; }
+
+    [[nodiscard]] QString path() const { return m_path; }
+    [[nodiscard]] const QString& pathRef() const noexcept { return m_path; }
+
+    [[nodiscard]] ScalingFilter filter() const noexcept { return m_filter; }
 
     // 核心逻辑：判断两个请求是否在处理同一张图的同一个规格
-    bool operator==(const ScalerRequest& other) const {
-        return m_image == other.m_image &&
+    bool operator==(const ScalerRequest& other) const noexcept {
+        return m_image.get() == other.m_image.get() &&
                m_size == other.m_size &&
                m_filter == other.m_filter;
     }
 
-    bool operator!=(const ScalerRequest& other) const {
+    bool operator!=(const ScalerRequest& other) const noexcept {
         return !(*this == other);
     }
 

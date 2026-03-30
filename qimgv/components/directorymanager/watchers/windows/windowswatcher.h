@@ -1,19 +1,20 @@
 #ifndef WINDOWSWATCHER_H
 #define WINDOWSWATCHER_H
 
-#include "../directorywatcher.h"
+#include “…/directorywatcher.h”
 
 class WindowsWatcherPrivate;
 
-class WindowsWatcher : public DirectoryWatcher {
-    Q_OBJECT
-public:
-    explicit WindowsWatcher(QObject* parent = nullptr);
+class WindowsWatcher : public DirectoryWatcher
+{
+Q_OBJECT
 
-    void setWatchPath(const QString& path) override;
+public:
+explicit WindowsWatcher(QObject* parent = nullptr);
+void setWatchPath(const QString& path) override;
 
 private:
-    Q_DECLARE_PRIVATE(WindowsWatcher)
+Q_DECLARE_PRIVATE(WindowsWatcher)
 };
 
 #endif // WINDOWSWATCHER_H

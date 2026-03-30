@@ -5,7 +5,7 @@
 
 class WatcherEvent {
 public:
-    // 方案 B：强类型定义，防止参数混淆
+    // 强类型包装，防止参数混淆
     struct Cookie { quint32 value; };
     struct TimerId { qint32 value; };
 
@@ -16,22 +16,27 @@ public:
         Modify
     };
 
-    // 构造函数现在接受强类型包装对象
-    WatcherEvent(const QString &name, qint32 timerId, Type type = None) noexcept;
-    WatcherEvent(const QString &name, Cookie cookie, TimerId timerId, Type type = None) noexcept;
-    ~WatcherEvent() noexcept;
+    // 构造函数（内联实现）
+    WatcherEvent(const QString &name, qint32 timerId, Type type = None) noexcept
+        : mName(name), mCookie(0), mTimerId(timerId), mType(type) {}
 
-    QString name() const noexcept;
-    void setName(const QString& name) noexcept;
+    WatcherEvent(const QString &name, Cookie cookie, TimerId timerId, Type type = None) noexcept
+        : mName(name), mCookie(cookie.value), mTimerId(timerId.value), mType(type) {}
 
-    quint32 cookie() const noexcept;
-    void setCookie(quint32 cookie) noexcept;
+    ~WatcherEvent() noexcept = default;
 
-    qint32 timerId() const noexcept;
-    void setTimerId(qint32 timerId) noexcept;
+    // Getter / Setter（内联实现）
+    QString name() const noexcept { return mName; }
+    void setName(const QString &name) noexcept { mName = name; }
 
-    Type type() const noexcept;
-    void setType(Type type) noexcept;
+    quint32 cookie() const noexcept { return mCookie; }
+    void setCookie(quint32 cookie) noexcept { mCookie = cookie; }
+
+    qint32 timerId() const noexcept { return mTimerId; }
+    void setTimerId(qint32 timerId) noexcept { mTimerId = timerId; }
+
+    Type type() const noexcept { return mType; }
+    void setType(Type type) noexcept { mType = type; }
 
 private:
     QString mName;

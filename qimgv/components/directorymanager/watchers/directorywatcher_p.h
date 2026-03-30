@@ -1,14 +1,12 @@
+// directorywatcher_p.h
 #ifndef DIRECTORYWATCHER_P_H
 #define DIRECTORYWATCHER_P_H
 
 #include "directorywatcher.h"
-#include "watcherevent.h"
 #include "watcherworker.h"
 
 #include <QString>
 #include <QThread>
-#include <QVector>
-#include <QSharedPointer>
 #include <QScopedPointer>
 
 class DirectoryWatcherPrivate : public QObject {
@@ -21,9 +19,12 @@ public:
 
     DirectoryWatcher* q_ptr;
     QString currentDirectory;
-    QVector<QSharedPointer<WatcherEvent>> directoryEvents;
     QScopedPointer<WatcherWorker> worker;
     QScopedPointer<QThread> workerThread;
+    bool isStarting = false;
+
+private Q_SLOTS:
+    void startWorker();
 
 private:
     Q_DISABLE_COPY_MOVE(DirectoryWatcherPrivate)

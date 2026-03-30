@@ -1,3 +1,4 @@
+// directorywatcher.cpp
 #include "directorywatcher_p.h"
 
 #if defined(__linux__) || defined(__FreeBSD__)
@@ -12,12 +13,30 @@
 #include "dummywatcher.h"
 #endif
 
+#include <QMetaObject>
+#include <QCoreApplication>
+
 DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* w)
     : QObject(nullptr)
     , q_ptr(qq)
     , worker(w)
     , workerThread(new QThread())
 {
+    if (worker && workerThread) {
+        worker->setParent(nullptr);
+        worker->moveToThread(workerThread.data());
+        connect(workerThread.data(), &QThread::started, this, &DirectoryWatcherPrivate::startWorker);
+        connect(workerThread.data(), &QThread::finished, worker.data(), &WatcherWorker::deleteLater);
+    }
+}
+
+void DirectoryWatcherPrivate::startWorker()
+{
+    if (!worker || isStarting)
+        return;
+    isStarting = true;
+    // 假设 WatcherWorker 有一个名为 start 的槽函数用于启动监视循环
+    QMetaObject::invokeMethod(worker.data(), "start", Qt::QueuedConnection);
 }
 
 DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr)
@@ -62,29 +81,29 @@ QString DirectoryWatcher::watchPath() const
 bool DirectoryWatcher::isObserving() const
 {
     Q_D(const DirectoryWatcher);
-    return d->workerThread->isRunning();
+    return d->workerThread && d->workerThread->isRunning();
 }
 
 void DirectoryWatcher::observe()
 {
     Q_D(DirectoryWatcher);
-    if (!isObserving()) {
-        d->worker->setRunning(true);
-        d->workerThread->start();
-    }
+    if (!d->workerThread || isObserving())
+        return;
+
+    d->worker->setRunning(true);
+    d->workerThread->start();
 }
 
 void DirectoryWatcher::stopObserving()
 {
     Q_D(DirectoryWatcher);
-    
-    if (!d->workerThread->isRunning()) {
+
+    if (!d->workerThread || !d->workerThread->isRunning())
         return;
-    }
 
     d->worker->setRunning(false);
     d->workerThread->quit();
-    
+
     if (!d->workerThread->wait(1000)) {
         d->workerThread->terminate();
         d->workerThread->wait(1000);

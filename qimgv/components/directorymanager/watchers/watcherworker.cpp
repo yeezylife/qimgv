@@ -1,8 +1,3 @@
 #include "watcherworker.h"
-#include <QDebug>
 
-WatcherWorker::WatcherWorker() = default;
-
-void WatcherWorker::setRunning(bool running) noexcept {
-    isRunning.store(running, std::memory_order_release);
-}
+// 所有实现已内联到头文件，此文件仅保留以兼容构建系统

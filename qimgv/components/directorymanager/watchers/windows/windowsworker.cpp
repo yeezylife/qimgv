@@ -36,7 +36,7 @@ void WindowsWorker::run() {
             }
 
             // 直接使用 QChar 构造 QString，在 Windows (UTF-16) 下零额外转换开销，性能最优
-            const QString fileName(reinterpret_cast<const QChar*>(notify->FileName), len);
+            const QString fileName(reinterpret_cast<const QChar*>(notify->FileName), static_cast<qsizetype>(len));
             emit notifyEvent(fileName, notify->Action);
 
             if (notify->NextEntryOffset == 0) {

@@ -7,14 +7,16 @@ class WatcherWorker : public QObject
 {
     Q_OBJECT
 public:
-    WatcherWorker();
+    WatcherWorker() = default;
     virtual void run() = 0;
 
 public Q_SLOTS:
-    void setRunning(bool running) noexcept;
+    void setRunning(bool running) noexcept {
+        isRunning.store(running, std::memory_order_release);
+    }
 
 Q_SIGNALS:
-    void error(const QString& errorMessage);
+    void error(const QString &errorMessage);
     void started();
     void finished();
 

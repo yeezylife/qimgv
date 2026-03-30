@@ -111,18 +111,18 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
         filter = QI_FILTER_BILINEAR;
 #endif
 
-    auto scaleQtMove = [](QImage img, QSize destSize, bool smooth) -> QImage {
-        // 🚀 统一逻辑，避免手动计算带来的边缘 Bug
+    // lambda 使用 const 引用，避免不必要的拷贝（scaled 不支持右值重载）
+    auto scaleQtMove = [](const QImage& img, QSize destSize, bool smooth) -> QImage {
         Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
         return img.scaled(destSize, Qt::KeepAspectRatio, mode);
     };
 
     switch (filter) {
         case QI_FILTER_NEAREST:
-            return scaleQtMove(std::move(scaleTarget), destSize, false);
+            return scaleQtMove(scaleTarget, destSize, false);
 
         case QI_FILTER_BILINEAR:
-            return scaleQtMove(std::move(scaleTarget), destSize, true);
+            return scaleQtMove(scaleTarget, destSize, true);
 
 #ifdef USE_OPENCV
         case QI_FILTER_CV_BILINEAR_SHARPEN:
@@ -136,7 +136,7 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 #endif
 
         default:
-            return scaleQtMove(std::move(scaleTarget), destSize, true);
+            return scaleQtMove(scaleTarget, destSize, true);
     }
 }
 

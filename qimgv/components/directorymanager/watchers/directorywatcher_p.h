@@ -1,4 +1,3 @@
-// directorywatcher_p.h
 #ifndef DIRECTORYWATCHER_P_H
 #define DIRECTORYWATCHER_P_H
 
@@ -21,7 +20,6 @@ public:
     QString currentDirectory;
     QScopedPointer<WatcherWorker> worker;
     QScopedPointer<QThread> workerThread;
-    bool isStarting = false;
 
 private Q_SLOTS:
     void startWorker();

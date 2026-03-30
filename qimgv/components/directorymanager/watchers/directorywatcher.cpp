@@ -32,11 +32,11 @@ DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWo
 
 void DirectoryWatcherPrivate::startWorker()
 {
-    if (!worker || isStarting)
+    if (!worker)
         return;
-    isStarting = true;
-    // 假设 WatcherWorker 有一个名为 start 的槽函数用于启动监视循环
-    QMetaObject::invokeMethod(worker.data(), "start", Qt::QueuedConnection);
+
+    // 在工作线程中执行 worker 的 run() 方法
+    QMetaObject::invokeMethod(worker.data(), "run", Qt::QueuedConnection);
 }
 
 DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr)

@@ -13,10 +13,10 @@ class WindowsWorker;
 static inline QString lastError()
 {
     char buffer[1024];
-    DWORD lastError = GetLastError();
+    DWORD lastError = GetLastError(); // 保存原始错误码
     DWORD res = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, lastError, LANG_SYSTEM_DEFAULT, buffer, sizeof(buffer), nullptr);
     if (res == 0) {
-        return QString::number(GetLastError());
+        return QString::number(lastError); // 使用保存的错误码
     }
     return QString::asprintf("%s::%d: %s", __FILE__, __LINE__, buffer);
 }
@@ -34,6 +34,9 @@ public slots:
     void dispatchNotify(const QString& fileName, DWORD action);
 
 private:
+    // 注意：oldFileName仅在dispatchNotify槽函数中读写，该槽函数在worker线程中执行。
+    // 由于重命名事件总是成对出现（FILE_ACTION_RENAMED_OLD_NAME后跟FILE_ACTION_RENAMED_NEW_NAME），
+    // 且Qt信号槽连接保证同一线程内的顺序调用，因此线程安全。
     QString oldFileName;
 };
 

@@ -4,7 +4,13 @@
 #include <cstddef>
 
 WindowsWorker::WindowsWorker() {
-    buffer.resize(65536);
+    buffer.resize(131072); // 128KB，提高高并发场景下的事件处理能力
+}
+
+WindowsWorker::~WindowsWorker() {
+    if (hDirectory != INVALID_HANDLE_VALUE) {
+        CloseHandle(hDirectory);
+    }
 }
 
 void WindowsWorker::setDirectoryHandle(HANDLE handle) {

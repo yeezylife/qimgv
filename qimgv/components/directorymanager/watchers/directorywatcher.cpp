@@ -1,5 +1,8 @@
 #include "directorywatcher_p.h"
 
+static constexpr int kThreadWaitMs = 2000;
+static constexpr int kThreadWaitMsDestructor = 3000;
+
 #if defined(__linux__) || defined(__FreeBSD__)
 #include "linux/linuxwatcher.h"
 #elif defined(_WIN32)
@@ -30,14 +33,14 @@ DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWo
 
 DirectoryWatcherPrivate::~DirectoryWatcherPrivate()
 {
-    // 确保线程已停止
+    // 确保线程优雅停止
     if (workerThread && workerThread->isRunning()) {
         if (worker)
             worker->setRunning(false);
         workerThread->quit();
-        workerThread->wait(3000); // 等待线程优雅退出
+        workerThread->wait(kThreadWaitMsDestructor);
     }
-    // QScopedPointer 会自动删除 worker 和 workerThread
+    // worker 和 workerThread 由 QScopedPointer 自动清理
 }
 
 void DirectoryWatcherPrivate::startWorker()
@@ -58,7 +61,7 @@ DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr)
 
 DirectoryWatcher::~DirectoryWatcher()
 {
-    stopObserving();
+    // 线程停止逻辑在 ~DirectoryWatcherPrivate() 中处理
     delete d_ptr;
 }
 
@@ -103,6 +106,7 @@ void DirectoryWatcher::observe()
 
     d->worker->setRunning(true);
     d->workerThread->start();
+    emit observingStarted();
 }
 
 void DirectoryWatcher::stopObserving()
@@ -114,5 +118,6 @@ void DirectoryWatcher::stopObserving()
 
     d->worker->setRunning(false);
     d->workerThread->quit();
-    d->workerThread->wait(2000); // 等待线程自然退出，不再使用 terminate
+    d->workerThread->wait(kThreadWaitMs);
+    emit observingStopped();
 }

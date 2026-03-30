@@ -10,6 +10,7 @@ class WindowsWorker : public WatcherWorker {
     Q_OBJECT
 public:
     explicit WindowsWorker();
+    ~WindowsWorker() override; // 添加析构函数以关闭句柄
     void run() override;
     void setDirectoryHandle(HANDLE handle);
 

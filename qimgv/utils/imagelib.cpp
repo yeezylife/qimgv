@@ -25,7 +25,6 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
 }
 
 QImage ImageLib::rotated(const QImage &src, int grad) {
-    if (src.isNull()) return QImage();
     // 旋转角度为 360° 的整数倍，无需变换，直接返回源图像（注意：src 是 const&，返回时会拷贝，但避免了 transform 开销）
     if (grad % 360 == 0) {
         return src;
@@ -41,7 +40,6 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
 }
 
 QImage ImageLib::cropped(const QImage &src, QRect newRect) {
-    if (src.isNull()) return QImage();
     // 裁剪区域等于原图大小，直接返回源图像
     if (src.rect() == newRect) {
         return src;
@@ -58,7 +56,6 @@ QImage ImageLib::flippedHRaw(QImage src) {
 }
 
 QImage ImageLib::flippedH(QImage src) {
-    if (src.isNull()) return QImage();
     return flippedHRaw(std::move(src));
 }
 
@@ -68,7 +65,6 @@ QImage ImageLib::flippedVRaw(QImage src) {
 }
 
 QImage ImageLib::flippedV(QImage src) {
-    if (src.isNull()) return QImage();
     return flippedVRaw(std::move(src));
 }
 
@@ -106,10 +102,8 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     QImage scaleTarget = std::move(source);
 
     if (scaleTarget.format() == QImage::Format_Indexed8) {
-        QImage::Format newFmt = scaleTarget.hasAlphaChannel()
-                                ? QImage::Format_ARGB32
-                                : QImage::Format_RGB32;
-        scaleTarget = std::move(scaleTarget).convertToFormat(newFmt);
+        scaleTarget = std::move(scaleTarget)
+                        .convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
 #ifdef USE_OPENCV
@@ -118,7 +112,6 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 #endif
 
     auto scaleQtMove = [](QImage img, QSize destSize, bool smooth) -> QImage {
-        if (destSize == img.size()) return img;
         // 🚀 统一逻辑，避免手动计算带来的边缘 Bug
         Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
         return img.scaled(destSize, Qt::KeepAspectRatio, mode);

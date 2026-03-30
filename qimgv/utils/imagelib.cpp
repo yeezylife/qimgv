@@ -185,7 +185,7 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
     if (source.isNull()) return QImage();
     if (destSize == source.size()) return source;
 
-    // 🚀 强制保证不 detach（关键）
+    // 避免 QImage 隐式 detach
     const QImage& srcRef = source;
 
     QtOcv::MatColorOrder order;
@@ -216,7 +216,7 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
         cv::addWeighted(dstMat, 1.0 + amount, blurred, -amount, 0, dstMat);
     }
 
-    // 🚀 完整 zero-copy 输出
-    return QtOcv::mat2Image_shared(dstMat, srcRef.format());
+    // 原版调用，正确且高效
+    return QtOcv::mat2Image(dstMat, order, srcRef.format());
 }
 #endif

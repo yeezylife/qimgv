@@ -1,9 +1,10 @@
+// windowsworker.cpp
 #include "windowsworker.h"
 #include "windowswatcher_p.h"
+#include <cstddef>
 
 WindowsWorker::WindowsWorker() {
-    // 预分配缓冲区，避免每次重新分配
-    buffer.resize(65536);  // 64KB 缓冲区
+    buffer.resize(65536);
 }
 
 void WindowsWorker::setDirectoryHandle(HANDLE handle) {
@@ -12,71 +13,40 @@ void WindowsWorker::setDirectoryHandle(HANDLE handle) {
 
 void WindowsWorker::run() {
     emit started();
-    
     if (hDirectory == INVALID_HANDLE_VALUE) {
         emit finished();
         return;
     }
 
     DWORD bytesReturned = 0;
-    
-    while (true) {
-        // 使用持续有效的缓冲区
-        BOOL result = ReadDirectoryChangesW(
-            hDirectory,
-            buffer.data(),
-            buffer.size(),
-            FALSE,  // 不监视子目录
-            FILE_NOTIFY_CHANGE_FILE_NAME | 
-            FILE_NOTIFY_CHANGE_DIR_NAME | 
-            FILE_NOTIFY_CHANGE_ATTRIBUTES | 
-            FILE_NOTIFY_CHANGE_SIZE | 
-            FILE_NOTIFY_CHANGE_LAST_WRITE,
-            &bytesReturned,
-            nullptr,
-            nullptr);
-        
-        if (!result) {
-            qDebug() << "ReadDirectoryChangesW failed:" << lastError();
-            break;
-        }
-        
+    constexpr DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | 
+                                   FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | 
+                                   FILE_NOTIFY_CHANGE_LAST_WRITE;
+
+    while (ReadDirectoryChangesW(hDirectory, buffer.data(), buffer.size(), FALSE, notifyFilter, &bytesReturned, nullptr, nullptr)) {
         if (bytesReturned == 0) {
             continue;
         }
-        
-        // 解析 FILE_NOTIFY_INFORMATION 链表
-        PFILE_NOTIFY_INFORMATION notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(buffer.data());
-        
+
+        auto notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(buffer.data());
         do {
-            // 在当前线程中安全地转换文件名
-            qsizetype len = static_cast<qsizetype>(notify->FileNameLength / sizeof(WCHAR));
-            
-            // 安全检查：防止异常长度
+            const auto len = notify->FileNameLength / sizeof(WCHAR);
             if (len == 0 || len > 4096) {
-                qDebug() << "Invalid FileNameLength:" << notify->FileNameLength;
                 break;
             }
-            
-            // 在发送信号前转换为 QString（数据复制到这里就安全了）
-            QString fileName = QString::fromWCharArray(
-                reinterpret_cast<wchar_t*>(notify->FileName), 
-                static_cast<qsizetype>(len));
-            
-            DWORD action = notify->Action;
-            
-            // 发送安全的字符串副本，而不是原始指针
-            emit notifyEvent(fileName, action);
-            
-            // 移动到下一个通知结构
+
+            // 直接使用 QChar 构造 QString，在 Windows (UTF-16) 下零额外转换开销，性能最优
+            const QString fileName(reinterpret_cast<const QChar*>(notify->FileName), len);
+            emit notifyEvent(fileName, notify->Action);
+
             if (notify->NextEntryOffset == 0) {
                 break;
             }
+            // C++20: 使用 std::byte 替代 char 进行指针算术，避免违反严格别名规则并利于编译器优化
             notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(
-                reinterpret_cast<char*>(notify) + notify->NextEntryOffset);
-                
+                reinterpret_cast<std::byte*>(notify) + notify->NextEntryOffset);
         } while (true);
     }
-    
+
     emit finished();
 }

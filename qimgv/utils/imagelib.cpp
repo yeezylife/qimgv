@@ -119,18 +119,9 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 
     auto scaleQtMove = [](QImage img, QSize destSize, bool smooth) -> QImage {
         if (destSize == img.size()) return img;
-
-        if (destSize.width() < img.width() || destSize.height() < img.height()) {
-            if (destSize.width() <= destSize.height()) {
-                return img.scaledToWidth(destSize.width(),
-                    smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-            }
-            return img.scaledToHeight(destSize.height(),
-                smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-        }
-
-        return img.scaled(destSize, Qt::KeepAspectRatio,
-            smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+        // 🚀 统一逻辑，避免手动计算带来的边缘 Bug
+        Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
+        return img.scaled(destSize, Qt::KeepAspectRatio, mode);
     };
 
     switch (filter) {
@@ -159,23 +150,12 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
 QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
     if (source.isNull()) return QImage();
     if (destSize == source.size()) {
-        return source;  // 源与目标大小相同，直接返回（但 source 是 const&，会拷贝）
+        return source; // 源与目标大小相同，直接返回（但 source 是 const&，会拷贝）
     }
-
-    // Qt 6.10优化：根据缩放方向选择最优方法
-    if (destSize.width() < source.width() || destSize.height() < source.height()) {
-        // 缩小操作 - 使用专门的缩小方法，性能更好
-        if (destSize.width() <= destSize.height()) {
-            return source.scaledToWidth(destSize.width(),
-                                      smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-        }
-        return source.scaledToHeight(destSize.height(),
-                                   smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
-    }
-    // 放大操作 - 使用通用scaled方法
-    return source.scaled(destSize,
-                       Qt::KeepAspectRatio,
-                       smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+    
+    // 🚀 直接调用，Qt内部已对 KeepAspectRatio 做过极致优化，无需手动判断宽高
+    Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
+    return source.scaled(destSize, Qt::KeepAspectRatio, mode);
 }
 
 #ifdef USE_OPENCV

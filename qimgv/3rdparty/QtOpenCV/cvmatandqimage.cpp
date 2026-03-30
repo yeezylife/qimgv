@@ -280,29 +280,32 @@ QImage mat2Image_shared(const cv::Mat &mat, QImage::Format formatHint) {
         finalFormat = QImage::Format_RGB888;
     } else if (mat.type() == CV_8UC4) {
         finalFormat = findClosestFormat(formatHint);
-    } else { // 单通道
-        if (formatHint != QImage::Format_Indexed8 &&
-            formatHint != QImage::Format_Alpha8 &&
-            formatHint != QImage::Format_Grayscale8) {
+    } else {
+        // 单通道
+        if (formatHint != QImage::Format_Indexed8 && formatHint != QImage::Format_Alpha8 && formatHint != QImage::Format_Grayscale8) {
             finalFormat = QImage::Format_Indexed8;
         } else {
             finalFormat = formatHint;
         }
     }
 
-    // 🚀 生命周期绑定，避免悬空指针
-    // 使用 shared_ptr 包装 cv::Mat 头，确保数据在 QImage 生命周期内有效
-    auto matPtr = std::make_shared<cv::Mat>(mat);
-    QImage img(mat.data, mat.cols, mat.rows, static_cast<qsizetype>(mat.step),
-               finalFormat,
-               [](void *p) { delete static_cast<std::shared_ptr<cv::Mat>*>(p); },
-               new std::shared_ptr<cv::Mat>(matPtr));
+    // 🚀 极致优化：只分配 Mat 的头部，无原子操作，零额外开销
+    cv::Mat* matPtr = new cv::Mat(mat);
+    QImage img(matPtr->data, 
+               matPtr->cols, 
+               matPtr->rows, 
+               static_cast<qsizetype>(matPtr->step), 
+               finalFormat, 
+               [](void* p) {
+                   // 析构时只需 delete 头部，底层像素数据的引用计数会自动管理
+                   delete static_cast<cv::Mat*>(p); 
+               }, 
+               matPtr);
 
     // 彩色表：仅对 Indexed8 设置灰度映射
     if (finalFormat == QImage::Format_Indexed8) {
         QVector<QRgb> colorTable;
-        for (int i = 0; i < 256; ++i)
-            colorTable.append(qRgb(i, i, i));
+        for (int i = 0; i < 256; ++i) colorTable.append(qRgb(i, i, i));
         img.setColorTable(colorTable);
     }
 

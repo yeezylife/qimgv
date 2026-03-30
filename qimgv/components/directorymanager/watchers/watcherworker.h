@@ -1,3 +1,4 @@
+// watcherworker.h
 #pragma once
 
 #include <QObject>
@@ -8,9 +9,9 @@ class WatcherWorker : public QObject
     Q_OBJECT
 public:
     WatcherWorker() = default;
-    virtual void run() = 0;
 
 public Q_SLOTS:
+    virtual void run() = 0;               // 改为槽，允许跨线程调用
     void setRunning(bool running) noexcept {
         isRunning.store(running, std::memory_order_release);
     }

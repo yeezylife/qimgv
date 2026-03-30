@@ -159,17 +159,19 @@ void LinuxWatcherPrivate::timerEvent(QTimerEvent *timerEvent) {
 
 LinuxWatcher::LinuxWatcher() : DirectoryWatcher(new LinuxWatcherPrivate(this)) {
     Q_D(LinuxWatcher);
-
-    connect(d->workerThread.data(), &QThread::started, d->worker.data(), &WatcherWorker::run);
-    d->worker.data()->moveToThread(d->workerThread.data());
-
     auto linuxWorker = static_cast<LinuxWorker*>(d->worker.data());
+
+    // 基类已经完成：
+    // - worker->moveToThread(workerThread)
+    // - 连接 workerThread->started 到 DirectoryWatcherPrivate::startWorker
+    //   startWorker 内部通过 QMetaObject::invokeMethod(worker, "run") 跨线程调用 run()
+    // 因此这里不再重复连接 started 到 run，也不再重复 moveToThread
+
     linuxWorker->setDescriptor(d->watcher);
 
     connect(linuxWorker, &LinuxWorker::fileEvent,
             d, &LinuxWatcherPrivate::dispatchFilesystemEvent);
 
-    // Here's no need to destroy thread and worker. They're will be removed automatically
     connect(linuxWorker, &LinuxWorker::finished, d->workerThread.data(), &QThread::quit);
 
     connect(linuxWorker, &LinuxWorker::started, this, &LinuxWatcher::observingStarted);

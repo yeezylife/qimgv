@@ -14,7 +14,7 @@ class DirectoryWatcherPrivate : public QObject {
 
 public:
     explicit DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* worker);
-    ~DirectoryWatcherPrivate() override = default;
+    ~DirectoryWatcherPrivate() override;
 
     DirectoryWatcher* q_ptr;
     QString currentDirectory;

@@ -1,4 +1,3 @@
-// directorywatcher.cpp
 #include "directorywatcher_p.h"
 
 #if defined(__linux__) || defined(__FreeBSD__)
@@ -14,7 +13,6 @@
 #endif
 
 #include <QMetaObject>
-#include <QCoreApplication>
 
 DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWorker* w)
     : QObject(nullptr)
@@ -23,21 +21,34 @@ DirectoryWatcherPrivate::DirectoryWatcherPrivate(DirectoryWatcher* qq, WatcherWo
     , workerThread(new QThread())
 {
     if (worker && workerThread) {
-        worker->setParent(nullptr);
         worker->moveToThread(workerThread.data());
         connect(workerThread.data(), &QThread::started, this, &DirectoryWatcherPrivate::startWorker);
-        connect(workerThread.data(), &QThread::finished, worker.data(), &WatcherWorker::deleteLater);
+        // 不再连接 finished 到 worker->deleteLater，避免与 QScopedPointer 冲突
+        // 在析构函数中确保线程停止后手动 reset worker
     }
+}
+
+DirectoryWatcherPrivate::~DirectoryWatcherPrivate()
+{
+    // 确保线程已停止
+    if (workerThread && workerThread->isRunning()) {
+        if (worker)
+            worker->setRunning(false);
+        workerThread->quit();
+        workerThread->wait(3000); // 等待线程优雅退出
+    }
+    // QScopedPointer 会自动删除 worker 和 workerThread
 }
 
 void DirectoryWatcherPrivate::startWorker()
 {
     if (!worker)
         return;
-
-    // 在工作线程中执行 worker 的 run() 方法
+    // 调用 run() 槽函数（需将 WatcherWorker::run 声明为槽）
     QMetaObject::invokeMethod(worker.data(), "run", Qt::QueuedConnection);
 }
+
+// ==================== DirectoryWatcher 实现 ====================
 
 DirectoryWatcher::DirectoryWatcher(DirectoryWatcherPrivate* ptr)
     : QObject(nullptr)
@@ -103,9 +114,5 @@ void DirectoryWatcher::stopObserving()
 
     d->worker->setRunning(false);
     d->workerThread->quit();
-
-    if (!d->workerThread->wait(1000)) {
-        d->workerThread->terminate();
-        d->workerThread->wait(1000);
-    }
+    d->workerThread->wait(2000); // 等待线程自然退出，不再使用 terminate
 }

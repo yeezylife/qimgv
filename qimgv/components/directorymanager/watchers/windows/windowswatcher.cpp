@@ -1,3 +1,4 @@
+// windowswatcher.cpp
 #include "windowswatcher_p.h"
 #include "windowsworker.h"
 
@@ -70,9 +71,8 @@ WindowsWatcher::WindowsWatcher(QObject* parent)
     : DirectoryWatcher(new WindowsWatcherPrivate(this))
 {
     Q_D(WindowsWatcher);
-    connect(d->workerThread.data(), &QThread::started, d->worker.data(), &WatcherWorker::run);
-    d->worker.data()->moveToThread(d->workerThread.data());
-
+    // 基类已经完成 worker 的 moveToThread 以及 started -> startWorker 的连接
+    // 这里只需要额外连接 worker 的 finished 信号来停止线程，以及转发 started/finished 信号
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
     connect(windowsWorker, &WindowsWorker::finished, d->workerThread.data(), &QThread::quit);
     connect(windowsWorker, &WindowsWorker::started, this, &WindowsWatcher::observingStarted);

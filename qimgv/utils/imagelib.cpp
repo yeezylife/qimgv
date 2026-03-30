@@ -99,14 +99,12 @@ QImage ImageLib::exifRotated(QImage src, int orientation) {
 QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     if (source.isNull()) return QImage();
 
-    // 目标尺寸与源相同，直接返回源（移动）
     if (destSize == source.size()) {
-        return source;
+        return source; // move elision
     }
 
     QImage scaleTarget = std::move(source);
 
-    // 格式转换时使用右值引用版本，避免额外拷贝
     if (scaleTarget.format() == QImage::Format_Indexed8) {
         QImage::Format newFmt = scaleTarget.hasAlphaChannel()
                                 ? QImage::Format_ARGB32
@@ -119,51 +117,43 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
         filter = QI_FILTER_BILINEAR;
 #endif
 
-    // 定义移动版本的 Qt 缩放 lambda，避免在 scaled_Qt 中拷贝
-    auto scaleQtMove = [&](QImage img, QSize destSize, bool smooth) -> QImage {
-        if (destSize == img.size()) return img;  // 移动返回
-        
+    auto scaleQtMove = [](QImage img, QSize destSize, bool smooth) -> QImage {
+        if (destSize == img.size()) return img;
+
         if (destSize.width() < img.width() || destSize.height() < img.height()) {
-            // 缩小操作
             if (destSize.width() <= destSize.height()) {
                 return img.scaledToWidth(destSize.width(),
-                                         smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+                    smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
             }
-            // 移除多余的 else
             return img.scaledToHeight(destSize.height(),
-                                      smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+                smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
         }
-        
-        // 放大操作 (移除多余的 else)
+
         return img.scaled(destSize, Qt::KeepAspectRatio,
-                          smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
+            smooth ? Qt::SmoothTransformation : Qt::FastTransformation);
     };
 
-    QImage result;
     switch (filter) {
         case QI_FILTER_NEAREST:
-            result = scaleQtMove(std::move(scaleTarget), destSize, false);
-            break;
+            return scaleQtMove(std::move(scaleTarget), destSize, false);
+
         case QI_FILTER_BILINEAR:
-            result = scaleQtMove(std::move(scaleTarget), destSize, true);
-            break;
+            return scaleQtMove(std::move(scaleTarget), destSize, true);
+
 #ifdef USE_OPENCV
         case QI_FILTER_CV_BILINEAR_SHARPEN:
-            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
-            break;
-        case QI_FILTER_CV_CUBIC:
-            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
-            break;
-        case QI_FILTER_CV_CUBIC_SHARPEN:
-            result = scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
-            break;
-#endif
-        default:
-            result = scaleQtMove(std::move(scaleTarget), destSize, true);
-            break;
-    }
+            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
 
-    return result;
+        case QI_FILTER_CV_CUBIC:
+            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
+
+        case QI_FILTER_CV_CUBIC_SHARPEN:
+            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
+#endif
+
+        default:
+            return scaleQtMove(std::move(scaleTarget), destSize, true);
+    }
 }
 
 QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
@@ -190,25 +180,27 @@ QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
 
 #ifdef USE_OPENCV
 QImage ImageLib::scaled_CV(QImage source, QSize destSize,
-                           cv::InterpolationFlags filter, int sharpen) {
+                           cv::InterpolationFlags filter, int sharpen)
+{
     if (source.isNull()) return QImage();
-
     if (destSize == source.size()) return source;
 
+    // 🚀 强制保证不 detach（关键）
+    const QImage& srcRef = source;
+
     QtOcv::MatColorOrder order;
-    cv::Mat srcMat = QtOcv::image2Mat_shared(source, &order);
+    cv::Mat srcMat = QtOcv::image2Mat_shared(srcRef, &order);
+    if (srcMat.empty()) return QImage();
 
     cv::InterpolationFlags actualFilter = filter;
     int actualSharpen = sharpen;
 
-    if (destSize.width() < source.width()) {
-        float scale = static_cast<float>(destSize.width()) /
-              static_cast<float>(source.width());
+    if (destSize.width() < srcRef.width()) {
+        float scale = float(destSize.width()) / float(srcRef.width());
         if (scale < 0.5f && filter != cv::INTER_NEAREST) {
             actualFilter = cv::INTER_AREA;
-            if (filter == cv::INTER_CUBIC) {
+            if (filter == cv::INTER_CUBIC)
                 actualSharpen = 1;
-            }
         }
     }
 
@@ -224,7 +216,7 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
         cv::addWeighted(dstMat, 1.0 + amount, blurred, -amount, 0, dstMat);
     }
 
-    QImage out = QtOcv::mat2Image(dstMat, order, source.format());
-    return out;
+    // 🚀 完整 zero-copy 输出
+    return QtOcv::mat2Image_shared(dstMat, srcRef.format());
 }
 #endif

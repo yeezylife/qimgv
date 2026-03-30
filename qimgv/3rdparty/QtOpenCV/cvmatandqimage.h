@@ -15,51 +15,55 @@ enum class MatColorOrder {
 };
 
 
-/* Convert QImage to/from cv::Mat
+/* ====================== 深拷贝版本 ======================
  *
- * - cv::Mat
- *   - Supported channels
- *     - 1 channel
- *     - 3 channels (B G R), (R G B)
- *     - 4 channels (B G R A), (R G B A), (A R G B)
- *   - Supported depth
- *     - CV_8U  [0, 255]
- *     - CV_16U [0, 65535]
- *     - CV_32F [0, 1.0]
+ * 安全版本：
+ * - 返回的 cv::Mat / QImage 拥有独立数据
+ * - 不依赖输入对象生命周期
  *
- * - QImage
- *   - All of the formats of QImage are supported.
+ * 支持：
+ * - channels: 1 / 3 / 4
+ * - depth: CV_8U / CV_16U / CV_32F
  */
-cv::Mat image2Mat(const QImage &img, int requiredMatType = CV_8UC(0), MatColorOrder requiredOrder=MatColorOrder::BGR);
-QImage mat2Image(const cv::Mat &mat, MatColorOrder order=MatColorOrder::BGR, QImage::Format formatHint = QImage::Format_Invalid);
+cv::Mat image2Mat(const QImage &img,
+                  int requiredMatType = CV_8UC(0),
+                  MatColorOrder requiredOrder = MatColorOrder::BGR) noexcept;
 
-/* Convert QImage to/from cv::Mat without data copy
+QImage mat2Image(const cv::Mat &mat,
+                 MatColorOrder order = MatColorOrder::BGR,
+                 QImage::Format formatHint = QImage::Format_Invalid) noexcept;
+
+
+/* ====================== 共享内存版本（零拷贝） ======================
  *
- * - Supported QImage formats and cv::Mat types are:
- *   - QImage::Format_Indexed8               <==> CV_8UC1
- *   - QImage::Format_Alpha8                 <==> CV_8UC1
- *   - QImage::Format_Grayscale8             <==> CV_8UC1
- *   - QImage::Format_RGB888                 <==> CV_8UC3 (R G B)
- *   - QImage::Format_RGB32                  <==> CV_8UC4 (A R G B or B G R A)
- *   - QImage::Format_ARGB32                 <==> CV_8UC4 (A R G B or B G R A)
- *   - QImage::Format_ARGB32_Premultiplied   <==> CV_8UC4 (A R G B or B G R A)
- *   - QImage::Format_RGBX8888               <==> CV_8UC4 (R G B A)
- *   - QImage::Format_RGBA8888               <==> CV_8UC4 (R G B A)
- *   - QImage::Format_RGBA8888_Premultiplied <==> CV_8UC4 (R G B A)
+ * ⚠️ 高性能接口（需注意生命周期）
  *
- * - For QImage::Format_RGB32 ,QImage::Format_ARGB32
- *   and QImage::Format_ARGB32_Premultiplied, the
- *   color channel order of cv::Mat will be (B G R A) in little
- *   endian system or (A R G B) in big endian system.
+ * image2Mat_shared：
+ *   - 返回 Mat 直接引用 QImage 内存
+ *   - ⚠️ QImage 必须在 Mat 使用期间保持存活
  *
- * - User must make sure that the color channels order is the same as
- *   the color channels order requried by QImage.
+ * mat2Image_shared：
+ *   - 返回 QImage 与 Mat 共享内存
+ *   - ✔ 已内部绑定 shared_ptr，安全
+ *
+ * 支持格式：
+ *   - QImage::Format_Indexed8      <==> CV_8UC1
+ *   - QImage::Format_Grayscale8    <==> CV_8UC1
+ *   - QImage::Format_RGB888        <==> CV_8UC3
+ *   - QImage::Format_ARGB32 等     <==> CV_8UC4
+ *   - QImage::Format_RGBA8888 等   <==> CV_8UC4
  */
-cv::Mat image2Mat_shared(const QImage &img, MatColorOrder *order=nullptr);
-QImage mat2Image_shared(const cv::Mat &mat, QImage::Format formatHint = QImage::Format_Invalid);
+cv::Mat image2Mat_shared(const QImage &img,
+                         MatColorOrder *order = nullptr) noexcept;
 
-bool isSupported(QImage::Format format);
+QImage mat2Image_shared(const cv::Mat &mat,
+                        QImage::Format formatHint = QImage::Format_Invalid) noexcept;
 
-} //namespace QtOcv
+
+/* ====================== 工具 ====================== */
+
+bool isSupported(QImage::Format format) noexcept;
+
+} // namespace QtOcv
 
 #endif // CVMATANDQIMAGE_H

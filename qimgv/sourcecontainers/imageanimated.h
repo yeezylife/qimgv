@@ -2,9 +2,7 @@
 
 #include "image.h"
 #include <QMovie>
-#include <QTimer>
 #include <memory>
-#include <atomic>
 
 class ImageAnimated final : public Image {
 public:
@@ -41,8 +39,8 @@ private:
     int mFrameCount = 0;
     std::shared_ptr<QMovie> movie;
 
-    // ✅ 帧缓存（无锁线程安全版本，使用 C++20 atomic<shared_ptr>）
-    std::atomic<std::shared_ptr<const QImage>> cachedFrame;
+    // ✅ 使用普通 shared_ptr + atomic free functions
+    std::shared_ptr<const QImage> cachedFrame;
 
 private slots:
     void onFrameChanged(int frameNumber);

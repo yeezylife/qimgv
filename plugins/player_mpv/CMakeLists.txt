@@ -24,7 +24,7 @@ add_library(player_mpv MODULE
     src/videoplayermpv.cpp
     src/qthelper.hpp)
 
-target_compile_features(player_mpv PRIVATE cxx_std_11)
+target_compile_features(player_mpv PRIVATE cxx_std_23)
 
 if(WIN32)
     target_link_libraries(player_mpv PRIVATE

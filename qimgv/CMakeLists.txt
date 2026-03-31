@@ -67,7 +67,7 @@ if(OPENCV_SUPPORT)
 endif()
 
 # C++ STANDARD
-target_compile_features(qimgv PRIVATE cxx_std_17)
+target_compile_features(qimgv PRIVATE cxx_std_23)
 set_target_properties(qimgv PROPERTIES CXX_EXTENSIONS OFF)
 
 # LINK STUFF

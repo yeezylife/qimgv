@@ -10,15 +10,11 @@ ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     closeButton = new ActionButton("exit", ":/res/icons/common/buttons/panel/close16.png", 30);
     closeButton->setAccessibleName("ButtonSmall");
 
-    QWidget *horizontalLineWidget = new QWidget;
-    horizontalLineWidget->setFixedSize(5, 22);
-    horizontalLineWidget->setStyleSheet(QString("background-color: #707070; margin-left: 2px; margin-right: 2px"));
 
     layout.setContentsMargins(0,0,0,0);
     this->setContentsMargins(0,0,0,0);
     layout.setSpacing(0);
     layout.addWidget(folderViewButton);
-    layout.addWidget(horizontalLineWidget);
     layout.addWidget(settingsButton);
     layout.addWidget(closeButton);
     setLayout(&layout);

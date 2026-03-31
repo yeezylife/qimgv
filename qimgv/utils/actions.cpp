@@ -91,7 +91,8 @@ void Actions::init() {
         {"lockView", QVersionNumber(0,9,2)},
         {"print", QVersionNumber(1,0,0)},
         {"toggleFullscreenInfoBar", QVersionNumber(1,0,0)},
-        {"pasteFile", QVersionNumber(1,0,3)}
+        {"pasteFile", QVersionNumber(1,0,3)},
+        {"minimize", QVersionNumber(1,0,0)}
     };
 }
 

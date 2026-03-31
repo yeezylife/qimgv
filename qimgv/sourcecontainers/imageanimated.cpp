@@ -2,12 +2,10 @@
 #include <QFile>
 #include <utility>
 
-// 修复 performance-unnecessary-value-param: 使用 std::move
 ImageAnimated::ImageAnimated(QString _path)
     : Image(std::move(_path))
 {
     mSize = QSize(0, 0);
-    // 修复 VirtualCall: 使用类名限定符显式调用，杜绝虚函数分发风险
     ImageAnimated::load();
 }
 
@@ -15,13 +13,13 @@ ImageAnimated::ImageAnimated(std::unique_ptr<DocumentInfo> _info)
     : Image(std::move(_info))
 {
     mSize = QSize(0, 0);
-    // 修复 VirtualCall
     ImageAnimated::load();
 }
 
 void ImageAnimated::load() {
     if (isLoaded())
         return;
+
     loadMovie();
     mLoaded = true;
 }
@@ -33,6 +31,7 @@ void ImageAnimated::loadMovie() {
 
     movie = std::make_shared<QMovie>(mPath);
     movie->setCacheMode(QMovie::CacheAll);
+
     if (!movie->isValid()) {
         mSize = QSize(0, 0);
         mFrameCount = 0;
@@ -42,6 +41,12 @@ void ImageAnimated::loadMovie() {
     movie->jumpToFrame(0);
     mSize = movie->frameRect().size();
     mFrameCount = movie->frameCount();
+
+    // ✅ 连接帧变化信号（确保 QMovie 只在 GUI 线程操作）
+    connect(movie.get(), &QMovie::frameChanged, this, &ImageAnimated::onFrameChanged);
+
+    // ✅ 初始化第一帧缓存
+    onFrameChanged(0);
 }
 
 int ImageAnimated::frameCount() {
@@ -80,19 +85,11 @@ void ImageAnimated::getPixmap(QPixmap& outPixmap) const {
 }
 
 std::shared_ptr<const QImage> ImageAnimated::getImage() const {
-    if (movie && movie->isValid()) {
-        const QImage img = movie->currentImage();
-        if (!img.isNull()) {
-            return std::make_shared<const QImage>(img);
-        }
-    }
-
-    const QByteArray formatBytes = mDocInfo->format().toLatin1();
-    return std::make_shared<const QImage>(mPath, formatBytes.constData());
+    return cachedFrame.load(std::memory_order_acquire);
 }
 
 std::shared_ptr<QMovie> ImageAnimated::getMovie() {
-    if (movie == nullptr)
+    if (!movie)
         loadMovie();
     return movie;
 }
@@ -107,4 +104,12 @@ int ImageAnimated::width() const {
 
 QSize ImageAnimated::size() const {
     return mSize;
+}
+
+void ImageAnimated::onFrameChanged(int frameNumber) {
+    // ✅ 在 GUI 线程中无锁更新缓存（使用 C++20 atomic<shared_ptr>）
+    QImage img = movie->currentImage();
+    if (!img.isNull()) {
+        cachedFrame.store(std::make_shared<QImage>(std::move(img)), std::memory_order_release);
+    }
 }

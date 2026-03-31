@@ -431,8 +431,7 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<QMovie>& animation)
     Qt::TransformationMode mode = smoothAnimatedImages ? Qt::SmoothTransformation : Qt::FastTransformation;
     pixmapItem.setTransformationMode(mode);
 
-    QPixmap newFrame = movie->currentPixmap();
-    updatePixmap(newFrame);
+    updatePixmap(movie->currentPixmap());
 
     emit durationChanged(movie->frameCount());
     emit frameChanged(0);
@@ -463,6 +462,41 @@ void ImageViewerV2::showImage(const QPixmap& newPixmap)
 
     pixmapItemScaled.hide();
     pixmap = std::make_unique<QPixmap>(newPixmap);
+    pixmap->setDevicePixelRatio(dpr);
+    pixmapItem.setPixmap(*pixmap);
+
+    Qt::TransformationMode mode = (mScalingFilter == QI_FILTER_NEAREST)
+                                  ? Qt::FastTransformation : Qt::SmoothTransformation;
+    pixmapItem.setTransformationMode(mode);
+    pixmapItem.show();
+
+    updateMinScale();
+
+    if (!keepFitMode || imageFitMode == FIT_FREE)
+        imageFitMode = imageFitModeDefault;
+
+    if (mViewLock == LOCK_NONE) {
+        applyFitMode();
+    } else {
+        imageFitMode = FIT_FREE;
+        fitFree(lockedScale);
+        if (mViewLock == LOCK_ALL)
+            applySavedViewportPos();
+    }
+
+    requestScaling();
+    update();
+}
+
+void ImageViewerV2::showImage(QPixmap&& newPixmap)
+{
+    reset();
+
+    if (newPixmap.isNull())
+        return;
+
+    pixmapItemScaled.hide();
+    pixmap = std::make_unique<QPixmap>(std::move(newPixmap));
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
 

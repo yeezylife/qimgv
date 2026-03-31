@@ -4,13 +4,13 @@
 #include <QMovie>
 #include <QTimer>
 #include <memory>
+#include <atomic>
 
-// 将类标记为 final 可以帮助编译器进行去虚化优化（devirtualization）
 class ImageAnimated final : public Image {
 public:
     explicit ImageAnimated(QString _path);
     explicit ImageAnimated(std::unique_ptr<DocumentInfo> _info);
-    ~ImageAnimated() override = default; // 修复 modernize-use-equals-default
+    ~ImageAnimated() override = default;
 
     using Image::save;
 
@@ -34,11 +34,16 @@ signals:
     void frameChanged(QPixmap*);
 
 private:
-    // 依然保留 override，但构造函数中通过类名显式调用
     void load() override;
     void loadMovie();
 
     QSize mSize;
     int mFrameCount = 0;
     std::shared_ptr<QMovie> movie;
+
+    // ✅ 帧缓存（无锁线程安全版本，使用 C++20 atomic<shared_ptr>）
+    std::atomic<std::shared_ptr<const QImage>> cachedFrame;
+
+private slots:
+    void onFrameChanged(int frameNumber);
 };

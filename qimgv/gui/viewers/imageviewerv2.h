@@ -86,6 +86,7 @@ public slots:
     void showImage(const QPixmap& pixmap);
     void showAnimation(const std::shared_ptr<QMovie>& animation);
     void setScaledPixmap(const QPixmap& newFrame);
+    void setScaledPixmap(QPixmap&& newFrame);
     void enableDrags();
     void disableDrags();
     void pauseResume();
@@ -130,7 +131,7 @@ private:
     void setScrollY(int y);
 
     QGraphicsScene* scene;
-    std::shared_ptr<QPixmap> pixmap;
+    std::unique_ptr<QPixmap> pixmap;
     QPixmap pixmapScaled;
     std::shared_ptr<QMovie> movie;
     QGraphicsPixmapItem pixmapItem;
@@ -240,6 +241,7 @@ private:
     void lockZoom();
 
     void updatePixmap(const QPixmap& newPixmap);
+    void updatePixmap(QPixmap&& newPixmap);
     void swapToOriginalPixmap();
     Qt::TransformationMode selectTransformationMode();
 

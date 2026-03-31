@@ -4,6 +4,8 @@
 #include <QProcess>
 #include <QPropertyAnimation>
 #include <QScreen>
+#include <ranges>
+#include <algorithm>
 
 ImageViewerV2::ImageViewerV2(QWidget* parent)
     : QGraphicsView(parent)
@@ -205,8 +207,7 @@ void ImageViewerV2::initSettings()
         zoomLevels.reserve(16);
 
         const auto levelsStr = settings->zoomLevels().split(',');
-        for (const auto& s : levelsStr)
-            zoomLevels.append(s.toFloat());
+        std::ranges::transform(levelsStr, std::back_inserter(zoomLevels), [](const QString& s) { return s.toFloat(); });
 
         std::sort(zoomLevels.begin(), zoomLevels.end());
     }
@@ -342,10 +343,10 @@ void ImageViewerV2::onAnimationTimer()
         }
     }
 
-    const QPixmap currentPixmap = movie->currentPixmap();
     // 使用 cacheKey() 比较，这是 Qt 推荐的轻量级比较方式
-    if (!pixmap || pixmap->cacheKey() != currentPixmap.cacheKey()) {
-        updatePixmap(currentPixmap);
+    // 只有在需要更新时才获取 currentPixmap，避免不必要的拷贝
+    if (!pixmap || pixmap->cacheKey() != movie->currentPixmap().cacheKey()) {
+        updatePixmap(movie->currentPixmap());
     }
 
     emit frameChanged(movie->currentFrameNumber());
@@ -384,6 +385,7 @@ bool ImageViewerV2::showAnimationFrame(int frame)
         return false;
 
     emit frameChanged(movie->currentFrameNumber());
+    // 使用移动语义传递临时对象，避免拷贝
     updatePixmap(movie->currentPixmap());
     return true;
 }
@@ -394,9 +396,22 @@ bool ImageViewerV2::showAnimationFrame(int frame)
 void ImageViewerV2::updatePixmap(const QPixmap& newPixmap)
 {
     if (!pixmap)
-        pixmap = std::make_shared<QPixmap>();
+        pixmap = std::make_unique<QPixmap>();
 
     *pixmap = newPixmap;
+    pixmap->setDevicePixelRatio(dpr);
+
+    pixmapItem.setPixmap(*pixmap);
+    if (!pixmapItem.isVisible())
+        pixmapItem.show();
+}
+
+void ImageViewerV2::updatePixmap(QPixmap&& newPixmap)
+{
+    if (!pixmap)
+        pixmap = std::make_unique<QPixmap>();
+
+    *pixmap = std::move(newPixmap);
     pixmap->setDevicePixelRatio(dpr);
 
     pixmapItem.setPixmap(*pixmap);
@@ -447,7 +462,7 @@ void ImageViewerV2::showImage(const QPixmap& newPixmap)
         return;
 
     pixmapItemScaled.hide();
-    pixmap = std::make_shared<QPixmap>(newPixmap);
+    pixmap = std::make_unique<QPixmap>(newPixmap);
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
 
@@ -500,6 +515,18 @@ void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame)
         return;
 
     pixmapScaled = newFrame;
+    pixmapScaled.setDevicePixelRatio(dpr);
+    pixmapItemScaled.setPixmap(pixmapScaled);
+    pixmapItem.hide();
+    pixmapItemScaled.show();
+}
+
+void ImageViewerV2::setScaledPixmap(QPixmap&& newFrame)
+{
+    if (!movie && newFrame.size() != scaledSizeR() * dpr)
+        return;
+
+    pixmapScaled = std::move(newFrame);
     pixmapScaled.setDevicePixelRatio(dpr);
     pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();
@@ -755,7 +782,7 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
         ? current * (1.0f + zoomStep)
         : current * (1.0f - zoomStep);
 
-    if (useFixedZoomLevels && !zoomLevels.isEmpty()) {
+    if (useFixedZoomLevels && !zoomLevels.isEmpty()) [[unlikely]] {
         if (zoomIn) {
             if (current < zoomLevels.first()) {
                 newScale = qMin(current * (1.0f + zoomStep), zoomLevels.first());

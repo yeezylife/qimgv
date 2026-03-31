@@ -10,6 +10,8 @@ bool Cache::contains(const QString &path) const {
 
 // 🚀 低锁 get（核心优化）
 std::shared_ptr<Image> Cache::get(const QString &path) {
+    std::shared_ptr<Image> result;
+
     {
         std::shared_lock locker(mRWLock);
         auto it = items.find(path);
@@ -19,21 +21,21 @@ std::shared_ptr<Image> Cache::get(const QString &path) {
             std::lock_guard qlock(mAccessQueueMutex);
             mAccessQueue.push_back(path);
 
-            // ✅ 修复1：限制队列大小（防止无限增长）
             if (mAccessQueue.size() > 64) {
-                // ⚠️ 不能在持有 shared_lock 时直接 process！
-                // 只做标记
+                mNeedProcessQueue.store(true, std::memory_order_release);
             }
         }
 
-        return it.value()->item->getContents();
+        result = it.value()->item->getContents();
     }
 
-    // ✅ 在这里（锁外）尝试触发
-    if (mAccessQueue.size() > 64) {
+    // ✅ 放在锁外 + return之前
+    if (mNeedProcessQueue.exchange(false, std::memory_order_acq_rel)) {
         std::unique_lock locker(mRWLock);
         processAccessQueue();
     }
+
+    return result;
 }
 
 bool Cache::insert(const std::shared_ptr<Image> &img) {
@@ -157,9 +159,12 @@ const QList<QString> Cache::keys() const {
     std::shared_lock locker(mRWLock);
 
     QList<QString> result;
-    for (const auto &node : lruList) {
-        result.append(node.key);
-    }
+    result.reserve(static_cast<int>(lruList.size()));
+    
+    // 使用 std::transform（C++17）替代手动循环
+    std::transform(lruList.begin(), lruList.end(), std::back_inserter(result),
+                   [](const Node &node) { return node.key; });
+    
     return result;
 }
 

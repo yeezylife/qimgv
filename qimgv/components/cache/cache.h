@@ -45,6 +45,9 @@ private:
     // 🚀 延迟访问队列（低锁关键）
     mutable std::mutex mAccessQueueMutex;
     std::vector<QString> mAccessQueue;
+    
+    // 🚀 原子标志，用于标记是否需要处理访问队列
+    std::atomic<bool> mNeedProcessQueue{false};
 
     void moveToFront(ListIt it);
     void evictLRUItems();

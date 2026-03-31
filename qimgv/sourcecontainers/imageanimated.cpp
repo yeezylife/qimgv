@@ -1,7 +1,8 @@
 #include "imageanimated.h"
+
 #include <QFile>
 #include <utility>
-#include <atomic>   // ⭐ 必须包含（atomic_load/store）
+#include <atomic>
 
 ImageAnimated::ImageAnimated(QString _path)
     : Image(std::move(_path))
@@ -43,7 +44,7 @@ void ImageAnimated::loadMovie() {
     mSize = movie->frameRect().size();
     mFrameCount = movie->frameCount();
 
-    // ✅ 确保在 GUI 线程
+    // 连接帧更新（GUI线程）
     connect(movie.get(), &QMovie::frameChanged,
             this, &ImageAnimated::onFrameChanged);
 
@@ -76,6 +77,18 @@ bool ImageAnimated::save() {
 }
 
 void ImageAnimated::getPixmap(QPixmap& outPixmap) const {
+    // ✅ 优先使用缓存（避免 QMovie 调用）
+    auto frame = std::atomic_load_explicit(
+        &cachedFrame,
+        std::memory_order_acquire
+    );
+
+    if (frame && !frame->isNull()) {
+        outPixmap = QPixmap::fromImage(*frame);
+        return;
+    }
+
+    // fallback（极少发生）
     if (movie && movie->isValid()) {
         outPixmap = movie->currentPixmap();
         if (!outPixmap.isNull())
@@ -112,17 +125,14 @@ QSize ImageAnimated::size() const {
 }
 
 void ImageAnimated::onFrameChanged(int /*frameNumber*/) {
-    // ⚠️ 必须在 GUI 线程调用（QMovie 限制）
+    // ⚠️ 保证在 GUI 线程调用（QMovie 限制）
 
-    // ✅ 避免不必要 detach：
-    // currentImage() 本身可能触发 copy（Qt 内部行为不可避免）
     QImage img = movie->currentImage();
     if (img.isNull())
         return;
 
-    // ✅ 优化：避免额外构造路径（减少一次临时对象成本）
-    auto newFrame = std::make_shared<QImage>();
-    *newFrame = std::move(img);
+    // ✅ 避免默认构造 + 赋值
+    auto newFrame = std::make_shared<QImage>(std::move(img));
 
     // ✅ lock-free 原子发布
     std::atomic_store_explicit(

@@ -135,6 +135,7 @@ signals:
     void print();
     void toggleFullscreenInfoBar();
     void pasteFile();
+    void minimize();
 };
 
 extern ActionManager *actionManager;

@@ -3,9 +3,9 @@
 ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     FloatingWidget(parent)
 {
-    folderViewButton = new ActionButton("folderView", ":/res/icons/common/buttons/panel/folderview20.png", 30);
+    folderViewButton = new ActionButton("minimize", ":/res/icons/common/buttons/panel/minimize16.png", 30);
     folderViewButton->setAccessibleName("ButtonSmall");
-    settingsButton = new ActionButton("openSettings", ":/res/icons/common/buttons/panel/settings20.png", 30);
+    settingsButton = new ActionButton("toggleFullscreen", ":/res/icons/common/buttons/panel/maximize16.png", 30);
     settingsButton->setAccessibleName("ButtonSmall");
     closeButton = new ActionButton("exit", ":/res/icons/common/buttons/panel/close16.png", 30);
     closeButton->setAccessibleName("ButtonSmall");

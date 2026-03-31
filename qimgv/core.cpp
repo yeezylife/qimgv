@@ -206,6 +206,7 @@ void Core::initActions() {
     connect(actionManager, &ActionManager::print, this, &Core::print);
     connect(actionManager, &ActionManager::toggleFullscreenInfoBar, this, &Core::toggleFullscreenInfoBar);
     connect(actionManager, &ActionManager::pasteFile, this, &Core::openFromClipboard);
+    connect(actionManager, &ActionManager::minimize, mw, &MW::minimize);
 }
 
 void Core::loadTranslation() {

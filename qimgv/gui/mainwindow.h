@@ -255,4 +255,5 @@ public slots:
     void toggleLockZoom();
     void toggleLockView();
     void toggleFullscreenInfoBar();
+    void minimize();
 };

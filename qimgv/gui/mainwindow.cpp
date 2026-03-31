@@ -501,6 +501,10 @@ void MW::close() {
     QWidget::close();
 }
 
+void MW::minimize() {
+    showMinimized();
+}
+
 void MW::closeEvent(QCloseEvent *event) {
     event->accept();
     actionManager->invokeAction("exit");

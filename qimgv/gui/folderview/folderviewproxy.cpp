@@ -5,164 +5,74 @@ FolderViewProxy::FolderViewProxy(QWidget *parent)
     : QWidget(parent),
       folderView(nullptr)
 {
-    stateBuf.sortingMode = settings->sortingMode();
-    layout.setContentsMargins(0,0,0,0);
+    // 空实现
 }
 
 void FolderViewProxy::init() {
-    // 已初始化直接返回（无锁）
-    if (folderView)
-        return;
-
-    // 直接创建（GUI线程保证安全）
-    folderView = std::make_shared<FolderView>();
-    folderView->setParent(this);
-
-    layout.addWidget(folderView.get());
-    setFocusProxy(folderView.get());
-    setLayout(&layout);
-
-    // 信号连接
-    connect(folderView.get(), &FolderView::itemActivated, this, &FolderViewProxy::itemActivated);
-    connect(folderView.get(), &FolderView::thumbnailsRequested, this, &FolderViewProxy::thumbnailsRequested);
-    connect(folderView.get(), &FolderView::sortingSelected, this, &FolderViewProxy::sortingSelected);
-    connect(folderView.get(), &FolderView::showFoldersChanged, this, &FolderViewProxy::showFoldersChanged);
-    connect(folderView.get(), &FolderView::directorySelected, this, &FolderViewProxy::directorySelected);
-    connect(folderView.get(), &FolderView::draggedOut, this, &FolderViewProxy::draggedOut);
-    connect(folderView.get(), &FolderView::copyUrlsRequested, this, &FolderViewProxy::copyUrlsRequested);
-    connect(folderView.get(), &FolderView::moveUrlsRequested, this, &FolderViewProxy::moveUrlsRequested);
-    connect(folderView.get(), &FolderView::droppedInto, this, &FolderViewProxy::droppedInto);
-    connect(folderView.get(), &FolderView::draggedOver, this, &FolderViewProxy::draggedOver);
-
-    folderView->show();
-
-    // 应用缓冲状态（无事件泵，无重入）
-    if(!stateBuf.directory.isEmpty())
-        folderView->setDirectoryPath(stateBuf.directory);
-
-    folderView->onFullscreenModeChanged(stateBuf.fullscreenMode);
-    folderView->populate(stateBuf.itemCount);
-    folderView->select(stateBuf.selection);
-
-    // 直接执行（Qt 会自己调度 repaint）
-    folderView->focusOnSelection();
-    folderView->onSortingChanged(stateBuf.sortingMode);
+    // 空实现
 }
 
 void FolderViewProxy::populate(int count) {
-    stateBuf.itemCount = count;
-
-    if (folderView)
-        folderView->populate(count);
-    else
-        stateBuf.selection.clear();
+    Q_UNUSED(count)
 }
 
 void FolderViewProxy::setThumbnail(int pos, std::shared_ptr<Thumbnail> thumb) {
-    if (folderView)
-        folderView->setThumbnail(pos, thumb);
+    Q_UNUSED(pos)
+    Q_UNUSED(thumb)
 }
 
 void FolderViewProxy::select(QList<int> indices) {
-    if (folderView)
-        folderView->select(indices);
-    else
-        stateBuf.selection = indices;
+    Q_UNUSED(indices)
 }
 
 void FolderViewProxy::select(int index) {
-    if (folderView) {
-        folderView->select(index);
-    } else {
-        stateBuf.selection.clear();
-        stateBuf.selection << index;
-    }
+    Q_UNUSED(index)
 }
 
 QList<int> FolderViewProxy::selection() {
-    if (folderView)
-        return folderView->selection();
-
-    return stateBuf.selection;
+    return QList<int>();
 }
 
 void FolderViewProxy::focusOn(int index) {
-    if (folderView)
-        folderView->focusOn(index);
+    Q_UNUSED(index)
 }
 
 void FolderViewProxy::focusOnSelection() {
-    if (folderView)
-        folderView->focusOnSelection();
+    // 空实现
 }
 
 void FolderViewProxy::setDirectoryPath(QString path) {
-    if (folderView)
-        folderView->setDirectoryPath(path);
-    else
-        stateBuf.directory = path;
+    Q_UNUSED(path)
 }
 
 void FolderViewProxy::insertItem(int index) {
-    if (folderView) {
-        folderView->insertItem(index);
-    } else {
-        stateBuf.itemCount++;
-    }
+    Q_UNUSED(index)
 }
 
 void FolderViewProxy::removeItem(int index) {
-    if (folderView) {
-        folderView->removeItem(index);
-        return;
-    }
-
-    // 缓冲模式逻辑保持一致
-    stateBuf.itemCount--;
-    stateBuf.selection.removeAll(index);
-
-    for(int i = 0; i < stateBuf.selection.count(); i++) {
-        if (stateBuf.selection[i] > index)
-            stateBuf.selection[i]--;
-    }
-
-    if (!stateBuf.selection.count())
-        stateBuf.selection << ((index >= stateBuf.itemCount) ? stateBuf.itemCount - 1 : index);
+    Q_UNUSED(index)
 }
 
 void FolderViewProxy::reloadItem(int index) {
-    if (folderView)
-        folderView->reloadItem(index);
+    Q_UNUSED(index)
 }
 
 void FolderViewProxy::setDragHover(int index) {
-    if (folderView)
-        folderView->setDragHover(index);
+    Q_UNUSED(index)
 }
 
 void FolderViewProxy::addItem() {
-    if (folderView) {
-        folderView->addItem();
-    } else {
-        stateBuf.itemCount++;
-    }
+    // 空实现
 }
 
 void FolderViewProxy::onFullscreenModeChanged(bool mode) {
-    if (folderView)
-        folderView->onFullscreenModeChanged(mode);
-    else
-        stateBuf.fullscreenMode = mode;
+    Q_UNUSED(mode)
 }
 
 void FolderViewProxy::onSortingChanged(SortingMode mode) {
-    if (folderView)
-        folderView->onSortingChanged(mode);
-    else
-        stateBuf.sortingMode = mode;
+    Q_UNUSED(mode)
 }
 
 void FolderViewProxy::showEvent(QShowEvent *event) {
-    init();
     QWidget::showEvent(event);
 }

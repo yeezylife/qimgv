@@ -1,103 +1,35 @@
 #include "bookmarkswidget.h"
 
 BookmarksWidget::BookmarksWidget(QWidget *parent) : QWidget(parent), highlightedPath("") {
-    setAcceptDrops(true);
-    setContentsMargins(0,0,0,0);
-    layout.setContentsMargins(0,0,0,0);
-    layout.setSpacing(0);
-    setLayout(&layout);
-    connect(settings, &Settings::settingsChanged, this, &BookmarksWidget::readSettings);
-    readSettings();
+    // 空实现
 }
 
 BookmarksWidget::~BookmarksWidget() = default;
 
 void BookmarksWidget::readSettings() {
-    QStringList _paths = settings->bookmarks();
-    for(const auto &path : _paths)
-        addBookmark(path);
-    if(_paths.empty())
-        addBookmark(QDir::homePath());
+    // 空实现
 }
 
 void BookmarksWidget::saveBookmarks() {
-    settings->setBookmarks(paths);
+    // 空实现
 }
 
 void BookmarksWidget::addBookmark(const QString &dirPath) {
-    if(paths.contains(dirPath))
-        return;
-
-    paths.push_back(dirPath);
-
-    QUrl url(dirPath);
-    BookmarksItem *item = new BookmarksItem(url.fileName(), dirPath);
-    layout.addWidget(item);
-
-    connect(item, &BookmarksItem::clicked, this, [this, dirPath]() {
-        emit bookmarkClicked(dirPath);
-    });
-
-    connect(item, &BookmarksItem::removeClicked, this, [this, dirPath]() {
-        removeBookmark(dirPath);
-    });
-
-    connect(item, &BookmarksItem::droppedIn, this, &BookmarksWidget::droppedIn);
-
-    saveBookmarks();
+    Q_UNUSED(dirPath)
 }
 
 void BookmarksWidget::removeBookmark(const QString &dirPath) {
-    for(int i = 0; i < layout.count(); i++) {
-        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(i)->widget());
-        if(w && w->path() == dirPath) {
-            if(highlightedPath == dirPath)
-                highlightedPath = "";
-
-            layout.removeWidget(w);
-
-            disconnect(w, &BookmarksItem::clicked, this, &BookmarksWidget::bookmarkClicked);
-            disconnect(w, &BookmarksItem::removeClicked, this, &BookmarksWidget::removeBookmark);
-            disconnect(w, &BookmarksItem::droppedIn, this, &BookmarksWidget::droppedIn);
-
-            w->deleteLater();
-
-            paths.removeAll(dirPath);
-            saveBookmarks();
-            break;
-        }
-    }
+    Q_UNUSED(dirPath)
 }
 
 void BookmarksWidget::onPathChanged(const QString &path) {
-    if(highlightedPath == path)
-        return;
-
-    if(paths.contains(highlightedPath)) {
-        qsizetype currentIndex = paths.indexOf(highlightedPath);
-        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(static_cast<int>(currentIndex))->widget());
-        if(w)
-            w->setHighlighted(false);
-        highlightedPath = "";
-    }
-
-    if(paths.contains(path)) {
-        qsizetype newIndex = paths.indexOf(path);
-        auto w = dynamic_cast<BookmarksItem*>(layout.itemAt(static_cast<int>(newIndex))->widget());
-        if(w)
-            w->setHighlighted(true);
-        highlightedPath = path;
-    }
+    Q_UNUSED(path)
 }
 
 void BookmarksWidget::dropEvent(QDropEvent *event) {
-//    QModelIndex dropIndex = indexAt(event->position().toPoint());
-//    if(dropIndex.isValid())
-//        emit droppedIn(event->mimeData()->urls(), dropIndex);
+    Q_UNUSED(event)
 }
 
 void BookmarksWidget::dragEnterEvent(QDragEnterEvent *event) {
-    if(event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
-    }
+    Q_UNUSED(event)
 }

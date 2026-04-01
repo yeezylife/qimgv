@@ -3,34 +3,7 @@
 BookmarksItem::BookmarksItem(QString _dirName, QString _dirPath, QWidget *parent) // NOLINT(bugprone-easily-swappable-parameters)
     : QWidget(parent), dirName(std::move(_dirName)), dirPath(std::move(_dirPath)), mHighlighted(false)
 {
-    this->setContentsMargins(0,0,0,0);
-    layout.setContentsMargins(10,6,10,6);
-    setAcceptDrops(true);
-    dirNameLabel.setText(dirName);
-
-    spacer = new QSpacerItem(16, 1, QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-
-    folderIconWidget.setAttribute(Qt::WA_TransparentForMouseEvents, true);
-    folderIconWidget.setIconPath(":/res/icons/common/menuitem/folder16.png");
-    folderIconWidget.setMinimumSize(16, 16);
-    folderIconWidget.installEventFilter(this);
-
-    removeItemButton.setIconPath(":/res/icons/common/buttons/panel-small/remove12.png");
-    removeItemButton.setMinimumSize(16, 16);
-    removeItemButton.installEventFilter(this);
-
-    removeItemButton.setAccessibleName("BookmarksItemRemoveLabel");
-
-    connect(&removeItemButton, &IconButton::clicked, this, &BookmarksItem::onRemoveClicked);
-
-    layout.addWidget(&folderIconWidget);
-    layout.addWidget(&dirNameLabel);
-    layout.addSpacerItem(spacer);
-    layout.addWidget(&removeItemButton);
-
-    setMouseTracking(true);
-
-    setLayout(&layout);
+    // 空实现
 }
 
 QString BookmarksItem::path() {
@@ -38,18 +11,11 @@ QString BookmarksItem::path() {
 }
 
 void BookmarksItem::setHighlighted(bool mode) {
-    if(mode != mHighlighted) {
-        mHighlighted = mode;
-        setProperty("highlighted", mHighlighted);
-        style()->unpolish(this);
-        style()->polish(this);
-    }
+    Q_UNUSED(mode)
 }
 
 void BookmarksItem::mouseReleaseEvent(QMouseEvent *event) {
     event->accept();
-    if(event->button() == Qt::LeftButton)
-        emit clicked(dirPath);
 }
 
 void BookmarksItem::mousePressEvent(QMouseEvent *event) {
@@ -57,7 +23,7 @@ void BookmarksItem::mousePressEvent(QMouseEvent *event) {
 }
 
 void BookmarksItem::onRemoveClicked() {
-    emit removeClicked(dirPath);
+    // 空实现
 }
 
 void BookmarksItem::paintEvent(QPaintEvent *event) {
@@ -69,23 +35,13 @@ void BookmarksItem::paintEvent(QPaintEvent *event) {
 }
 
 void BookmarksItem::dropEvent(QDropEvent *event) {
-    QList<QString> paths;
-    // TODO: QUrl gave me some issues previosly, test
-    for(const auto &url : event->mimeData()->urls())
-        paths << url.toLocalFile();
-    emit droppedIn(paths, dirPath);
+    Q_UNUSED(event)
 }
 
 void BookmarksItem::dragEnterEvent(QDragEnterEvent *event) {
-    if(event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
-    }
-    setProperty("hover", true);
-    update();
+    Q_UNUSED(event)
 }
 
 void BookmarksItem::dragLeaveEvent(QDragLeaveEvent *event) {
     Q_UNUSED(event)
-    setProperty("hover", false);
-    update();
 }

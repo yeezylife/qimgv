@@ -6,63 +6,35 @@ FVOptionsPopup::FVOptionsPopup(QWidget *parent) :
     ui(new Ui::FVOptionsPopup)
 {
     ui->setupUi(this);
-
-    setWindowFlags(Qt::Popup);
-    setAttribute(Qt::WA_TranslucentBackground, true);
-
-    ui->viewSimpleButton->setText(QObject::tr("Simple"));
-    ui->viewExtendedButton->setText(QObject::tr("Extended"));
-    ui->viewFoldersButton->setText(QObject::tr("Extended + Folders"));
-
-    connect(ui->viewSimpleButton,   &ContextMenuItem::pressed, this, &FVOptionsPopup::selectSimpleView);
-    connect(ui->viewExtendedButton, &ContextMenuItem::pressed, this, &FVOptionsPopup::selectExtendedView);
-    connect(ui->viewFoldersButton,  &ContextMenuItem::pressed, this, &FVOptionsPopup::selectFoldersView);
-
-    // force size recalculation
-    this->adjustSize();
-
-    readSettings();
-    connect(settings, &Settings::settingsChanged, this, &FVOptionsPopup::readSettings);
-
-    hide();
+    // 空实现
 }
-
 
 FVOptionsPopup::~FVOptionsPopup() {
     delete ui;
 }
 
 void FVOptionsPopup::setSimpleView() {
-    ui->viewSimpleButton->setIconPath(":res/icons/common/buttons/panel-small/add-new12.png");
-    ui->viewExtendedButton->setIconPath("");
-    ui->viewFoldersButton->setIconPath("");
+    // 空实现
 }
 
 void FVOptionsPopup::setExtendedView() {
-    ui->viewSimpleButton->setIconPath("");
-    ui->viewExtendedButton->setIconPath(":res/icons/common/buttons/panel-small/add-new12.png");
-    ui->viewFoldersButton->setIconPath("");
+    // 空实现
 }
 
 void FVOptionsPopup::setFoldersView() {
-    ui->viewSimpleButton->setIconPath("");
-    ui->viewExtendedButton->setIconPath("");
-    ui->viewFoldersButton->setIconPath(":res/icons/common/buttons/panel-small/add-new12.png");
+    // 空实现
 }
 
 void FVOptionsPopup::selectSimpleView() {
-    setSimpleView();
-    emit viewModeSelected(FV_SIMPLE);
+    // 空实现
 }
 
 void FVOptionsPopup::selectExtendedView() {
-    setExtendedView();
-    emit viewModeSelected(FV_EXTENDED);
+    // 空实现
 }
 
 void FVOptionsPopup::selectFoldersView() {
-    setFoldersView();
-    emit viewModeSelected(FV_EXT_FOLDERS);
+    // 空实现
 }
 
 void FVOptionsPopup::paintEvent(QPaintEvent *event) {
@@ -74,33 +46,21 @@ void FVOptionsPopup::paintEvent(QPaintEvent *event) {
 }
 
 void FVOptionsPopup::keyPressEvent(QKeyEvent *event) {
-    if(event->key() == Qt::Key_Escape)
-        hide();
-    else
-        actionManager->processEvent(event);
+    Q_UNUSED(event)
 }
 
 void FVOptionsPopup::setViewMode(FolderViewMode mode) {
-    if(mode == FV_SIMPLE)
-        setSimpleView();
-    else if(mode == FV_EXTENDED)
-        setExtendedView();
-    else
-        setFoldersView();
+    Q_UNUSED(mode)
 }
 
 void FVOptionsPopup::readSettings() {
-    setViewMode(settings->folderViewMode());
+    // 空实现
 }
 
 void FVOptionsPopup::showAt(QPoint pos) {
-    QRect geom = geometry();
-    geom.moveTopLeft(pos);
-    setGeometry(geom);
-    show();
+    Q_UNUSED(pos)
 }
 
 void FVOptionsPopup::hideEvent(QHideEvent* event) {
     event->accept();
-    emit dismissed();
 }

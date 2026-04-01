@@ -3,9 +3,6 @@
 ThumbnailStrip::ThumbnailStrip(QWidget *parent) : ThumbnailView(Qt::Horizontal, parent) {
 }
 
-ThumbnailStrip::~ThumbnailStrip() {
-}
-
 void ThumbnailStrip::updateScrollbarIndicator() {
 }
 

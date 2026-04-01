@@ -5,9 +5,6 @@ ThumbnailStripProxy::ThumbnailStripProxy(QWidget *parent)
 {
 }
 
-ThumbnailStripProxy::~ThumbnailStripProxy() {
-}
-
 void ThumbnailStripProxy::init() {
 }
 

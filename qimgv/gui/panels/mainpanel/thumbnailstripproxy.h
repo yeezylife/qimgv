@@ -14,6 +14,7 @@ class ThumbnailStripProxy : public QWidget, public IDirectoryView {
     Q_INTERFACES(IDirectoryView)
 public:
     ThumbnailStripProxy(QWidget *parent = nullptr);
+    ~ThumbnailStripProxy() = default;
     void init();
     bool isInitialized();
     QSize itemSize();

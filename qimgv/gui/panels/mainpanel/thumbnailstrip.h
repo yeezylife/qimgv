@@ -20,6 +20,7 @@ class ThumbnailStrip : public ThumbnailView
     Q_OBJECT
 public:
     explicit ThumbnailStrip(QWidget *parent = nullptr);
+    ~ThumbnailStrip() = default;
     QSize itemSize();
     void readSettings();
 

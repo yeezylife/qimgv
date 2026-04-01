@@ -19,35 +19,19 @@ Scaler::~Scaler() {
 void Scaler::requestScaled(const ScalerRequest &req) {
     bool needImmediateStart = false;
 
-    const auto& requestedImage = req.imageRef();
-    const QString requestedFileName = requestedImage ? requestedImage->fileName() : QString();
-
     {
         QMutexLocker locker(&mutex);
 
         if (!running) {
+            bufferedRequest = req;
             if (!buffered) {
-                bufferedRequest = req;
                 buffered = true;
                 needImmediateStart = true;
-            } else {
-                const auto& existingImage = bufferedRequest.imageRef();
-                if (existingImage != requestedImage) {
-                    // 图像变化，直接替换
-                }
-                bufferedRequest = req;
             }
         } else {
+            bufferedRequest = req;
             if (!buffered) {
-                bufferedRequest = req;
                 buffered = true;
-            } else {
-                const auto& existingImage = bufferedRequest.imageRef();
-                if (existingImage != requestedImage) {
-                    bufferedRequest = req;
-                } else {
-                    bufferedRequest = req;
-                }
             }
         }
     }

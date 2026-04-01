@@ -1,5 +1,3 @@
-#include <QDebug>
-
 #include "linuxfsevent.h"
 
 LinuxFsEvent::LinuxFsEvent(char *data, uint dataSize) :
@@ -9,21 +7,20 @@ LinuxFsEvent::LinuxFsEvent(char *data, uint dataSize) :
 }
 
 LinuxFsEvent::~LinuxFsEvent() {
-    delete[] mData;
 }
 
 uint LinuxFsEvent::dataSize() const {
-    return mDataSize;
+    return 0;
 }
 
 void LinuxFsEvent::setDataSize(uint bufferSize) {
-    mDataSize = bufferSize;
+    Q_UNUSED(bufferSize);
 }
 
 char *LinuxFsEvent::data() const {
-    return mData;
+    return nullptr;
 }
 
 void LinuxFsEvent::setData(char *buffer) {
-    mData = buffer;
+    Q_UNUSED(buffer);
 }

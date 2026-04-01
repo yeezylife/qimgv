@@ -9,6 +9,7 @@ class WatcherWorker : public QObject
     Q_OBJECT
 public:
     WatcherWorker() = default;
+    virtual ~WatcherWorker() = default;
 
 public Q_SLOTS:
     virtual void run() = 0;               // 改为槽，允许跨线程调用

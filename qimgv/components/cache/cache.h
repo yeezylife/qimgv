@@ -35,28 +35,34 @@ private:
         QString key;
         std::shared_ptr<CacheItem> item;
     };
-
     using ListIt = std::list<Node>::iterator;
 
-    std::list<Node> lruList;
-    QHash<QString, ListIt> items;
-
-    int mMaxCacheSize;
-
-    mutable std::shared_mutex mRWLock;
-
-    // 🚀 延迟访问队列
-    mutable std::mutex mAccessQueueMutex;
-    std::vector<QString> mAccessQueue;
-
-    // 🚀 批处理阈值（🔥 新增）
-    size_t mQueueThreshold;
-
-    // 🚀 原子标志
+    // -----------------------------
+    // 1️⃣ 高频原子标志独占 cache line
     alignas(64) std::atomic<bool> mNeedProcessQueue{false};
 
+    // -----------------------------
+    // 2️⃣ 高频锁独占 cache line
+    alignas(64) mutable std::shared_mutex mRWLock;
+
+    // -----------------------------
+    // 3️⃣ 队列相关
+    mutable std::mutex mAccessQueueMutex;
+    std::vector<QString> mAccessQueue;
+    size_t mQueueThreshold{64}; // 默认阈值
+
+    // -----------------------------
+    // 4️⃣ 核心 LRU 数据
+    QHash<QString, ListIt> items;
+    std::list<Node> lruList;
+
+    // -----------------------------
+    // 5️⃣ 配置参数
+    int mMaxCacheSize{20};
+
+    // -----------------------------
+    // 辅助函数
     void moveToFront(ListIt it);
     void evictLRUItems();
-
     void processAccessQueue();
 };

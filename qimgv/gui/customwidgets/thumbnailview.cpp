@@ -8,8 +8,6 @@ ThumbnailView::ThumbnailView(Qt::Orientation _orientation, QWidget *parent)
     Q_UNUSED(_orientation)
 }
 
-ThumbnailView::~ThumbnailView() {
-}
 
 Qt::Orientation ThumbnailView::orientation() {
     return Qt::Horizontal;

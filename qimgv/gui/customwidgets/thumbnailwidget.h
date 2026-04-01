@@ -24,6 +24,7 @@ class ThumbnailWidget : public QGraphicsWidget {
 
 public:
     ThumbnailWidget(QGraphicsItem *parent = nullptr);
+    ~ThumbnailWidget() = default;
 
     enum { Type = UserType + 1 };
     int type() const override { return Type; }

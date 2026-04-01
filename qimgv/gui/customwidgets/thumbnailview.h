@@ -35,6 +35,7 @@ class ThumbnailView : public QGraphicsView, public IDirectoryView {
     Q_INTERFACES(IDirectoryView)
 public:
     ThumbnailView(Qt::Orientation orient, QWidget *parent = nullptr);
+    ~ThumbnailView() = default;
     void setDirectoryPath(QString path) override;
     void select(QList<int> indices) override;
     void select(int index) override;

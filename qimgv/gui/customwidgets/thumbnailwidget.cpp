@@ -7,8 +7,6 @@ ThumbnailWidget::ThumbnailWidget(QGraphicsItem *parent) :
 {
 }
 
-ThumbnailWidget::~ThumbnailWidget() {
-}
 
 void ThumbnailWidget::updateDpr(qreal newDpr) {
     Q_UNUSED(newDpr)

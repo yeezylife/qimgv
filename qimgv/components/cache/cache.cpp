@@ -1,7 +1,10 @@
 #include "cache.h"
 #include <algorithm>
 
-Cache::Cache() : mMaxCacheSize(20) {}
+Cache::Cache() : mMaxCacheSize(20) {
+    // 🚀 关键优化：避免频繁 realloc
+    mAccessQueue.reserve(128);
+}
 
 bool Cache::contains(const QString &path) const {
     std::shared_lock locker(mRWLock);
@@ -29,7 +32,7 @@ std::shared_ptr<Image> Cache::get(const QString &path) {
         result = it.value()->item->getContents();
     }
 
-    // ✅ 放在锁外 + return之前
+    // 🚀 锁外批处理
     if (mNeedProcessQueue.exchange(false, std::memory_order_acq_rel)) {
         std::unique_lock locker(mRWLock);
         processAccessQueue();
@@ -43,7 +46,7 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
 
     std::unique_lock locker(mRWLock);
 
-    processAccessQueue(); // 🚀 批量更新 LRU
+    processAccessQueue(); // 🚀 保证 LRU 顺序最新
 
     const QString &path = img->filePath();
 
@@ -59,7 +62,7 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
     return true;
 }
 
-// 🚀 批量处理访问（关键）
+// 🚀 批量处理访问
 void Cache::processAccessQueue() {
     std::vector<QString> localQueue;
 
@@ -89,7 +92,9 @@ void Cache::evictLRUItems() {
         auto lastIt = std::prev(lruList.end());
 
         if (lastIt->item->isLocked()) {
-            break;
+            // 🚀 改进：跳过，而不是 break
+            lruList.splice(lruList.begin(), lruList, lastIt);
+            continue;
         }
 
         items.remove(lastIt->key);
@@ -155,16 +160,15 @@ bool Cache::release(const QString &path) {
     return true;
 }
 
-const QList<QString> Cache::keys() const {
+QList<QString> Cache::keys() const {
     std::shared_lock locker(mRWLock);
 
     QList<QString> result;
     result.reserve(static_cast<int>(lruList.size()));
-    
-    // 使用 std::transform（C++17）替代手动循环
+
     std::transform(lruList.begin(), lruList.end(), std::back_inserter(result),
                    [](const Node &node) { return node.key; });
-    
+
     return result;
 }
 

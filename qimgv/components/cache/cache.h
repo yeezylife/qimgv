@@ -6,6 +6,9 @@
 #include <memory>
 #include <list>
 #include <atomic>
+#include <vector>
+#include <mutex>
+
 #include "sourcecontainers/image.h"
 #include "components/cache/cacheitem.h"
 
@@ -21,7 +24,7 @@ public:
     std::shared_ptr<Image> get(const QString &path);
     bool release(const QString &path);
     bool reserve(const QString &path);
-    const QList<QString> keys() const;
+    QList<QString> keys() const; // ✅ 去掉多余 const
 
     void setMaxCacheSize(int maxItems);
     int maxCacheSize() const;
@@ -42,12 +45,12 @@ private:
 
     mutable std::shared_mutex mRWLock;
 
-    // 🚀 延迟访问队列（低锁关键）
+    // 🚀 延迟访问队列
     mutable std::mutex mAccessQueueMutex;
     std::vector<QString> mAccessQueue;
-    
-    // 🚀 原子标志，用于标记是否需要处理访问队列
-    std::atomic<bool> mNeedProcessQueue{false};
+
+    // 🚀 原子标志（避免频繁加锁）
+    alignas(64) std::atomic<bool> mNeedProcessQueue{false};
 
     void moveToFront(ListIt it);
     void evictLRUItems();

@@ -17,8 +17,6 @@ Scaler::~Scaler() {
 }
 
 void Scaler::requestScaled(const ScalerRequest &req) {
-    QString toReserve;
-    QString toRelease;
     bool needImmediateStart = false;
 
     const auto& requestedImage = req.imageRef();
@@ -31,13 +29,11 @@ void Scaler::requestScaled(const ScalerRequest &req) {
             if (!buffered) {
                 bufferedRequest = req;
                 buffered = true;
-                toReserve = requestedFileName;
                 needImmediateStart = true;
             } else {
                 const auto& existingImage = bufferedRequest.imageRef();
                 if (existingImage != requestedImage) {
-                    toRelease = existingImage ? existingImage->fileName() : QString();
-                    toReserve = requestedFileName;
+                    // 图像变化，直接替换
                 }
                 bufferedRequest = req;
             }
@@ -45,18 +41,9 @@ void Scaler::requestScaled(const ScalerRequest &req) {
             if (!buffered) {
                 bufferedRequest = req;
                 buffered = true;
-                if (requestedImage != startedRequest.imageRef()) {
-                    toReserve = requestedFileName;
-                }
             } else {
                 const auto& existingImage = bufferedRequest.imageRef();
                 if (existingImage != requestedImage) {
-                    if (existingImage != startedRequest.imageRef()) {
-                        toRelease = existingImage ? existingImage->fileName() : QString();
-                    }
-                    if (requestedImage != startedRequest.imageRef()) {
-                        toReserve = requestedFileName;
-                    }
                     bufferedRequest = req;
                 } else {
                     bufferedRequest = req;
@@ -64,9 +51,6 @@ void Scaler::requestScaled(const ScalerRequest &req) {
             }
         }
     }
-
-    if (!toReserve.isEmpty()) cache->reserve(toReserve);
-    if (!toRelease.isEmpty()) cache->release(toRelease);
 
     if (needImmediateStart) {
         startRequest(req);
@@ -94,22 +78,15 @@ void Scaler::onTaskStart(const ScalerRequest &req) {
 }
 
 void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
-    QString toRelease;
     bool hasNextTask = false;
     ScalerRequest nextReq;
 
     QImage resultImage;
     ScalerRequest resultReq;
 
-    const auto& finishedImage = req.imageRef();
-
     {
         QMutexLocker locker(&mutex);
         running = false;
-
-        if (!(buffered && bufferedRequest.imageRef() == finishedImage)) {
-            toRelease = finishedImage ? finishedImage->fileName() : QString();
-        }
 
         if (buffered) {
             hasNextTask = true;
@@ -117,11 +94,9 @@ void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
         } else {
             resultImage = std::move(scaled);
             resultReq = std::move(req);
+            // 任务完成且无缓冲任务，释放当前任务的图像引用
+            startedRequest = ScalerRequest();
         }
-    }
-
-    if (!toRelease.isEmpty()) {
-        cache->release(toRelease);
     }
 
     if (hasNextTask) {

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <QHash>
-#include <QStringList>
-#include <shared_mutex>
-#include <memory>
+#include <QString>
 #include <list>
-#include <atomic>
+#include <memory>
+#include <shared_mutex>
 #include <vector>
+#include <atomic>
 #include <mutex>
 
 #include "sourcecontainers/image.h"
@@ -14,21 +14,14 @@
 
 class Cache {
 public:
-    explicit Cache();
-    ~Cache() = default;
+    explicit Cache(size_t maxSize = 20);
 
     bool contains(const QString &path) const;
+    std::shared_ptr<Image> get(const QString &path);
+    bool insert(const std::shared_ptr<Image> &img);
+
     void remove(const QString &path);
     void clear();
-    bool insert(const std::shared_ptr<Image> &img);
-    std::shared_ptr<Image> get(const QString &path);
-    bool release(const QString &path);
-    bool reserve(const QString &path);
-    QList<QString> keys() const;
-
-    void setMaxCacheSize(int maxItems);
-    int maxCacheSize() const;
-    int currentCacheSize() const;
 
 private:
     struct Node {
@@ -38,19 +31,23 @@ private:
 
     using ListIt = std::list<Node>::iterator;
 
-    alignas(64) std::atomic<bool> mNeedProcessQueue{false};
-    alignas(64) mutable std::shared_mutex mRWLock;
-
-    std::mutex mAccessQueueMutex;
-    std::vector<QString> mAccessQueue;
-    size_t mQueueThreshold{4};
-
-    QHash<QString, ListIt> items;
-    std::list<Node> lruList;
-
-    int mMaxCacheSize{20};
-
+private:
     void moveToFront(ListIt it);
     void evictLRUItems();
     void processAccessQueue();
+
+private:
+    size_t mMaxCacheSize;
+
+    std::list<Node> lruList;                 // front = MRU, back = LRU
+    QHash<QString, ListIt> items;
+
+    mutable std::shared_mutex mRWLock;
+
+    // fast path queue（减少写锁争用）
+    std::vector<QString> mAccessQueue;
+    std::mutex mAccessQueueMutex;
+    std::atomic<bool> mNeedProcessQueue{false};
+
+    static constexpr size_t mQueueThreshold = 5;
 };

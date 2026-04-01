@@ -49,5 +49,5 @@ private:
     std::mutex mAccessQueueMutex;
     std::atomic<bool> mNeedProcessQueue{false};
 
-    static constexpr size_t mQueueThreshold = 5;
+    static constexpr size_t mQueueThreshold = 10;
 };

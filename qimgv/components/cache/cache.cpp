@@ -5,7 +5,7 @@ Cache::Cache() : mMaxCacheSize(20) {
     mAccessQueue.reserve(128);
 
     // 🔥 自适应阈值（核心改动）
-    mQueueThreshold = std::max<size_t>(8, mMaxCacheSize / 2);
+    mQueueThreshold = std::max<size_t>(4, mMaxCacheSize / 4);
 }
 
 bool Cache::contains(const QString &path) const {
@@ -176,7 +176,7 @@ void Cache::setMaxCacheSize(int maxItems) {
     mMaxCacheSize = maxItems;
 
     // 🔥 同步更新阈值（关键）
-    mQueueThreshold = std::max<size_t>(8, mMaxCacheSize / 2);
+    mQueueThreshold = std::max<size_t>(4, mMaxCacheSize / 4);
 
     evictLRUItems();
 }

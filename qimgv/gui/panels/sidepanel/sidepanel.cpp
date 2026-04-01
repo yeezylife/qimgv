@@ -43,8 +43,4 @@ void SidePanel::hide() {
 }
 
 void SidePanel::paintEvent(QPaintEvent *) {
-    QStyleOption opt;
-    opt.initFrom(this);
-    QPainter p(this);
-    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }

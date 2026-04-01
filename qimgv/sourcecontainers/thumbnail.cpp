@@ -5,8 +5,9 @@ Thumbnail::Thumbnail(const QString &_name, int _size, const QString &_info, cons
       mInfo(_info),
       mPixmap(_pixmap),
       mSize(_size),
-      mHasAlphaChannel(_pixmap ? _pixmap->hasAlphaChannel() : false)
+      mHasAlphaChannel(false)
 {
+    Q_UNUSED(_pixmap)
 }
 
 QString Thumbnail::name() const { return mName; }

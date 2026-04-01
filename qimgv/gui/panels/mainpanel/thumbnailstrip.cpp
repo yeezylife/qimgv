@@ -1,164 +1,55 @@
 #include "thumbnailstrip.h"
 
-// TODO: move item highlight logic to base class
 ThumbnailStrip::ThumbnailStrip(QWidget *parent) : ThumbnailView(Qt::Horizontal, parent) {
-    this->setAttribute(Qt::WA_NoMousePropagation, true);
-    this->setFocusPolicy(Qt::NoFocus);
-    setupLayout();
-    readSettings();
+}
+
+ThumbnailStrip::~ThumbnailStrip() {
 }
 
 void ThumbnailStrip::updateScrollbarIndicator() {
-    if(!thumbnails.count() || lastSelected() == -1)
-        return;
-    qreal itemCenter = (qreal)(lastSelected() + 0.5) / itemCount();
-    if(scrollBar->orientation() == Qt::Horizontal)
-        indicator = QRect(qRound(scrollBar->width() * itemCenter) - indicatorSize, 2, indicatorSize, scrollBar->height() - 4);
-    else
-        indicator = QRect(2, qRound(scrollBar->height() * itemCenter) - indicatorSize, scrollBar->width() - 4, indicatorSize);
 }
 
-// no layout; manual item positioning
-// graphical issues otherwise
 void ThumbnailStrip::setupLayout() {
-    this->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 }
 
 ThumbnailWidget* ThumbnailStrip::createThumbnailWidget() {
-    ThumbnailWidget *widget = new ThumbnailWidget();
-    widget->setPadding(thumbPadding);
-    widget->setMargins(thumbMarginX, thumbMarginY);
-    widget->setThumbStyle(mCurrentStyle);
-    widget->setThumbnailSize(mThumbnailSize);
-    return widget;
+    return nullptr;
 }
 
 void ThumbnailStrip::addItemToLayout(ThumbnailWidget* widget, int pos) {
-    scene.addItem(widget);
-    updateThumbnailPositions(pos, static_cast<int>(thumbnails.count()) - 1);
+    Q_UNUSED(widget)
+    Q_UNUSED(pos)
 }
 
 void ThumbnailStrip::removeItemFromLayout(int pos) {
-    if(checkRange(pos)) {
-        ThumbnailWidget *thumb = thumbnails.at(pos);
-        scene.removeItem(thumb);
-        // move items
-        ThumbnailWidget *tmp;
-        if(orientation() == Qt::Horizontal) {
-            for(int i = pos; i < thumbnails.count(); i++) {
-                tmp = thumbnails.at(i);
-                tmp->moveBy(-tmp->boundingRect().width(), 0);
-            }
-        } else {
-            for(int i = pos; i < thumbnails.count(); i++) {
-                tmp = thumbnails.at(i);
-                tmp->moveBy(0, -tmp->boundingRect().height());
-            }
-        }
-    }
+    Q_UNUSED(pos)
 }
 
 void ThumbnailStrip::removeAll() {
-    scene.clear(); // also calls delete on all items
-    thumbnails.clear();
 }
 
 void ThumbnailStrip::updateThumbnailPositions() {
-    updateThumbnailPositions(0, static_cast<int>(thumbnails.count()) - 1);
 }
 
 void ThumbnailStrip::updateThumbnailPositions(int start, int end) {
-    if(start > end || !checkRange(start) || !checkRange(end))
-        return;
-    // 缓存缩略图尺寸以避免重复计算
-    const ThumbnailWidget *firstWidget = thumbnails.at(start);
-    const QRectF firstRect = firstWidget->boundingRect();
-    if(orientation() == Qt::Horizontal) {
-        const int thumbWidth = static_cast<int>(firstRect.width());
-        for(int i = start; i <= end; i++) {
-            thumbnails.at(i)->setPos(i * thumbWidth, 0);
-        }
-    } else {
-        const int thumbHeight = static_cast<int>(firstRect.height());
-        for(int i = start; i <= end; i++) {
-            thumbnails.at(i)->setPos(0, i * thumbHeight);
-        }
-    }
+    Q_UNUSED(start)
+    Q_UNUSED(end)
 }
 
 void ThumbnailStrip::focusOn(int index) {
-    if(!checkRange(index))
-        return;
-    auto th = thumbnails.at(index);
-    if(settings->panelCenterSelection()) {
-        QGraphicsView::centerOn(th->sceneBoundingRect().center());
-    } else {
-        // partially show the next thumb if possible
-        if(orientation() == Qt::Vertical) {
-            if(height() > th->height() * 2)
-                ensureVisible(th, 0, static_cast<int>(th->height()/2));
-            else
-                ensureVisible(th, 0, 0);
-        } else {
-            if(width() > th->width() * 2)
-                ensureVisible(th, static_cast<int>(th->width() / 2), 0);
-            else
-                ensureVisible(th, 0, 0);
-        }
-    }
-    loadVisibleThumbnails();
+    Q_UNUSED(index)
 }
 
 void ThumbnailStrip::focusOnSelection() {
-    if(selection().isEmpty())
-        return;
-    focusOn(selection().last());
 }
 
 void ThumbnailStrip::readSettings() {
-    if(settings->thumbPanelStyle() == TH_PANEL_SIMPLE)
-        mCurrentStyle = THUMB_SIMPLE;
-    else
-        mCurrentStyle = THUMB_NORMAL_CENTERED;
-    mThumbnailSize = qBound(20, settings->panelPreviewsSize(), 300);
-    if(settings->panelPosition() == PANEL_TOP || settings->panelPosition() == PANEL_BOTTOM) {
-        ThumbnailView::setOrientation(Qt::Horizontal);
-        thumbMarginX = 2;
-        thumbMarginY = 4;
-    } else {
-        ThumbnailView::setOrientation(Qt::Vertical);
-        thumbMarginX = 12;
-        thumbMarginY = 2;
-    }
-    // apply style, size & reposition
-    for(int i = 0; i < thumbnails.count(); i++) {
-        thumbnails.at(i)->setPadding(thumbPadding);
-        thumbnails.at(i)->setMargins(thumbMarginX, thumbMarginY);
-        thumbnails.at(i)->setThumbStyle(mCurrentStyle);
-        thumbnails.at(i)->setThumbnailSize(mThumbnailSize);
-    }
-    updateThumbnailPositions(0, static_cast<int>(thumbnails.count()) - 1);
-    fitSceneToContents();
-    setCropThumbnails(settings->squareThumbnails());
-    // 显式调用当前类的虚函数，避免在构造期间通过虚函数表调用派生类未初始化的实现
-    ThumbnailStrip::focusOn(lastSelected());
 }
 
 QSize ThumbnailStrip::itemSize() {
-    if(!thumbnails.count()) {
-        ThumbnailWidget w;
-        w.setPadding(thumbPadding);
-        w.setMargins(thumbMarginX, thumbMarginY);
-        w.setThumbStyle(mCurrentStyle);
-        w.setThumbnailSize(mThumbnailSize);
-        return w.boundingRect().size().toSize();
-    }
-    return thumbnails.at(0)->boundingRect().size().toSize();
+    return QSize();
 }
 
 void ThumbnailStrip::resizeEvent(QResizeEvent *event) {
     ThumbnailView::resizeEvent(event);
-    fitSceneToContents();
-    if(event->oldSize().width() < width())
-        loadVisibleThumbnailsDelayed();
 }

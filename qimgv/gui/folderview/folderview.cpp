@@ -38,7 +38,7 @@ void FolderView::onTreeViewTabOut() {
 }
 
 // TODO: ask what to do
-void FolderView::onDroppedInByIndex(QList<QString> paths, QModelIndex index) {
+void FolderView::onDroppedInByIndex(const QList<QString> &paths, QModelIndex index) {
     Q_UNUSED(paths)
     Q_UNUSED(index)
 }
@@ -143,7 +143,7 @@ void FolderView::onTreeViewClicked(QModelIndex index) {
     Q_UNUSED(index)
 }
 
-void FolderView::onBookmarkClicked(QString dirPath) {
+void FolderView::onBookmarkClicked(const QString &dirPath) {
     Q_UNUSED(dirPath)
 }
 

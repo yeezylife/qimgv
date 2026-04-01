@@ -24,7 +24,7 @@ public:
     std::shared_ptr<Image> get(const QString &path);
     bool release(const QString &path);
     bool reserve(const QString &path);
-    QList<QString> keys() const; // ✅ 去掉多余 const
+    QList<QString> keys() const;
 
     void setMaxCacheSize(int maxItems);
     int maxCacheSize() const;
@@ -49,12 +49,14 @@ private:
     mutable std::mutex mAccessQueueMutex;
     std::vector<QString> mAccessQueue;
 
-    // 🚀 原子标志（避免频繁加锁）
+    // 🚀 批处理阈值（🔥 新增）
+    size_t mQueueThreshold;
+
+    // 🚀 原子标志
     alignas(64) std::atomic<bool> mNeedProcessQueue{false};
 
     void moveToFront(ListIt it);
     void evictLRUItems();
 
-    // 🚀 批量刷新访问
     void processAccessQueue();
 };

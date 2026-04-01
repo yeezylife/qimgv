@@ -2,8 +2,10 @@
 #include <algorithm>
 
 Cache::Cache() : mMaxCacheSize(20) {
-    // 🚀 关键优化：避免频繁 realloc
     mAccessQueue.reserve(128);
+
+    // 🔥 自适应阈值（核心改动）
+    mQueueThreshold = std::max<size_t>(8, mMaxCacheSize / 2);
 }
 
 bool Cache::contains(const QString &path) const {
@@ -11,7 +13,6 @@ bool Cache::contains(const QString &path) const {
     return items.contains(path);
 }
 
-// 🚀 低锁 get（核心优化）
 std::shared_ptr<Image> Cache::get(const QString &path) {
     std::shared_ptr<Image> result;
 
@@ -24,7 +25,8 @@ std::shared_ptr<Image> Cache::get(const QString &path) {
             std::lock_guard qlock(mAccessQueueMutex);
             mAccessQueue.push_back(path);
 
-            if (mAccessQueue.size() > 64) {
+            // 🔥 使用自适应阈值
+            if (mAccessQueue.size() > mQueueThreshold) {
                 mNeedProcessQueue.store(true, std::memory_order_release);
             }
         }
@@ -32,7 +34,6 @@ std::shared_ptr<Image> Cache::get(const QString &path) {
         result = it.value()->item->getContents();
     }
 
-    // 🚀 锁外批处理
     if (mNeedProcessQueue.exchange(false, std::memory_order_acq_rel)) {
         std::unique_lock locker(mRWLock);
         processAccessQueue();
@@ -46,7 +47,7 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
 
     std::unique_lock locker(mRWLock);
 
-    processAccessQueue(); // 🚀 保证 LRU 顺序最新
+    processAccessQueue();
 
     const QString &path = img->filePath();
 
@@ -62,7 +63,6 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
     return true;
 }
 
-// 🚀 批量处理访问
 void Cache::processAccessQueue() {
     std::vector<QString> localQueue;
 
@@ -86,13 +86,12 @@ void Cache::moveToFront(ListIt it) {
 }
 
 void Cache::evictLRUItems() {
-    processAccessQueue(); // 确保顺序最新
+    processAccessQueue();
 
     while (items.size() > mMaxCacheSize && !lruList.empty()) {
         auto lastIt = std::prev(lruList.end());
 
         if (lastIt->item->isLocked()) {
-            // 🚀 改进：跳过，而不是 break
             lruList.splice(lruList.begin(), lruList, lastIt);
             continue;
         }
@@ -175,6 +174,10 @@ QList<QString> Cache::keys() const {
 void Cache::setMaxCacheSize(int maxItems) {
     std::unique_lock locker(mRWLock);
     mMaxCacheSize = maxItems;
+
+    // 🔥 同步更新阈值（关键）
+    mQueueThreshold = std::max<size_t>(8, mMaxCacheSize / 2);
+
     evictLRUItems();
 }
 

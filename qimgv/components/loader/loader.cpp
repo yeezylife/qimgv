@@ -1,33 +1,45 @@
 #include "loader.h"
 #include <QThread>
-#include <QCoreApplication>
+#include <QMutableHashIterator>
 
 Loader::Loader() {
     pool = new QThreadPool(this);
-
-    // 🚀 自适应线程数（比固定2强很多）
-    int ideal = QThread::idealThreadCount();
-    pool->setMaxThreadCount(std::max(2, ideal > 1 ? ideal - 1 : 1));
+    pool->setMaxThreadCount(2);
 
     // 🚀 减少 QHash rehash
     tasks.reserve(32);
 }
 
 Loader::~Loader() {
-    clearTasks();
+    clearTasks(); 
+    // 注意：这里不再调用 waitForDone()
+    // QThreadPool 的析构函数会等待所有线程结束，但由于我们在 clearTasks 中
+    // 已经处理了任务对象的归属权，这里可以快速安全地离开。
 }
 
 void Loader::clearTasks() {
-    clearPool();
+    // 🚀 优化：非阻塞清理
+    // 遍历所有任务，区分“排队中”和“运行中”分别处理
+    QMutableHashIterator<QString, LoaderRunnable*> it(tasks);
+    
+    while (it.hasNext()) {
+        it.next();
+        LoaderRunnable *runnable = it.value();
 
-    // 🚀 不再 busy-wait + processEvents
-    pool->waitForDone();
-
-    // 理论上 tasks 应该已经清空，但做兜底
-    while (!tasks.isEmpty()) {
-        auto it = tasks.begin();
-        delete it.value();
-        it = tasks.erase(it);
+        // tryTake 仅对尚未启动的任务返回 true
+        if (pool->tryTake(runnable)) {
+            // 任务还在队列中，直接删除对象
+            delete runnable;
+        } else {
+            // 任务正在运行中，无法通过 tryTake 移除
+            // 策略：断开信号连接，防止任务完成后触发 UI 更新
+            // 并设置 autoDelete 让线程池在任务结束时自动回收内存
+            runnable->disconnect();
+            runnable->setAutoDelete(true);
+        }
+        
+        // 从哈希表中移除记录
+        it.remove();
     }
 }
 
@@ -44,7 +56,7 @@ std::shared_ptr<Image> Loader::load(const QString &path) {
 }
 
 void Loader::loadAsyncPriority(const QString &path) {
-    clearPool();
+    clearTasks(); // 清理当前任务，优先加载新任务
     doLoadAsync(path, 1);
 }
 
@@ -58,42 +70,28 @@ void Loader::doLoadAsync(const QString &path, int priority) {
     }
 
     auto *runnable = new LoaderRunnable(path);
-    runnable->setAutoDelete(false);
-
+    runnable->setAutoDelete(false); // 我们手动管理内存，以便在 clearTasks 时安全删除
+    
     tasks.insert(path, runnable);
-
-    connect(runnable, &LoaderRunnable::finished,
-            this, &Loader::onLoadFinished,
-            Qt::UniqueConnection);
-
+    connect(runnable, &LoaderRunnable::finished, this, &Loader::onLoadFinished, Qt::UniqueConnection);
+    
     pool->start(runnable, priority);
 }
 
 void Loader::onLoadFinished(const std::shared_ptr<Image> &image, const QString &path) {
     auto it = tasks.find(path);
+    
+    // 情况 1: 任务正常存在 (未被取消)
     if (it != tasks.end()) {
         auto *task = it.value();
         tasks.erase(it);
-        delete task;
+        delete task; // 回收 runnable 对象内存
+
+        // 转发结果
+        if (!image) emit loadFailed(path);
+        else emit loadFinished(image, path);
     }
-
-    // 🚀 shared_ptr 直接转发（减少不必要操作）
-    if (!image)
-        emit loadFailed(path);
-    else
-        emit loadFinished(image, path);
-}
-
-void Loader::clearPool() {
-    for (auto it = tasks.begin(); it != tasks.end(); ) {
-        LoaderRunnable *runnable = it.value();
-
-        // 🚀 tryTake 成功才删除
-        if (pool->tryTake(runnable)) {
-            delete runnable;
-            it = tasks.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // 情况 2: 任务不在 tasks 中 (已被 clearTasks 移除/取消)
+    // 此时什么也不做，runnable 已在 clearTasks 中被设置为 autoDelete=true，
+    // 线程池会负责回收其内存，且信号已断开，不会造成悬空指针。
 }

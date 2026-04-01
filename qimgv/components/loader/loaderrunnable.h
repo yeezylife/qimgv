@@ -6,9 +6,9 @@
 #include <memory>
 #include "utils/imagefactory.h"
 
-class LoaderRunnable : public QObject, public QRunnable
-{
+class LoaderRunnable : public QObject, public QRunnable {
     Q_OBJECT
+
 public:
     explicit LoaderRunnable(const QString& _path);
     void run() override;

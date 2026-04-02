@@ -81,19 +81,14 @@ void Loader::doLoadAsync(const QString &path, int priority) {
 }
 
 void Loader::onLoadFinished(const std::shared_ptr<Image> &image, const QString &path) {
-    auto it = tasks.find(path);
-    
-    // 情况 1: 任务正常存在 (未被取消)
-    if (it != tasks.end()) {
-        auto *task = it.value();
-        tasks.erase(it);
-        delete task; // 回收 runnable 对象内存
-
+    auto *task = tasks.take(path);
+    if (task) {
         // 转发结果
         if (!image) emit loadFailed(path);
         else emit loadFinished(image, path);
+        task->deleteLater(); // 安全删除，避免跨线程 delete 竞态
     }
-    // 情况 2: 任务不在 tasks 中 (已被 clearTasks 移除/取消)
-    // 此时什么也不做，runnable 已在 clearTasks 中被设置为 autoDelete=true，
-    // 线程池会负责回收其内存，且信号已断开，不会造成悬空指针。
+    // 任务不在 tasks 中 (已被 clearTasks 移除/取消)
+    // runnable 已在 clearTasks 中被设置为 autoDelete=true，
+    // 线程池会负责回收其内存。
 }

@@ -302,7 +302,9 @@ void DocumentInfo::loadExifTags() const {
                 formattedValue = formattedValue.mid(spaceIndex + 1);
         }
 
-        exifTags.insertIfNotExists(displayKey, formattedValue);
+        if (auto it = exifTags.find(displayKey); it == exifTags.end()) {
+            exifTags.insert(displayKey, formattedValue);
+        }
     }
 
     if(exifTags.isEmpty()) {

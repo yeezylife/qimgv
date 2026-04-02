@@ -5,7 +5,8 @@
 FloatingMessage::FloatingMessage(FloatingWidgetContainer *parent) :
     OverlayWidget(parent),
     preferredPosition(FloatingWidgetPosition::BOTTOM),
-    ui(new Ui::FloatingMessage)
+    ui(new Ui::FloatingMessage),
+    currentIcon(FloatingMessageIcon::NO_ICON)
 {
     ui->setupUi(this);
     hideDelay = 700;
@@ -46,34 +47,42 @@ void FloatingMessage::readSettings() {
 
 void FloatingMessage::showMessage(const QString &text, FloatingWidgetPosition position, FloatingMessageIcon icon, int duration) {
     setPosition(position);
-    doShowMessage(text, icon, duration);   // 直接传递const引用
+    doShowMessage(text, icon, duration);
 }
 
 void FloatingMessage::showMessage(const QString &text, FloatingMessageIcon icon, int duration) {
     setPosition(preferredPosition);
-    doShowMessage(text, icon, duration);   // 直接传递const引用
+    doShowMessage(text, icon, duration);
 }
 
 void FloatingMessage::doShowMessage(const QString &text, FloatingMessageIcon icon, int duration) {
     hideDelay = duration;
     setIcon(icon);
-    setText(text);   // 直接传递const引用，避免不必要的拷贝和移动
+    setText(text);
     show();
 }
 
 void FloatingMessage::setText(const QString &text) {
+    if(currentText == text)
+        return;
+    currentText = text;
     ui->textLabel->setText(text);
-    text.isEmpty()?ui->textLabel->hide():ui->textLabel->show();
-    recalculateGeometry();
-    update();
+    const bool empty = text.isEmpty();
+    const bool wasHidden = ui->textLabel->isHidden();
+    if(empty != wasHidden) {
+        empty ? ui->textLabel->hide() : ui->textLabel->show();
+        recalculateGeometry();
+    }
 }
 
 void FloatingMessage::setIcon(FloatingMessageIcon icon) {
+    if(currentIcon == icon)
+        return;
+    currentIcon = icon;
     switch (icon) {
         case FloatingMessageIcon::NO_ICON:
         case FloatingMessageIcon::ICON_WARNING:
         case FloatingMessageIcon::ICON_ERROR:
-            //ui->iconLabel->setIconPath(":/res/icons/common/notifications/error16.png");
             ui->iconLabel->hide();
             break;
         case FloatingMessageIcon::ICON_DIRECTORY:

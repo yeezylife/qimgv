@@ -39,6 +39,9 @@ private:
     void doShowMessage(const QString &text, FloatingMessageIcon icon, int duration);
     void setIcon(FloatingMessageIcon icon);
 
+    QString currentText;
+    FloatingMessageIcon currentIcon;
+
 protected:
     void mousePressEvent(QMouseEvent *event);
 

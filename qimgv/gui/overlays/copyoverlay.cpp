@@ -1,5 +1,6 @@
 #include "copyoverlay.h"
 #include "ui_copyoverlay.h"
+#include <QSet>
 
 CopyOverlay::CopyOverlay(FloatingWidgetContainer *parent) :
     OverlayWidget(parent),
@@ -109,14 +110,12 @@ void CopyOverlay::readSettings() {
 // we remove duplicate directories
 void CopyOverlay::saveSettings() {
     paths.clear();
-    QStringList temp;
-    for(int i = 0; i< pathWidgets.count(); i++) {
+    QSet<QString> seen;
+    for(int i = 0; i < pathWidgets.count(); i++) {
         QString path = pathWidgets.at(i)->path();
-        if (!path.isEmpty()) {
-            if (!temp.contains(path)) {
-                temp << path;
-                paths << pathWidgets.at(i)->directory();
-            }
+        if (!path.isEmpty() && !seen.contains(path)) {
+            seen.insert(path);
+            paths << pathWidgets.at(i)->directory();
         }
     }
     settings->setSavedPaths(paths);

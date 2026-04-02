@@ -10,49 +10,38 @@ Randomizer::Randomizer(size_t _count) : currentIndex(0) {
 
 void Randomizer::setCount(size_t _count) {
     vec.resize(_count);
+    indexMap.resize(_count);
     fill();
 }
 
 void Randomizer::shuffle() {
     std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
     std::shuffle(vec.begin(), vec.end(), rng);
+    for(size_t i = 0; i < vec.size(); ++i)
+        indexMap[vec[i]] = static_cast<int>(i);
 }
 
 void Randomizer::setCurrent(size_t _current) {
     currentIndex = indexOf(_current);
 }
 
-// this assumes our array contains shuffled int values [0 ... count]
-// which it does in our case
 size_t Randomizer::indexOf(size_t item) {
-    size_t index = size_t(-1);
-    if(item >= vec.size())
-        return index;
-    std::vector<int>::iterator it;
-    size_t i = 0;
-    for (it = vec.begin(); it != vec.end(); ++it, ++i) {
-        if(vec[i] == static_cast<int>(item)) {
-            index = i;
-            break;
-        }
-    }
-    return index;
+    if(item >= indexMap.size())
+        return size_t(-1);
+    return static_cast<size_t>(indexMap[item]);
 }
 
 void Randomizer::fill() {
-    std::vector<int>::iterator it;
-    int i = 0;
-    for (it = vec.begin(); it != vec.end(); ++it, ++i) {
-        *it = i;
+    for(size_t i = 0; i < vec.size(); ++i) {
+        vec[i] = static_cast<int>(i);
+        indexMap[i] = static_cast<int>(i);
     }
 }
 
 void Randomizer::print() {
     qDebug() << "---vector---";
-    std::vector<int>::iterator it;
-    for (it = vec.begin(); it != vec.end(); ++it) {
-        std::cout << *it << '\n';
-    }
+    for(int v : vec)
+        std::cout << v << '\n';
     qDebug() << "----end----";
 }
 

@@ -24,6 +24,7 @@ public:
 private:
     size_t currentIndex;
     std::vector<int> vec;
+    std::vector<int> indexMap;  // indexMap[value] = position in vec
     void fill();
     size_t indexOf(size_t item);
 };

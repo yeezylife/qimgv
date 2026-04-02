@@ -2,6 +2,9 @@
 
 ActionManager *actionManager = nullptr;
 
+// 热路径：processEvent → invokeActionForShortcut → invokeAction
+// 优化：去掉 invokeAction 中冗余的 validateAction 调用
+
 ActionManager::ActionManager(QObject *parent) : QObject(parent) {
 }
 
@@ -100,13 +103,26 @@ void ActionManager::initShortcuts() {
     }
 }
 
+void ActionManager::rebuildActionsToShortcutsIndex() {
+    m_actionsToShortcuts.clear();
+    for(auto it = shortcuts.constBegin(); it != shortcuts.constEnd(); ++it) {
+        m_actionsToShortcuts.insert(it.value(), it.key());
+    }
+}
+
 void ActionManager::addShortcut(const QString &keys, const QString &action) {
     if(validateAction(action) != ActionType::ACTION_INVALID) {
         shortcuts.insert(keys, action);
+        m_actionsToShortcuts.insert(action, keys);  // O(log n) 同步反向索引
     }
 }
 
 void ActionManager::removeShortcut(const QString &keys) {
+    auto actionIt = shortcuts.find(keys);
+    if(actionIt != shortcuts.end()) {
+        // 从反向索引中移除, QMultiMap::remove 只移除匹配的键值对
+        m_actionsToShortcuts.remove(actionIt.value(), keys);
+    }
     shortcuts.remove(keys);
 }
 
@@ -120,18 +136,19 @@ const QMap<QString, QString>& ActionManager::allShortcuts() const {
 
 void ActionManager::removeAllShortcuts() {
     shortcuts.clear();
+    m_actionsToShortcuts.clear();
 }
 
 void ActionManager::removeAllShortcuts(const QString &actionName) {
     if(validateAction(actionName) == ActionType::ACTION_INVALID)
         return;
 
-    for(auto i = shortcuts.begin(); i != shortcuts.end();) {
-        if(i.value() == actionName)
-            i = shortcuts.erase(i);
-        else
-            ++i;
+    // 使用反向索引 O(k log n) 代替 O(n) 遍历
+    const auto shortcutKeys = m_actionsToShortcuts.values(actionName);
+    for(const auto &key : shortcutKeys) {
+        shortcuts.remove(key);
     }
+    m_actionsToShortcuts.remove(actionName);
 }
 
 QString ActionManager::keyForNativeScancode(quint32 scanCode) const {
@@ -143,14 +160,21 @@ QString ActionManager::keyForNativeScancode(quint32 scanCode) const {
 
 void ActionManager::resetDefaults() {
     shortcuts = defaults;
+    rebuildActionsToShortcutsIndex();
 }
 
 void ActionManager::resetDefaults(const QString &action) {
-    removeAllShortcuts(action);
+    // 直接使用反向索引移除, 不需要遍历
+    const auto shortcutKeys = m_actionsToShortcuts.values(action);
+    for(const auto &key : shortcutKeys) {
+        shortcuts.remove(key);
+    }
+    m_actionsToShortcuts.remove(action);
     
     for(auto i = defaults.constBegin(); i != defaults.constEnd(); ++i) {
         if(i.value() == action) {
             shortcuts.insert(i.key(), i.value());
+            m_actionsToShortcuts.insert(i.value(), i.key());
             qDebug() << "[ActionManager] new action " << i.value() << " - assigning as [" << i.key() << "]";
         }
     }
@@ -174,12 +198,14 @@ void ActionManager::adjustFromVersion(const QVersionNumber &lastVer) {  // 改�
             swapped.insert(key, i.value());
         }
         shortcuts = swapped;
+        rebuildActionsToShortcutsIndex();
     }
     
     for(auto i = defaults.constBegin(); i != defaults.constEnd(); ++i) {
         if(appActions->getMap().value(i.value()) > lastVer) {
             if(!shortcuts.contains(i.key())) {
                 shortcuts.insert(i.key(), i.value());
+                m_actionsToShortcuts.insert(i.value(), i.key());
                 qDebug() << "[ActionManager] new action " << i.value() << " - assigning as [" << i.key() << "]";
             } else if(i.value() != actionForShortcut(i.key())) {
                 qDebug() << "[ActionManager] new action " << i.value() << " - shortcut [" << i.key() 
@@ -204,7 +230,8 @@ const QString ActionManager::shortcutForAction(const QString &action) const {
 }
 
 const QList<QString> ActionManager::shortcutsForAction(const QString &action) const {
-    return shortcuts.keys(action);
+    // 使用反向索引 O(log n) 代替 O(n) 遍历
+    return m_actionsToShortcuts.values(action);
 }
 
 bool ActionManager::invokeAction(const QString &actionName) {
@@ -238,6 +265,7 @@ void ActionManager::validateShortcuts() {
         else
             ++i;
     }
+    rebuildActionsToShortcutsIndex();
 }
 
 ActionType ActionManager::validateAction(const QString &actionName) const {

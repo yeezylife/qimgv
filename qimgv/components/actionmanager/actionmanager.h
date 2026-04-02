@@ -64,6 +64,9 @@ private:
     
     QMap<QString, QString> defaults;
     QMap<QString, QString> shortcuts;
+    QMultiMap<QString, QString> m_actionsToShortcuts;  // 反向索引: action → shortcuts
+
+    void rebuildActionsToShortcutsIndex();
 
 signals:
     void open();

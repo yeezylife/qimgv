@@ -3,12 +3,7 @@
 
 #include <QDialog>
 #include <QtPrintSupport/QPrinter>
-#include <QtPrintSupport/QPrinterInfo>
-#include <QFileDialog>
-#include <QPainter>
-#include <QGraphicsColorizeEffect>
-#include <QDebug>
-#include "components/thumbnailer/thumbnailer.h"
+#include <memory>
 #include "settings.h"
 
 namespace Ui {

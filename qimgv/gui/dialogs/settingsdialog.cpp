@@ -478,22 +478,30 @@ void SettingsDialog::saveColorScheme() {
 void SettingsDialog::readShortcuts() {
     ui->shortcutsTableWidget->clearContents();
     ui->shortcutsTableWidget->setRowCount(0);
+    shortcutToRowMap.clear();
     const QMap<QString, QString> &shortcuts = actionManager->allShortcuts();
+    shortcutToRowMap.reserve(shortcuts.size());
     QMapIterator<QString, QString> i(shortcuts);
     while(i.hasNext()) {
         i.next();
         addShortcutToTable(i.value(), i.key());
     }
+    // sort once after loading all shortcuts instead of sorting on each add
+    ui->shortcutsTableWidget->sortByColumn(0, Qt::AscendingOrder);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::readScripts() {
     ui->scriptsListWidget->clear();
+    scriptToRowMap.clear();
     const QMap<QString, Script> &scripts = scriptManager->allScripts();
+    scriptToRowMap.reserve(scripts.size());
     QMapIterator<QString, Script> i(scripts);
     while(i.hasNext()) {
         i.next();
         addScriptToList(i.key());
     }
+    // sort once after loading all scripts instead of sorting on each add
+    ui->scriptsListWidget->sortItems(Qt::AscendingOrder);
 }
 //------------------------------------------------------------------------------
 // does not check if the shortcut already there
@@ -504,8 +512,9 @@ void SettingsDialog::addScriptToList(const QString &name) {
     QListWidget *list = ui->scriptsListWidget;
     QListWidgetItem *nameItem = new QListWidgetItem(name);
     nameItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-    list->insertItem(ui->scriptsListWidget->count(), nameItem);
-    list->sortItems(Qt::AscendingOrder);
+    int row = ui->scriptsListWidget->count();
+    list->insertItem(row, nameItem);
+    scriptToRowMap.insert(name, row);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::addScript() {
@@ -547,6 +556,12 @@ void SettingsDialog::removeScript() {
     if(row >= 0) {
         QString scriptName = ui->scriptsListWidget->currentItem()->text();
         delete ui->scriptsListWidget->takeItem(row);
+        scriptToRowMap.remove(scriptName);
+        // update row indices for items after the removed one
+        for(auto it = scriptToRowMap.begin(); it != scriptToRowMap.end(); ++it) {
+            if(it.value() > row)
+                it.value() = it.value() - 1;
+        }
         saveShortcuts();
         actionManager->removeAllShortcuts("s:"+scriptName);
         readShortcuts();
@@ -559,38 +574,48 @@ void SettingsDialog::addShortcutToTable(const QString &action, const QString &sh
     if(action.isEmpty() || shortcut.isEmpty())
         return;
 
-    ui->shortcutsTableWidget->setRowCount(ui->shortcutsTableWidget->rowCount() + 1);
+    int row = ui->shortcutsTableWidget->rowCount();
+    ui->shortcutsTableWidget->setRowCount(row + 1);
     QTableWidgetItem *actionItem = new QTableWidgetItem(action);
     actionItem->setTextAlignment(Qt::AlignCenter);
-    ui->shortcutsTableWidget->setItem(ui->shortcutsTableWidget->rowCount() - 1, 0, actionItem);
+    ui->shortcutsTableWidget->setItem(row, 0, actionItem);
     QTableWidgetItem *shortcutItem = new QTableWidgetItem(shortcut);
     shortcutItem->setTextAlignment(Qt::AlignCenter);
-    ui->shortcutsTableWidget->setItem(ui->shortcutsTableWidget->rowCount() - 1, 1, shortcutItem);
-    // EFFICIENCY
-    ui->shortcutsTableWidget->sortByColumn(0, Qt::AscendingOrder);
+    ui->shortcutsTableWidget->setItem(row, 1, shortcutItem);
+    // maintain O(1) lookup cache
+    shortcutToRowMap.insert(shortcut, row);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::addShortcut() {
     ShortcutCreatorDialog w;
     if(!w.exec())
         return;
-    for(int i = 0; i < ui->shortcutsTableWidget->rowCount(); i++) {
-        if(ui->shortcutsTableWidget->item(i, 1)->text() == w.selectedShortcut())
-            removeShortcutAt(i);
+    // O(1) lookup instead of O(n) traversal
+    const QString &newShortcut = w.selectedShortcut();
+    auto it = shortcutToRowMap.find(newShortcut);
+    if(it != shortcutToRowMap.end()) {
+        removeShortcutAt(it.value());
     }
-    addShortcutToTable(w.selectedAction(), w.selectedShortcut());
-    // select
-    auto items = ui->shortcutsTableWidget->findItems(w.selectedShortcut(), Qt::MatchExactly);
-    if(items.count()) {
-        int newRow = ui->shortcutsTableWidget->row(items.at(0));
+    addShortcutToTable(w.selectedAction(), newShortcut);
+    // select - O(1) via hash map
+    int newRow = shortcutToRowMap.value(newShortcut, -1);
+    if(newRow >= 0)
         ui->shortcutsTableWidget->selectRow(newRow);
-    }
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::removeShortcutAt(int row) {
-    if(row > 0 && row >= ui->shortcutsTableWidget->rowCount())
+    if(row < 0 || row >= ui->shortcutsTableWidget->rowCount())
         return;
+    // remove from hash map before removing row
+    auto item = ui->shortcutsTableWidget->item(row, 1);
+    if(item)
+        shortcutToRowMap.remove(item->text());
     ui->shortcutsTableWidget->removeRow(row);
+    // update row indices in hash map for rows after the removed one
+    for(auto it = shortcutToRowMap.begin(); it != shortcutToRowMap.end(); ++it) {
+        if(it.value() > row)
+            it.value() = it.value() - 1;
+    }
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::editShortcut(int row) {
@@ -603,19 +628,18 @@ void SettingsDialog::editShortcut(int row) {
             return;
         // remove itself
         removeShortcutAt(row);
-        // remove anything we are replacing
-        for(int i = 0; i < ui->shortcutsTableWidget->rowCount(); i++) {
-            if(ui->shortcutsTableWidget->item(i, 1)->text() == w.selectedShortcut())
-                removeShortcutAt(i);
+        // remove anything we are replacing - O(1) lookup
+        const QString &newShortcut = w.selectedShortcut();
+        auto it = shortcutToRowMap.find(newShortcut);
+        if(it != shortcutToRowMap.end()) {
+            removeShortcutAt(it.value());
         }
         // re-add
-        addShortcutToTable(w.selectedAction(), w.selectedShortcut());
-        // re-select
-        auto items = ui->shortcutsTableWidget->findItems(w.selectedShortcut(), Qt::MatchExactly);
-        if(items.count()) {
-            int newRow = ui->shortcutsTableWidget->row(items.at(0));
+        addShortcutToTable(w.selectedAction(), newShortcut);
+        // re-select - O(1) via hash map
+        int newRow = shortcutToRowMap.value(newShortcut, -1);
+        if(newRow >= 0)
             ui->shortcutsTableWidget->selectRow(newRow);
-        }
     }
 }
 //------------------------------------------------------------------------------

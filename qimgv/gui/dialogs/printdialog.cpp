@@ -1,5 +1,10 @@
 #include "printdialog.h"
 #include "ui_printdialog.h"
+#include <QtPrintSupport/QPrinterInfo>
+#include <QFileDialog>
+#include <QPainter>
+#include <QGraphicsColorizeEffect>
+#include <QDebug>
 
 PrintDialog::PrintDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::PrintDialog)

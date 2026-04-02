@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QHash>
 #include <QFileDialog>
 #include <QColorDialog>
 #include <QThreadPool>
@@ -56,6 +57,10 @@ private:
 
     QMap<QString, QString> langs; // <"en_US", "English">
     QButtonGroup fitModeGrp, folderEndGrp, zoomIndGrp;
+    
+    // O(1) lookup caches for shortcuts and scripts
+    QHash<QString, int> shortcutToRowMap; // shortcut string -> table row
+    QHash<QString, int> scriptToRowMap;   // script name -> list row
 
 private slots:
     void saveSettings();

@@ -452,16 +452,30 @@ void ViewerWidget::hideCursor() {
     }
 
     const QPoint globalPos = QCursor::pos();
-    const QPoint posMapped = mapFromGlobal(globalPos);
+    const QPoint pos = mapFromGlobal(globalPos);
 
-    if(clickZoneOverlay->leftZone().contains(posMapped) ||
-       clickZoneOverlay->rightZone().contains(posMapped))
+    if(clickZoneOverlay->leftZone().contains(pos) ||
+       clickZoneOverlay->rightZone().contains(pos))
         return;
 
-    QWidget *w = qApp->widgetAt(globalPos);
+    // O(1) 替代 widgetAt 的 O(n) 遍历
+    bool inTarget = false;
 
-    if(w && (w == imageViewer->viewport() || w == videoPlayer->getPlayer().get())) {
-        if(!videoControls->isVisible() || !videoControlsArea().contains(posMapped)) {
+    if(imageViewer && imageViewer->viewport()) {
+        const QPoint p = imageViewer->viewport()->mapFrom(this, pos);
+        if(imageViewer->viewport()->rect().contains(p))
+            inTarget = true;
+    }
+
+    if(!inTarget && videoPlayer && videoPlayer->getPlayer()) {
+        auto *player = videoPlayer->getPlayer().get();
+        const QPoint p = player->mapFrom(this, pos);
+        if(player->rect().contains(p))
+            inTarget = true;
+    }
+
+    if(inTarget) {
+        if(!videoControls->isVisible() || !videoControlsArea().contains(pos)) {
             setCursor(QCursor(Qt::BlankCursor));
             videoControls->hide();
         }

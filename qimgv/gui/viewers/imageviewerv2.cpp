@@ -1548,7 +1548,7 @@ QSize ImageViewerV2::scaledSizeR() const
         return QSize(0, 0);
 
     float s = currentScaleInternal();
-    return QSize(qRound(pixmap->width() * s), qRound(pixmap->height() * s));
+    return QSize(qRound(static_cast<float>(pixmap->width()) * s), qRound(static_cast<float>(pixmap->height()) * s));
 }
 
 QRect ImageViewerV2::scaledRectR() const

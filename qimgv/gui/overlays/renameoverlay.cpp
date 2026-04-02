@@ -15,8 +15,13 @@ RenameOverlay::RenameOverlay(FloatingWidgetContainer *parent) :
     setPosition(FloatingWidgetPosition::CENTER);
     setAcceptKeyboardFocus(true);
 
-    keyFilter.append(actionManager->shortcutsForAction("exit"));
-    keyFilter.append(actionManager->shortcutsForAction("renameFile"));
+    auto exitShortcuts = actionManager->shortcutsForAction("exit");
+    auto renameShortcuts = actionManager->shortcutsForAction("renameFile");
+    keyFilter.reserve(exitShortcuts.size() + renameShortcuts.size());
+    for (const auto &s : exitShortcuts)
+        keyFilter.insert(s);
+    for (const auto &s : renameShortcuts)
+        keyFilter.insert(s);
 
     hide();
     if(parent)
@@ -94,6 +99,6 @@ void RenameOverlay::keyPressEvent(QKeyEvent *event) {
 
 void RenameOverlay::mousePressEvent(QMouseEvent *event) {
     event->accept();
-    if(qApp->widgetAt(mapToGlobal(event->position().toPoint())) == this)
-        this->onCancel();
+    if(!backdrop && !rect().contains(event->position().toPoint()))
+        onCancel();
 }

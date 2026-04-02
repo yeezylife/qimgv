@@ -29,7 +29,6 @@ ZoomIndicatorOverlay::ZoomIndicatorOverlay(FloatingWidgetContainer *parent)
 void ZoomIndicatorOverlay::setScale(qreal scale) {
     label.setText(QString::number(qRound(scale * 100.0))+"%");
     label.setFixedSize(fm.horizontalAdvance(label.text()) + 14, fm.height() + 12);
-    recalculateGeometry();
 }
 
 void ZoomIndicatorOverlay::recalculateGeometry() {

@@ -47,29 +47,26 @@ void VideoControls::setMode(PlaybackMode _mode) {
 // helper used by duration/position setters
 static QString formatSeconds(int value, PlaybackMode mode, bool forPosition=false) {
     if(mode == PLAYBACK_VIDEO) {
-        int _time = value;
-        int hours = _time / 3600;
-        _time -= hours * 3600;
-        int minutes = _time / 60;
-        int seconds = _time - minutes * 60;
-        QString s = QString("%1").arg(minutes, 2, 10, QChar('0')) + ":" +
-                    QString("%1").arg(seconds, 2, 10, QChar('0'));
+        int hours = value / 3600;
+        int minutes = (value % 3600) / 60;
+        int seconds = value % 60;
+
         if(hours)
-            s.prepend(QString("%1").arg(hours, 2, 10, QChar('0')) + ":");
-        return s;
+            return QString::asprintf("%02d:%02d:%02d", hours, minutes, seconds);
+
+        return QString::asprintf("%02d:%02d", minutes, seconds);
     }
-    // for non-video playback the position is 1‑based while duration is raw
-    if(forPosition)
-        return QString::number(value + 1);
-    return QString::number(value);
+
+    return forPosition
+        ? QString::number(value + 1)
+        : QString::number(value);
 }
 
 void VideoControls::setPlaybackDuration(int duration) {
     QString durationStr = formatSeconds(duration, mode, false);
     ui->seekBar->setRange(0, duration - 1);
     ui->durationLabel->setText(durationStr);
-    ui->positionLabel->setText(durationStr);
-    recalculateGeometry();
+    // positionLabel will be set empty here, avoid redundant setText/recalculate
     ui->positionLabel->setText("");
 }
 

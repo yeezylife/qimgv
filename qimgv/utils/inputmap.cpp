@@ -14,11 +14,11 @@ InputMap *InputMap::getInstance() {
     return inputMap;
 }
 
-const QMap<quint32, QString> &InputMap::keys() {
+const QHash<quint32, QString> &InputMap::keys() {
     return keyMap;
 }
 
-const QMap<QString, Qt::KeyboardModifier> &InputMap::modifiers() {
+const QHash<QString, Qt::KeyboardModifier> &InputMap::modifiers() {
     return modMap;
 }
 
@@ -140,26 +140,29 @@ void InputMap::initModMap() {
     modMap.insert(keyNameShift(), Qt::ShiftModifier);
 }
 
-QString InputMap::keyNameCtrl() {
+const QString& InputMap::keyNameCtrl() {
 #ifdef __APPLE__
-    return "⌘";
+    static const QString name = "⌘";
 #else
-    return "Ctrl";
+    static const QString name = "Ctrl";
 #endif
+    return name;
 }
 
-QString InputMap::keyNameAlt() {
+const QString& InputMap::keyNameAlt() {
 #ifdef __APPLE__
-    return "⌥";
+    static const QString name = "⌥";
 #else
-    return "Alt";
+    static const QString name = "Alt";
 #endif
+    return name;
 }
 
-QString InputMap::keyNameShift() {
+const QString& InputMap::keyNameShift() {
 #ifdef __APPLE__
-    return "⇧";
+    static const QString name = "⇧";
 #else
-    return "Shift";
+    static const QString name = "Shift";
 #endif
+    return name;
 }

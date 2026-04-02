@@ -1,23 +1,23 @@
 #pragma once
 
-#include <QMap>
+#include <QHash>
 #include <QString>
 
 class InputMap {
 public:
     InputMap();
     static InputMap *getInstance();
-    const QMap<quint32, QString> &keys();
-    const QMap<QString, Qt::KeyboardModifier> &modifiers();
-    static QString keyNameCtrl();
-    static QString keyNameAlt();
-    static QString keyNameShift();
+    const QHash<quint32, QString> &keys();
+    const QHash<QString, Qt::KeyboardModifier> &modifiers();
+    static const QString& keyNameCtrl();
+    static const QString& keyNameAlt();
+    static const QString& keyNameShift();
 
 private:
     void initKeyMap();
     void initModMap();
-    QMap<quint32, QString> keyMap;
-    QMap<QString, Qt::KeyboardModifier> modMap;
+    QHash<quint32, QString> keyMap;
+    QHash<QString, Qt::KeyboardModifier> modMap;
 };
 
 extern InputMap *inputMap;

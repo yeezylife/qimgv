@@ -25,6 +25,7 @@ private:
     size_t currentIndex;
     std::vector<int> vec;
     std::vector<int> indexMap;  // indexMap[value] = position in vec
+    std::mt19937 rng;  // 随机数生成器作为成员变量，避免重复创建
     void fill();
     size_t indexOf(size_t item);
 };

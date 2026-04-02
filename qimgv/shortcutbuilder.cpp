@@ -82,7 +82,7 @@ QString ShortcutBuilder::modifierKeys(QInputEvent *event){
         
     QString mods;
     const auto& modifiers = inputMap->modifiers();
-    QMapIterator<QString, Qt::KeyboardModifier> i(modifiers);
+    QHashIterator<QString, Qt::KeyboardModifier> i(modifiers);
     while(i.hasNext()) {
         i.next();
         if(event->modifiers().testFlag(i.value()))

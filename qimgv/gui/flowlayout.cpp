@@ -1,9 +1,5 @@
 #include "flowlayout.h"
 
-FlowLayout::FlowLayout()
-{
-}
-
 void FlowLayout::invalidateSizeCache() const
 {
 }

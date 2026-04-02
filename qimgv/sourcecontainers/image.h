@@ -46,9 +46,10 @@ public:
         return mDocInfo ? mDocInfo->lastModified() : QDateTime(); 
     }
     
-   QHash<QString, QString> getExifTags() { 
-        return mDocInfo ? mDocInfo->getExifTags() : QHash<QString, QString>(); 
-    }
+   const QHash<QString, QString>& getExifTags() const { 
+         static const QHash<QString, QString> empty;
+         return mDocInfo ? mDocInfo->getExifTags() : empty; 
+     }
 
     // --- 纯虚函数接口 ---
     virtual void getPixmap(QPixmap& outPixmap) const = 0;

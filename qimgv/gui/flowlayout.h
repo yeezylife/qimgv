@@ -15,7 +15,7 @@ struct GridInfo {
 class FlowLayout : public QGraphicsLayout
 {
 public:
-    FlowLayout();
+    FlowLayout() = default;
     void insertItem(int index, QGraphicsLayoutItem *item);
     void setSpacing(Qt::Orientations o, qreal spacing);
     qreal spacing(Qt::Orientation o) const;

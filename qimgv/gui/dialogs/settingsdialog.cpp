@@ -493,9 +493,9 @@ void SettingsDialog::readShortcuts() {
 void SettingsDialog::readScripts() {
     ui->scriptsListWidget->clear();
     scriptToRowMap.clear();
-    const QMap<QString, Script> &scripts = scriptManager->allScripts();
+    const QHash<QString, Script> &scripts = scriptManager->allScripts();
     scriptToRowMap.reserve(scripts.size());
-    QMapIterator<QString, Script> i(scripts);
+    QHashIterator<QString, Script> i(scripts);
     while(i.hasNext()) {
         i.next();
         addScriptToList(i.key());

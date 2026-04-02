@@ -506,31 +506,44 @@ void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileNa
         removeFileEntry(oldFilePath.value);
         return;
     }
-    if(containsFile(newFilePath)) {
-        int replaceIndex = indexOfFile(newFilePath);
-        fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
-        updateFileIndexAfterRemove(newFilePath, replaceIndex);  // ⭐关键补上
-        emit fileRemoved(newFilePath, replaceIndex);
-    }
 
     int oldIndex = indexOfFile(oldFilePath.value);
+    int replaceIndex = containsFile(newFilePath) ? indexOfFile(newFilePath) : -1;
+
+    // 优化：记录 emit 所需的索引，在 vector 操作前保存
+    int emitOldIndex = oldIndex;
+    // replaceIndex 在 erase 后可能需要调整，但最终 newIndex 由 insert_sorted 决定
+
+    // 先删除 replace（如存在且位置在 oldIndex 之前，避免 oldIndex 变化）
+    if(replaceIndex != -1) {
+        if(replaceIndex < oldIndex) {
+            fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
+            oldIndex--;
+        } else if(replaceIndex > oldIndex) {
+            fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
+        }
+        // replaceIndex == oldIndex 不可能发生（同一路径）
+    }
+
+    // 删除旧位置
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
-    updateFileIndexAfterRemove(oldFilePath.value, oldIndex);  // ⭐必须
+
+    // 插入新条目
     std::filesystem::path pathObj(newFilePath.toStdWString());
     std::filesystem::directory_entry stdEntry(pathObj);
     FSEntry newEntry(FilePath(newFilePath), FileName(newFileName), stdEntry.file_size(), stdEntry.last_write_time(), stdEntry.is_directory());
 
-    // 优化：使用 lambda 替代 std::bind
     auto cmpFn = compareFunction();
     auto it = insert_sorted(fileEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
 
     int newIndex = static_cast<int>(it - fileEntryVec.begin());
-    // 增量更新索引映射
-    updateFileIndexAfterInsert(newFilePath, newIndex);
 
-    emit fileRenamed(oldFilePath.value, oldIndex, newFilePath, newIndex);
+    // 性能优化：单次 rebuild 替代多次增量更新（3×O(n) → 1×O(n)）
+    rebuildFileIndexMap();
+
+    emit fileRenamed(oldFilePath.value, emitOldIndex, newFilePath, newIndex);
 }
 
 bool DirectoryManager::insertDirEntry(const QString &dirPath) {
@@ -574,18 +587,24 @@ void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& 
     QFileInfo fi(oldDirPath.value);
     QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
 
-    // 处理目标路径已存在的情况（必须先删除它）
-    if (containsDir(newDirPath)) {
-        int replaceIndex = indexOfDir(newDirPath);
-        dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
-        updateDirIndexAfterRemove(newDirPath, replaceIndex);
-        emit dirRemoved(newDirPath, replaceIndex);
+    int oldIndex = indexOfDir(oldDirPath.value);
+    int replaceIndex = containsDir(newDirPath) ? indexOfDir(newDirPath) : -1;
+
+    // 记录 emit 所需的索引
+    int emitOldIndex = oldIndex;
+
+    // 先删除 replace（如存在且位置在 oldIndex 之前）
+    if(replaceIndex != -1) {
+        if(replaceIndex < oldIndex) {
+            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
+            oldIndex--;
+        } else if(replaceIndex > oldIndex) {
+            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
+        }
     }
 
     // 删除旧路径
-    int oldIndex = indexOfDir(oldDirPath.value);
     dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
-    updateDirIndexAfterRemove(oldDirPath.value, oldIndex);
 
     // 构造新条目并插入
     std::filesystem::path pathObj(newDirPath.toStdWString());
@@ -602,10 +621,10 @@ void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& 
 
     int newIndex = static_cast<int>(it - dirEntryVec.begin());
 
-    // ✅ 使用增量更新（与 renameFileEntry 一致）
-    updateDirIndexAfterInsert(newDirPath, newIndex);
+    // 性能优化：单次 rebuild 替代多次增量更新
+    rebuildDirIndexMap();
 
-    emit dirRenamed(oldDirPath.value, oldIndex, newDirPath, newIndex);
+    emit dirRenamed(oldDirPath.value, emitOldIndex, newDirPath, newIndex);
 }
 
 QStringList DirectoryManager::fileList() const {

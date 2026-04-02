@@ -20,6 +20,7 @@ public:
 private:
     QBoxLayout *layout;
     QList<SSideBarItem *> entries;
+    int mSelectedIndex = -1;
     void selectEntryAt(QPoint pos);
 
 signals:

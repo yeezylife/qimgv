@@ -14,7 +14,7 @@ public:
     SpinBoxInputFix(QWidget *parent = nullptr);
 
 private:
-    QStringList allowedKeys;
+    QSet<QString> allowedKeys;
 
 protected:
     void keyPressEvent(QKeyEvent *event);

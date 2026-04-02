@@ -25,9 +25,10 @@ void SSideBar::addEntry(const QString &icon, const QString &name) {
 
 void SSideBar::selectEntry(int idx) {
     if(idx >= 0 && idx < entries.count()) {
-        for(auto *entry : entries)
-            entry->setHighlighted(false);
+        if(mSelectedIndex >= 0 && mSelectedIndex < entries.count())
+            entries[mSelectedIndex]->setHighlighted(false);
         entries[idx]->setHighlighted(true);
+        mSelectedIndex = idx;
         emit entrySelected(idx);
     }
 }

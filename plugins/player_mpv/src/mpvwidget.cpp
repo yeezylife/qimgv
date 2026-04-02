@@ -15,7 +15,7 @@ static void *get_proc_address(void *ctx, const char *name) noexcept {
 }
 
 MpvWidget::MpvWidget(QWidget *parent, Qt::WindowFlags f)
-    : QOpenGLWidget(parent, f)
+    : QOpenGLWidget(parent, f), m_volume(100)
 {
     mpv = mpv_create();
     if(!mpv)
@@ -170,11 +170,12 @@ bool MpvWidget::muted() const {
 }
 
 int MpvWidget::volume() const {
-    return mpv::qt::get_property(mpv, "volume").toInt();
+    return m_volume;
 }
 
 void MpvWidget::setVolume(int vol) {
     vol = qBound(0, vol, 100);
+    m_volume = vol;
     mpv::qt::set_property(mpv, "volume", vol);
 }
 

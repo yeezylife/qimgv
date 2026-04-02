@@ -6,7 +6,7 @@
 #include <QFileDialog>
 
 // TODO: window flashes white when opening a video (straight from file manager)
-VideoPlayerMpv::VideoPlayerMpv(QWidget *parent) : VideoPlayer(parent) {
+VideoPlayerMpv::VideoPlayerMpv(QWidget *parent) : VideoPlayer(parent), m_paused(false) {
     setAttribute(Qt::WA_TranslucentBackground, true);
     setMouseTracking(true);
 
@@ -46,8 +46,7 @@ void VideoPlayerMpv::seekRelative(int pos) {
 }
 
 void VideoPlayerMpv::pauseResume() {
-    const bool paused = m_mpv->getProperty("pause").toBool();
-    setPaused(!paused);
+    setPaused(!m_paused);
 }
 
 void VideoPlayerMpv::frameStep() {
@@ -63,6 +62,7 @@ void VideoPlayerMpv::stop() {
 }
 
 void VideoPlayerMpv::setPaused(bool mode) {
+    m_paused = mode;
     m_mpv->setProperty("pause", mode);
 }
 

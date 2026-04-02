@@ -49,8 +49,9 @@ signals:
 private slots:
     void readSettings();
 
-private:
+ private:
     MpvWidget *m_mpv;
+    bool m_paused;
 
 };
 

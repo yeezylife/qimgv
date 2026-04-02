@@ -55,10 +55,11 @@ private slots:
     void on_mpv_events();
     void maybeUpdate();
 
-private:
+ private:
     void handle_mpv_event(mpv_event *event);
     static void on_update(void *ctx);
 
     mpv_handle *mpv;
     mpv_render_context *mpv_gl;
+    int m_volume;
 };

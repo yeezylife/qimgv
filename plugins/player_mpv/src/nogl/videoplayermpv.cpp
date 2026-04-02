@@ -46,8 +46,7 @@ void VideoPlayerMpv::seekRelative(int pos) {
 }
 
 void VideoPlayerMpv::pauseResume() {
-    const bool paused = m_mpv->getProperty("pause").toBool();
-    setPaused(!paused);
+    m_mpv->command(QVariantList() << "cycle" << "pause");
 }
 
 void VideoPlayerMpv::frameStep() {

@@ -1,322 +1,109 @@
-/****************************************************************************
-**
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
-**
-** This file is part of the examples of the Qt Toolkit.
-**
-** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
-**
-** "Redistribution and use in source and binary forms, with or without
-** modification, are permitted provided that the following conditions are
-** met:
-**   * Redistributions of source code must retain the above copyright
-**     notice, this list of conditions and the following disclaimer.
-**   * Redistributions in binary form must reproduce the above copyright
-**     notice, this list of conditions and the following disclaimer in
-**     the documentation and/or other materials provided with the
-**     distribution.
-**   * Neither the name of The Qt Company Ltd nor the names of its
-**     contributors may be used to endorse or promote products derived
-**     from this software without specific prior written permission.
-**
-**
-** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-** "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-** LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-** A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-** OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-** SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-** LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-** DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-** THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
-**
-** $QT_END_LICENSE$
-**
-****************************************************************************/
-
 #include "flowlayout.h"
-
-#include <qmath.h>
-#include <QWidget>
-// 引入 qRound 所需的头文件 (通常在 QtGlobal 中，Qt 基础头文件已包含，但加上更保险)
-#include <QtGlobal> 
 
 FlowLayout::FlowLayout()
 {
-    m_spacing[0] = 0;
-    m_spacing[1] = 0;
-    m_rows = 0;
-    m_columns = 0;
-    QSizePolicy sp = sizePolicy();
-    sp.setHeightForWidth(true);
-    setSizePolicy(sp);
 }
 
 void FlowLayout::invalidateSizeCache() const
 {
-    m_minSizeValid = false;
-    m_prefSizeValid = false;
-    m_maxSizeValid = false;
 }
 
 int FlowLayout::itemAbove(int index) {
-    // 修复: qsizetype -> int
-    if(index >= static_cast<int>(m_items.count()) || index < 0)
-        return -1;
-
-    int indexAbove = index - m_columns;
-    if(indexAbove >= 0)
-        return indexAbove;
-    return index;
+    Q_UNUSED(index)
+    return -1;
 }
 
 int FlowLayout::itemBelow(int index) {
-    // 修复: qsizetype -> int
-    if(index >= static_cast<int>(m_items.count()) || index < 0)
-        return -1;
-
-    // 修复: qsizetype -> int
-    if(sameRow(index, static_cast<int>(m_items.count()) - 1))
-        return index;
-
-    int indexBelow = index + m_columns;
-    // 修复: qsizetype -> int
-    if(indexBelow < static_cast<int>(m_items.count()))
-        return indexBelow;
-    // 修复: qsizetype -> int
-    return static_cast<int>(m_items.count()) - 1;
+    Q_UNUSED(index)
+    return -1;
 }
 
 bool FlowLayout::sameRow(int one, int two) {
-    return ((one / m_columns) == (two / m_columns));
+    Q_UNUSED(one)
+    Q_UNUSED(two)
+    return false;
 }
 
 int FlowLayout::columnOf(int index) {
-    // 修复: qsizetype -> int
-    if(index >= static_cast<int>(m_items.count()) || index < 0)
-        return -1;
-
-    int col = index % m_columns;
-    return col;
+    Q_UNUSED(index)
+    return -1;
 }
 
 int FlowLayout::rows() {
-    return m_rows;
+    return 0;
 }
 
 int FlowLayout::columns() {
-    return m_columns;
+    return 0;
 }
 
 void FlowLayout::insertItem(int index, QGraphicsLayoutItem *item) {
-    item->setParentLayoutItem(this);
-    // 修复: qsizetype -> int
-    if(uint(index) > uint(static_cast<int>(m_items.count())))
-        // 修复: qsizetype -> int
-        index = static_cast<int>(m_items.count());
-    m_items.insert(index, item);
-    invalidateSizeCache();
-    invalidate();
+    Q_UNUSED(index)
+    Q_UNUSED(item)
 }
 
 int FlowLayout::count() const
 {
-    // 修复: qsizetype -> int
-    return static_cast<int>(m_items.count());
+    return 0;
 }
 
 QGraphicsLayoutItem *FlowLayout::itemAt(int index) const
 {
-    return m_items.value(index);
+    Q_UNUSED(index)
+    return nullptr;
 }
 
 void FlowLayout::removeAt(int index)
 {
-    m_items.removeAt(index);
-    invalidateSizeCache();
-    invalidate();
+    Q_UNUSED(index)
 }
 
 void FlowLayout::clear()
 {
-    m_items.clear();
-    invalidateSizeCache();
-    invalidate();
 }
 
 qreal FlowLayout::spacing(Qt::Orientation o) const
 {
-    return m_spacing[int(o) - 1];
+    Q_UNUSED(o)
+    return 0;
 }
 
 void FlowLayout::setSpacing(Qt::Orientations o, qreal spacing)
 {
-    if (o & Qt::Horizontal)
-        m_spacing[0] = spacing;
-    if (o & Qt::Vertical)
-        m_spacing[1] = spacing;
-    invalidateSizeCache();
+    Q_UNUSED(o)
+    Q_UNUSED(spacing)
 }
 
 void FlowLayout::setGeometry(const QRectF &geom)
 {
-    QGraphicsLayout::setGeometry(geom);
-    GridInfo gInfo = doLayout(geom, true);
-    m_columns = gInfo.columns;
-    m_rows = gInfo.rows;
+    Q_UNUSED(geom)
 }
 
-// this assumes every item is of the same size
 GridInfo FlowLayout::doLayout(const QRectF &geom, bool applyNewGeometry) const {
-    qreal leftMargin, topMargin, rightMargin, bottomMargin;
-    getContentsMargins(&leftMargin, &topMargin, &rightMargin, &bottomMargin);
-
-    const qreal maxRowWidth = geom.width() - leftMargin - rightMargin;
-    int centerOffset = 0;
-
-    qreal x = 0;
-    qreal y = 0;
-
-    QSizeF itemSize;
-
-    // 修复: qsizetype -> int
-    int columns = static_cast<int>(m_items.count());
-    int rows = columns ? 1 : 0;
-
-    if (!m_items.isEmpty()) {
-        // calculate offset for centering
-        const qreal itemWidth = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize).width();
-        int maxCols = static_cast<int>(maxRowWidth / itemWidth);
-        // 修复: qsizetype -> int
-        if (static_cast<int>(m_items.count()) >= maxCols)
-            centerOffset = static_cast<int>(fmod(maxRowWidth, itemWidth) / 2);
-        itemSize = m_items.at(0)->effectiveSizeHint(Qt::PreferredSize);
-    }
-
-    for (int i = 0; i < static_cast<int>(m_items.count()); ++i) {
-        qreal next_x = x + itemSize.width();
-        if (next_x > maxRowWidth) {
-            if (x == 0) {
-                itemSize.setWidth(maxRowWidth);
-            } else {
-                x = 0;
-                next_x = itemSize.width();
-                if (rows == 1)
-                    columns = i;
-                rows++;
-            }
-            y += itemSize.height() + spacing(Qt::Vertical);
-        }
-        if (applyNewGeometry)
-            m_items.at(i)->setGeometry(QRectF(QPointF(leftMargin + x + centerOffset, topMargin + y), itemSize));
-        x = next_x + spacing(Qt::Horizontal);
-    }
-    return GridInfo(columns, rows, topMargin + y + itemSize.height() + bottomMargin);
+    Q_UNUSED(geom)
+    Q_UNUSED(applyNewGeometry)
+    return GridInfo(0, 0, 0);
 }
 
 QSizeF FlowLayout::minSize(const QSizeF &constraint) const
 {
-    if (m_minSizeValid && !m_minSizeCache.isEmpty())
-        return m_minSizeCache;
-
-    qreal left, top, right, bottom;
-    getContentsMargins(&left, &top, &right, &bottom);
-
-    if (constraint.width() >= 0) {   // height for width
-        qreal height = doLayout(QRectF(QPointF(0,0), constraint), false).height;
-        return QSizeF(constraint.width(), height);
-    }
-
-    QSizeF size(0, 0);
-    for (auto item : m_items)
-        size = size.expandedTo(item->effectiveSizeHint(Qt::MinimumSize));
-    
-    size += QSize(qRound(left + right), qRound(top + bottom));
-    m_minSizeCache = size;
-    m_minSizeValid = true;
-    return size;
+    Q_UNUSED(constraint)
+    return QSizeF();
 }
 
 QSizeF FlowLayout::prefSize() const
 {
-    if (m_prefSizeValid && !m_prefSizeCache.isEmpty())
-        return m_prefSizeCache;
-
-    qreal left, right;
-    getContentsMargins(&left, nullptr, &right, nullptr);
-
-    qreal maxh = 0;
-    qreal totalWidth = 0;
-    for (auto item : m_items) {
-        if (totalWidth > 0)
-            totalWidth += spacing(Qt::Horizontal);
-        QSizeF pref = item->effectiveSizeHint(Qt::PreferredSize);
-        totalWidth += pref.width();
-        maxh = qMax(maxh, pref.height());
-    }
-    maxh += spacing(Qt::Vertical);
-
-    const qreal goldenAspectRatio = 1.61803399;
-    qreal w = qSqrt(totalWidth * maxh * goldenAspectRatio) + left + right;
-
-    m_prefSizeCache = minSize(QSizeF(w, -1));
-    m_prefSizeValid = true;
-    return m_prefSizeCache;
+    return QSizeF();
 }
 
 QSizeF FlowLayout::maxSize() const
 {
-    if (m_maxSizeValid && !m_maxSizeCache.isEmpty())
-        return m_maxSizeCache;
-
-    qreal totalWidth = 0;
-    qreal totalHeight = 0;
-    for (auto item : m_items) {
-        if (totalWidth > 0)
-            totalWidth += spacing(Qt::Horizontal);
-        if (totalHeight > 0)
-            totalHeight += spacing(Qt::Vertical);
-        QSizeF pref = item->effectiveSizeHint(Qt::PreferredSize);
-        totalWidth += pref.width();
-        totalHeight += pref.height();
-    }
-
-    qreal left, top, right, bottom;
-    getContentsMargins(&left, &top, &right, &bottom);
-    m_maxSizeCache = QSizeF(left + totalWidth + right, top + totalHeight + bottom);
-    m_maxSizeValid = true;
-    return m_maxSizeCache;
+    return QSizeF();
 }
 
 QSizeF FlowLayout::sizeHint(Qt::SizeHint which, const QSizeF &constraint) const
 {
-    QSizeF sh = constraint;
-    switch (which) {
-    case Qt::PreferredSize:
-        sh = prefSize();
-        break;
-    case Qt::MinimumSize:
-        sh = minSize(constraint);
-        break;
-    case Qt::MaximumSize:
-        sh = maxSize();
-        break;
-    default:
-        break;
-    }
-    return sh;
+    Q_UNUSED(which)
+    Q_UNUSED(constraint)
+    return QSizeF();
 }

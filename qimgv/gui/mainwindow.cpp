@@ -412,8 +412,12 @@ void MW::restoreWindowGeometry() {
 }
 
 void MW::updateCurrentDisplay() {
-    const auto& screens = qApp->screens();
-    currentDisplay = static_cast<int>(screens.indexOf(window()->screen()));
+    auto* newScreen = window()->screen();
+    if (newScreen != m_currentScreen) [[unlikely]] {
+        m_currentScreen = newScreen;
+        const auto& screens = qApp->screens();
+        currentDisplay = static_cast<int>(screens.indexOf(m_currentScreen));
+    }
 }
 
 void MW::onWindowGeometryChanged() {
@@ -422,8 +426,9 @@ void MW::onWindowGeometryChanged() {
 }
 
 void MW::saveCurrentDisplay() {
-    const auto& screens = qApp->screens();
-    settings->setLastDisplay(static_cast<int>(screens.indexOf(window()->screen())));
+    // 优化：使用缓存的屏幕指针，避免重复调用 indexOf
+    settings->setLastDisplay(m_currentScreen ? 
+        static_cast<int>(qApp->screens().indexOf(m_currentScreen)) : currentDisplay);
 }
 
 void MW::showEvent(QShowEvent *event) {
@@ -665,16 +670,18 @@ void MW::showFullScreen() {
     if(!isHidden())
         saveWindowGeometry();
     
-    auto screens = qApp->screens();
-    int _currentDisplay = static_cast<int>(screens.indexOf(this->window()->screen()));
+    const auto& screens = qApp->screens();
+    // 优化：缓存 screen() 调用，但不更新 currentDisplay
+    auto* currentScreen = window()->screen();
+    int _currentDisplay = static_cast<int>(screens.indexOf(currentScreen));
     
+    // 如果窗口当前所在屏幕与目标屏幕不一致，则移动到目标屏幕
     if(screens.count() > currentDisplay && currentDisplay != _currentDisplay) {
         this->move(screens.at(currentDisplay)->geometry().x(),
                    screens.at(currentDisplay)->geometry().y());
     }
     
     QWidget::showFullScreen();
-    // 优化：移除 processEvents，依赖 Qt 自然事件循环
     emit fullscreenStateChanged(true);
 }
 
@@ -816,7 +823,6 @@ QString MW::calculateWindowTitle() {
         return qApp->applicationName();
     }
     
-    // 优化：使用 arg 代替 + 拼接，减少临时字符串创建
     QString windowTitle = info.fileName;
     
     if(settings->windowTitleExtendedInfo()) {

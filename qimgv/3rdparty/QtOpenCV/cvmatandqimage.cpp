@@ -119,13 +119,24 @@ cv::Mat image2Mat_shared(const QImage &img, MatColorOrder *order) noexcept {
 cv::Mat image2Mat(const QImage &img, int requiredType, MatColorOrder requiredOrder) noexcept {
     if (img.isNull()) return cv::Mat();
 
-    // 1. 将 QImage 转换为最接近支持的格式
-    QImage::Format fmt = findClosestFormat(img.format());
-    QImage src = (fmt == img.format()) ? img : img.convertToFormat(fmt);
+    // 1. 支持的格式直接走零拷贝路径，跳过 convertToFormat
+    QImage::Format fmt = img.format();
+    bool isSupportedFormat = (fmt == QImage::Format_RGB888
+        || fmt == QImage::Format_RGB32 || fmt == QImage::Format_ARGB32
+        || fmt == QImage::Format_ARGB32_Premultiplied
+        || fmt == QImage::Format_RGBX8888 || fmt == QImage::Format_RGBA8888
+        || fmt == QImage::Format_RGBA8888_Premultiplied
+        || fmt == QImage::Format_Grayscale8 || fmt == QImage::Format_Alpha8
+        || fmt == QImage::Format_Indexed8);
 
-    // 2. 获取共享 Mat 及其颜色顺序
     MatColorOrder srcOrder = MatColorOrder::RGB;
-    cv::Mat mat = image2Mat_shared(src, &srcOrder);
+    cv::Mat mat;
+    if (isSupportedFormat) {
+        mat = image2Mat_shared(img, &srcOrder);
+    } else {
+        QImage src = img.convertToFormat(findClosestFormat(fmt));
+        mat = image2Mat_shared(src, &srcOrder);
+    }
     if (mat.empty()) return cv::Mat();
 
     // 3. 解析目标类型
@@ -310,7 +321,11 @@ QImage mat2Image(const cv::Mat &mat, MatColorOrder order, QImage::Format formatH
         if (formatHint == QImage::Format_RGBX8888 || formatHint == QImage::Format_RGBA8888 || formatHint == QImage::Format_RGBA8888_Premultiplied) {
             requiredOrder = MatColorOrder::RGBA;
         }
-        tmp = reorderChannels(mat, order, requiredOrder);
+        if (order == requiredOrder) {
+            tmp = mat;
+        } else {
+            tmp = reorderChannels(mat, order, requiredOrder);
+        }
     }
 
     // ===== 深度转换 =====

@@ -823,12 +823,9 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
             } else if (current >= zoomLevels.last()) {
                 newScale = current * (1.0f + zoomStep);
             } else {
-                for (float level : zoomLevels) {
-                    if (current < level) {
-                        newScale = level;
-                        break;
-                    }
-                }
+                auto it = std::upper_bound(zoomLevels.cbegin(), zoomLevels.cend(), current);
+                if (it != zoomLevels.cend())
+                    newScale = *it;
             }
         } else {
             if (current > zoomLevels.last()) {
@@ -836,13 +833,9 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
             } else if (current <= zoomLevels.first()) {
                 newScale = current * (1.0f - zoomStep);
             } else {
-                // 修复: 将 int 改为 qsizetype，匹配 zoomLevels.size() 的返回类型
-                for (qsizetype i = zoomLevels.size() - 1; i >= 0; --i) {
-                    if (current > zoomLevels[i]) {
-                        newScale = zoomLevels[i];
-                        break;
-                    }
-                }
+                auto it = std::lower_bound(zoomLevels.cbegin(), zoomLevels.cend(), current);
+                if (it != zoomLevels.cbegin())
+                    newScale = *std::prev(it);
             }
         }
     }
@@ -1554,8 +1547,8 @@ QSize ImageViewerV2::scaledSizeR() const
     if (!pixmap)
         return QSize(0, 0);
 
-    const QRectF sceneRect = pixmapItem.sceneBoundingRect();
-    return QSize(qRound(sceneRect.width()), qRound(sceneRect.height()));
+    float s = currentScaleInternal();
+    return QSize(qRound(pixmap->width() * s), qRound(pixmap->height() * s));
 }
 
 QRect ImageViewerV2::scaledRectR() const

@@ -1,5 +1,6 @@
 #include "documentinfo.h"
 #include <array>
+#include <QSet>
 
 using namespace Qt::StringLiterals;
 
@@ -130,8 +131,18 @@ void DocumentInfo::detectFormat() {
         if(QStringView(mFormat).compare(u"jfif", Qt::CaseInsensitive) == 0)
             mFormat = "jpg";
 
-        if(settings->videoPlayback() && settings->videoFormats().values().contains(suffix))
-            mDocumentType = VIDEO;
+        if(settings->videoPlayback()) {
+            static const QSet<QByteArray> videoSuffixes = [](){
+                QSet<QByteArray> set;
+                const auto formats = settings->videoFormats().values();
+                set.reserve(formats.size());
+                for(const auto &fmt : formats)
+                    set.insert(fmt);
+                return set;
+            }();
+            if(videoSuffixes.contains(suffix))
+                mDocumentType = VIDEO;
+        }
         else
             mDocumentType = STATIC;
     }
@@ -291,8 +302,7 @@ void DocumentInfo::loadExifTags() const {
                 formattedValue = formattedValue.mid(spaceIndex + 1);
         }
 
-        if(!exifTags.contains(displayKey))
-            exifTags.insert(displayKey, formattedValue);
+        exifTags.insertIfNotExists(displayKey, formattedValue);
     }
 
     if(exifTags.isEmpty()) {

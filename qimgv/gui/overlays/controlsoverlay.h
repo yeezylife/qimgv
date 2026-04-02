@@ -24,6 +24,7 @@ private:
     QSize contentsSize();
     void fitToContents();
     void recalculateGeometryInternal();
+    QSize mCachedContentsSize;
 
 protected:
     virtual void recalculateGeometry();

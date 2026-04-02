@@ -20,7 +20,12 @@ ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     setLayout(&layout);
     
     // 构造函数中直接设置大小和几何，避免调用虚函数
-    this->setFixedSize(contentsSize());
+    mCachedContentsSize = QSize(0, 0);
+    for(int i=0; i<layout.count(); i++) {
+        mCachedContentsSize.setWidth(mCachedContentsSize.width() + layout.itemAt(i)->widget()->width());
+        mCachedContentsSize.setHeight(layout.itemAt(i)->widget()->height());
+    }
+    this->setFixedSize(mCachedContentsSize);
     recalculateGeometryInternal();
 
     setMouseTracking(true);
@@ -44,16 +49,11 @@ void ControlsOverlay::show() {
 }
 
 QSize ControlsOverlay::contentsSize() {
-    QSize newSize(0, 0);
-    for(int i=0; i<layout.count(); i++) {
-        newSize.setWidth(newSize.width() + layout.itemAt(i)->widget()->width());
-        newSize.setHeight(layout.itemAt(i)->widget()->height());
-    }
-    return newSize;
+    return mCachedContentsSize;
 }
 
 void ControlsOverlay::fitToContents() {
-    this->setFixedSize(contentsSize());
+    this->setFixedSize(mCachedContentsSize);
     recalculateGeometry();
 }
 

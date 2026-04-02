@@ -412,11 +412,12 @@ void MW::restoreWindowGeometry() {
 }
 
 void MW::updateCurrentDisplay() {
-    auto* newScreen = window()->screen();
-    if (newScreen != m_currentScreen) [[unlikely]] {
-        m_currentScreen = newScreen;
-        const auto& screens = qApp->screens();
-        currentDisplay = static_cast<int>(screens.indexOf(m_currentScreen));
+    const auto& screens = qApp->screens();
+    int newDisplayIndex = static_cast<int>(screens.indexOf(window()->screen()));
+    
+    // 只在屏幕索引真正改变时更新
+    if (newDisplayIndex != currentDisplay && newDisplayIndex >= 0) {
+        currentDisplay = newDisplayIndex;
     }
 }
 
@@ -426,9 +427,8 @@ void MW::onWindowGeometryChanged() {
 }
 
 void MW::saveCurrentDisplay() {
-    // 优化：使用缓存的屏幕指针，避免重复调用 indexOf
-    settings->setLastDisplay(m_currentScreen ? 
-        static_cast<int>(qApp->screens().indexOf(m_currentScreen)) : currentDisplay);
+    // 直接使用 currentDisplay,它已经在 updateCurrentDisplay() 中更新
+    settings->setLastDisplay(currentDisplay);
 }
 
 void MW::showEvent(QShowEvent *event) {

@@ -13,16 +13,7 @@ Actions *Actions::getInstance() {
     return appActions;
 }
 
-const QMap<QString, QVersionNumber> &Actions::getMap() {
-    return mActions;
-}
-
-QList<QString> Actions::getList() {
-    return mActions.keys();
-}
-
 void Actions::init() {
-    // Use initializer list for better performance
     mActions = {
         {"nextImage", QVersionNumber(0,6,2)},
         {"prevImage", QVersionNumber(0,6,2)},
@@ -94,5 +85,7 @@ void Actions::init() {
         {"pasteFile", QVersionNumber(1,0,3)},
         {"minimize", QVersionNumber(1,0,0)}
     };
+    // 缓存 key 列表，避免每次调用都遍历
+    mActionList = mActions.keys();
 }
 

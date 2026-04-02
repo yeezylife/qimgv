@@ -1,6 +1,5 @@
 #pragma once
 #include <QHBoxLayout>
-#include <QScreen>
 #include <QTimer>
 #include <QHash>
 #include <QSize>
@@ -114,7 +113,6 @@ private:
     QHash<QString, QString> m_exifInfo;  // 优化：使用 QHash 代替 QMap
     bool fullUiInitialized = false;
     bool firstShowHandled = false;
-    QScreen* m_currentScreen = nullptr;  // 优化：缓存屏幕指针，避免 indexOf O(n) 搜索
 
     void saveWindowGeometry();
     void restoreWindowGeometry();

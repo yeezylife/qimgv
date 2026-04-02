@@ -7,19 +7,13 @@ WindowsWorker::WindowsWorker() {
     buffer.resize(131072); // 128KB，提高高并发场景下的事件处理能力
 }
 
-WindowsWorker::~WindowsWorker() {
-    if (hDirectory != INVALID_HANDLE_VALUE) {
-        CloseHandle(hDirectory);
-    }
-}
-
-void WindowsWorker::setDirectoryHandle(HANDLE handle) {
-    hDirectory = handle;
+void WindowsWorker::setDirectoryHandle(ScopedHandle handle) {
+    hDirectory = std::move(handle);
 }
 
 void WindowsWorker::run() {
     emit started();
-    if (hDirectory == INVALID_HANDLE_VALUE) {
+    if (!hDirectory) {
         emit finished();
         return;
     }
@@ -29,7 +23,7 @@ void WindowsWorker::run() {
                                    FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | 
                                    FILE_NOTIFY_CHANGE_LAST_WRITE;
 
-    while (ReadDirectoryChangesW(hDirectory, buffer.data(), buffer.size(), FALSE, notifyFilter, &bytesReturned, nullptr, nullptr)) {
+    while (ReadDirectoryChangesW(hDirectory.get(), buffer.data(), buffer.size(), FALSE, notifyFilter, &bytesReturned, nullptr, nullptr)) {
         if (bytesReturned == 0) {
             continue;
         }

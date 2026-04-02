@@ -7,6 +7,7 @@
 #include <QString>
 #include <QDebug>
 
+class ScopedHandle;
 class WindowsWorker;
 
 // 优化：使用 QStringLiteral 和 asprintf 减少临时 QString 对象的构造开销
@@ -28,7 +29,7 @@ class WindowsWatcherPrivate : public DirectoryWatcherPrivate
 
 public:
     explicit WindowsWatcherPrivate(WindowsWatcher* qq);
-    HANDLE requestDirectoryHandle(const QString& path);
+    ScopedHandle requestDirectoryHandle(const QString& path);
 
 public slots:
     void dispatchNotify(const QString& fileName, DWORD action);

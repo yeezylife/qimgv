@@ -10,7 +10,7 @@ WindowsWatcherPrivate::WindowsWatcherPrivate(WindowsWatcher* qq)
     connect(windowsWorker, &WindowsWorker::notifyEvent, this, &WindowsWatcherPrivate::dispatchNotify);
 }
 
-HANDLE WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
+ScopedHandle WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
 {
     HANDLE hDirectory;
     do {
@@ -30,12 +30,12 @@ HANDLE WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
                 QThread::msleep(100);
             } else {
                 qDebug() << lastError();
-                return INVALID_HANDLE_VALUE;
+                return ScopedHandle();
             }
         }
     } while (hDirectory == INVALID_HANDLE_VALUE);
 
-    return hDirectory;
+    return ScopedHandle(hDirectory);
 }
 
 void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, DWORD action)
@@ -84,12 +84,12 @@ void WindowsWatcher::setWatchPath(const QString &path)
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
 
-    HANDLE hDirectory = d->requestDirectoryHandle(path);
-    if (hDirectory == INVALID_HANDLE_VALUE) {
+    ScopedHandle hDirectory = d->requestDirectoryHandle(path);
+    if (!hDirectory) {
         qDebug() << "requestDirectoryHandle: INVALID_HANDLE_VALUE";
         return;
     }
 
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
-    windowsWorker->setDirectoryHandle(hDirectory);
+    windowsWorker->setDirectoryHandle(std::move(hDirectory));
 }

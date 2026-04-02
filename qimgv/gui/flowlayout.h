@@ -95,8 +95,15 @@ private:
     QSizeF minSize(const QSizeF &constraint) const;
     QSizeF prefSize() const;
     QSizeF maxSize() const;
+    void invalidateSizeCache() const;
 
     QList<QGraphicsLayoutItem*> m_items;
     qreal m_spacing[2];
     int m_rows, m_columns;
+    mutable QSizeF m_minSizeCache;
+    mutable QSizeF m_prefSizeCache;
+    mutable QSizeF m_maxSizeCache;
+    mutable bool m_minSizeValid = false;
+    mutable bool m_prefSizeValid = false;
+    mutable bool m_maxSizeValid = false;
 };

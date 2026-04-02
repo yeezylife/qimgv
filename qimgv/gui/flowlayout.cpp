@@ -66,6 +66,13 @@ FlowLayout::FlowLayout()
     setSizePolicy(sp);
 }
 
+void FlowLayout::invalidateSizeCache() const
+{
+    m_minSizeValid = false;
+    m_prefSizeValid = false;
+    m_maxSizeValid = false;
+}
+
 int FlowLayout::itemAbove(int index) {
     // 修复: qsizetype -> int
     if(index >= static_cast<int>(m_items.count()) || index < 0)
@@ -122,6 +129,7 @@ void FlowLayout::insertItem(int index, QGraphicsLayoutItem *item) {
         // 修复: qsizetype -> int
         index = static_cast<int>(m_items.count());
     m_items.insert(index, item);
+    invalidateSizeCache();
     invalidate();
 }
 
@@ -139,12 +147,14 @@ QGraphicsLayoutItem *FlowLayout::itemAt(int index) const
 void FlowLayout::removeAt(int index)
 {
     m_items.removeAt(index);
+    invalidateSizeCache();
     invalidate();
 }
 
 void FlowLayout::clear()
 {
     m_items.clear();
+    invalidateSizeCache();
     invalidate();
 }
 
@@ -159,6 +169,7 @@ void FlowLayout::setSpacing(Qt::Orientations o, qreal spacing)
         m_spacing[0] = spacing;
     if (o & Qt::Vertical)
         m_spacing[1] = spacing;
+    invalidateSizeCache();
 }
 
 void FlowLayout::setGeometry(const QRectF &geom)
@@ -219,6 +230,9 @@ GridInfo FlowLayout::doLayout(const QRectF &geom, bool applyNewGeometry) const {
 
 QSizeF FlowLayout::minSize(const QSizeF &constraint) const
 {
+    if (m_minSizeValid && !m_minSizeCache.isEmpty())
+        return m_minSizeCache;
+
     qreal left, top, right, bottom;
     getContentsMargins(&left, &top, &right, &bottom);
 
@@ -231,13 +245,17 @@ QSizeF FlowLayout::minSize(const QSizeF &constraint) const
     for (auto item : m_items)
         size = size.expandedTo(item->effectiveSizeHint(Qt::MinimumSize));
     
-    // 修复: qreal -> int (使用 qRound 进行四舍五入)
     size += QSize(qRound(left + right), qRound(top + bottom));
+    m_minSizeCache = size;
+    m_minSizeValid = true;
     return size;
 }
 
 QSizeF FlowLayout::prefSize() const
 {
+    if (m_prefSizeValid && !m_prefSizeCache.isEmpty())
+        return m_prefSizeCache;
+
     qreal left, right;
     getContentsMargins(&left, nullptr, &right, nullptr);
 
@@ -255,11 +273,16 @@ QSizeF FlowLayout::prefSize() const
     const qreal goldenAspectRatio = 1.61803399;
     qreal w = qSqrt(totalWidth * maxh * goldenAspectRatio) + left + right;
 
-    return minSize(QSizeF(w, -1));
+    m_prefSizeCache = minSize(QSizeF(w, -1));
+    m_prefSizeValid = true;
+    return m_prefSizeCache;
 }
 
 QSizeF FlowLayout::maxSize() const
 {
+    if (m_maxSizeValid && !m_maxSizeCache.isEmpty())
+        return m_maxSizeCache;
+
     qreal totalWidth = 0;
     qreal totalHeight = 0;
     for (auto item : m_items) {
@@ -274,7 +297,9 @@ QSizeF FlowLayout::maxSize() const
 
     qreal left, top, right, bottom;
     getContentsMargins(&left, &top, &right, &bottom);
-    return QSizeF(left + totalWidth + right, top + totalHeight + bottom);
+    m_maxSizeCache = QSizeF(left + totalWidth + right, top + totalHeight + bottom);
+    m_maxSizeValid = true;
+    return m_maxSizeCache;
 }
 
 QSizeF FlowLayout::sizeHint(Qt::SizeHint which, const QSizeF &constraint) const

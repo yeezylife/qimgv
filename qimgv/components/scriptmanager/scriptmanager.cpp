@@ -20,8 +20,9 @@ ScriptManager *ScriptManager::getInstance() {
 }
 
 void ScriptManager::runScript(const QString &scriptName, const std::shared_ptr<Image> &img) {
-    if(scripts.contains(scriptName)) {
-        Script script = scripts.value(scriptName);
+    auto it = scripts.find(scriptName);
+    if(it != scripts.end()) {
+        const Script &script = it.value();
         if(script.command.isEmpty())
             return;
         QProcess exec(this);
@@ -138,7 +139,6 @@ void ScriptManager::saveScripts() {
 void ScriptManager::addScript(const QString& scriptName, const Script& script) {
     if(scripts.contains(scriptName)) {
         qDebug() << "[ScriptManager] Replacing script" << scriptName;
-        scripts.remove(scriptName);
     }
     scripts.insert(scriptName, script);
 }
@@ -147,7 +147,7 @@ void ScriptManager::removeScript(const QString& scriptName) {
     scripts.remove(scriptName);
 }
 
-const QMap<QString, Script>& ScriptManager::allScripts() const {
+const QHash<QString, Script>& ScriptManager::allScripts() const {
     return scripts;
 }
 

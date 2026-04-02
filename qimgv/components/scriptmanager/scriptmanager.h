@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QObject>
-#include <QMap>
+#include <QHash>
 #include <QStringList>
 #include <QProcess>
 #include <memory>
@@ -21,7 +21,7 @@ public:
     void readScripts();
     void saveScripts();
     void removeScript(const QString& scriptName);
-    const QMap<QString, Script>& allScripts() const;
+    const QHash<QString, Script>& allScripts() const;
     const QList<QString> scriptNames() const;
     Script getScript(const QString& scriptName) const;
     void addScript(const QString& scriptName, const Script& script);
@@ -32,7 +32,7 @@ signals:
 
 private:
     explicit ScriptManager(QObject *parent = nullptr);
-    QMap<QString, Script> scripts; // <name, script>
+    QHash<QString, Script> scripts; // <name, script>
     void processArguments(QStringList& cmd, const std::shared_ptr<Image> &img) const;
 };
 

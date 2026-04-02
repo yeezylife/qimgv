@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <QHash>
 
 Settings *settings = nullptr;
 
@@ -665,7 +666,7 @@ void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
     settings->settingsConf->endGroup();
 }
 //------------------------------------------------------------------------------
-void Settings::readScripts(QMap<QString, Script> &scripts) {
+void Settings::readScripts(QHash<QString, Script> &scripts) {
     scripts.clear();
     settings->settingsConf->beginGroup("Scripts");
     int size = settings->settingsConf->beginReadArray("script");
@@ -680,10 +681,10 @@ void Settings::readScripts(QMap<QString, Script> &scripts) {
     settings->settingsConf->endGroup();
 }
 
-void Settings::saveScripts(const QMap<QString, Script> &scripts) {
+void Settings::saveScripts(const QHash<QString, Script> &scripts) {
     settings->settingsConf->beginGroup("Scripts");
     settings->settingsConf->beginWriteArray("script");
-    QMapIterator<QString, Script> i(scripts);
+    QHashIterator<QString, Script> i(scripts);
     int counter = 0;
     while(i.hasNext()) {
         i.next();

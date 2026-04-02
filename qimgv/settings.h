@@ -166,8 +166,8 @@ public:
     void setBlurBackground(bool mode);
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode();    
-    void readScripts(QMap<QString, Script> &scripts);
-    void saveScripts(const QMap<QString, Script> &scripts);
+    void readScripts(QHash<QString, Script> &scripts);
+    void saveScripts(const QHash<QString, Script> &scripts);
     int folderViewIconSize();
     void setFolderViewIconSize(int value);
 

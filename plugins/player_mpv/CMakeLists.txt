@@ -25,6 +25,7 @@ add_library(player_mpv MODULE
     src/qthelper.hpp)
 
 target_compile_features(player_mpv PRIVATE cxx_std_23)
+target_compile_options(player_mpv PRIVATE -Wno-padded)
 
 if(WIN32)
     target_link_libraries(player_mpv PRIVATE

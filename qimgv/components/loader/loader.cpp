@@ -65,16 +65,15 @@ void Loader::loadAsync(const QString &path) {
 }
 
 void Loader::doLoadAsync(const QString &path, int priority) {
-    // 🚀 优化：用 insert 返回值替代 contains + insert 双查找
-    auto result = tasks.insert(path, nullptr);
-    if (!result.second) {
+    auto it = tasks.find(path);
+    if (it != tasks.end()) {
         return; // 已在加载中
     }
-
+    
     auto *runnable = new LoaderRunnable(path);
     runnable->setAutoDelete(false); // 我们手动管理内存，以便在 clearTasks 时安全删除
     
-    result.first.value() = runnable;
+    tasks.insert(path, runnable);
     connect(runnable, &LoaderRunnable::finished, this, &Loader::onLoadFinished);
     
     pool->start(runnable, priority);

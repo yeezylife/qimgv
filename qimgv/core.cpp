@@ -1,10 +1,3 @@
-/*
- * This is sort-of a main controller of application.
- * It creates and initializes all components, then sets up gui and actions.
- * Most of communication between components go through here.
- *
- */
-
 #include "core.h"
 #include <QSettings>
 
@@ -1294,31 +1287,25 @@ bool Core::setDirectory(const QString& path) {
 }
 
 bool Core::loadFileIndex(int index, bool async, bool preload) {
-    if(!model)
+    if (!model)
         return false;
 
     auto entry = model->fileEntryAt(index);
-    if(entry.path.isEmpty())
+    const auto& path = entry.path;       // 减少重复的 entry.path 访问
+    if (path.isEmpty())
         return false;
 
-    state.currentFilePath = entry.path;
+    state.currentFilePath = path;
 
-    // 删除：model->unloadExcept(entry.path, preload);
+    model->load(path, async);
 
-    model->load(entry.path, async);
-
-    if(preload) {
-        model->preload(model->nextOf(entry.path));
-        model->preload(model->prevOf(entry.path));
+    if (preload) {
+        model->preload(model->nextOf(path));
+        model->preload(model->prevOf(path));
     }
 
-    // 优化4：避免重复UI更新
-    static QString lastFocusedPath;
-    if(lastFocusedPath != entry.path) {
-        thumbPanelPresenter.selectAndFocus(entry.path);
-        folderViewPresenter.selectAndFocus(entry.path);
-        lastFocusedPath = entry.path;
-    }
+    thumbPanelPresenter.selectAndFocus(path);
+    folderViewPresenter.selectAndFocus(path);
     updateInfoString();
     return true;
 }
@@ -1506,8 +1493,6 @@ void Core::onModelItemReady(const std::shared_ptr<Image>& img, const QString &pa
             state.delayModel = false;
             QTimer::singleShot(40, this, SLOT(modelDelayLoad()));
         }
-
-        // 删除：model->unloadExcept(state.currentFilePath, settings->usePreloader());
     }
 }
 

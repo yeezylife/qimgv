@@ -59,7 +59,7 @@ private:
     void onFirstRun();
 
     // ui stuff
-    MW *mw;
+    std::unique_ptr<MW> mw;
 
     State state;
     bool loopSlideshow, shuffle, slideshow;
@@ -82,8 +82,15 @@ private:
 
     Randomizer randomizer;
     void syncRandomizer();
+    
+    // 优化3：QMimeData/QDrag复用
+    std::unique_ptr<QMimeData> mimeCache;
+    std::unique_ptr<QDrag> dragCache;
+    
+    // 优化5：QSettings缓存
+    QString cachedClipboardSaveFormat;
 
-    void attachModel(DirectoryModel *_model);
+    void attachModel(std::unique_ptr<DirectoryModel> _model);
     QString selectedPath();
     void guiSetImage(const std::shared_ptr<Image>& img);
     QTimer slideshowTimer;

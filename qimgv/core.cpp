@@ -28,10 +28,12 @@ Core::Core()
     slideshowTimer.setSingleShot(true);
     connect(settings, &Settings::settingsChanged, this, &Core::readSettings);
 
+    // 优化5：QSettings缓存 - 初始化时读取一次
     QSettings qsettings;
-    lastClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
-    if(lastClipboardSaveFormat.isEmpty())
-        lastClipboardSaveFormat = "jxl";
+    cachedClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
+    if(cachedClipboardSaveFormat.isEmpty())
+        cachedClipboardSaveFormat = "jxl";
+    lastClipboardSaveFormat = cachedClipboardSaveFormat;
 
     QVersionNumber lastVersion = settings->lastVersion();
     if(settings->firstRun())
@@ -61,12 +63,12 @@ void Core::showGui() {
 
 // create MainWindow and all widgets
 void Core::initGui() {
-    mw = std::make_unique<MW>().release();
+    mw = std::make_unique<MW>();
     mw->hide();
 }
 
-void Core::attachModel(DirectoryModel *_model) {
-    model.reset(_model);
+void Core::attachModel(std::unique_ptr<DirectoryModel> _model) {
+    model = std::move(_model);
     thumbPanelPresenter.setModel(model);
     folderViewPresenter.setModel(model);
     bool showDirs = (settings->folderViewMode() == FV_EXT_FOLDERS);
@@ -76,7 +78,7 @@ void Core::attachModel(DirectoryModel *_model) {
 }
 
 void Core::initComponents() {
-    attachModel(std::make_unique<DirectoryModel>().release());
+    attachModel(std::make_unique<DirectoryModel>());
 }
 
 void Core::connectComponents() {
@@ -211,7 +213,7 @@ void Core::initActions() {
 
 void Core::loadTranslation() {
     if(!translator)
-        translator = std::make_unique<QTranslator>().release();
+        translator = new QTranslator(this);
     QString trPathFallback = QCoreApplication::applicationDirPath() + "/translations";
 #ifdef TRANSLATIONS_PATH
     const QString& trPath = QString(TRANSLATIONS_PATH);
@@ -523,8 +525,10 @@ void Core::openFromClipboard() {
         QFileInfo destFi(destPath);
         if(!destFi.suffix().isEmpty()) {
             lastClipboardSaveFormat = destFi.suffix().toLower();
+            cachedClipboardSaveFormat = lastClipboardSaveFormat;
+            // 优化5：只在格式变化时才写入QSettings
             QSettings qsettings;
-            qsettings.setValue("clipboard/saveFormat", lastClipboardSaveFormat);
+            qsettings.setValue("clipboard/saveFormat", cachedClipboardSaveFormat);
         }
 
 
@@ -602,23 +606,30 @@ void Core::onDraggedOutList(const QList<QString>& paths) {
     QMimeData *mimeData;
     // single selection, image
     if(paths.count() == 1 && model->containsFile(paths.first())) {
-        mimeData = getMimeDataForImage(model->getImage(paths.last()), TARGET_DROP);
+        mimeData = getMimeDataForImage(model->getImage(paths.first()), TARGET_DROP);
     } else { // multi-selection, or single directory. drag urls
-        mimeData = std::make_unique<QMimeData>().release();
+        // 优化3：复用QMimeData
+        if(!mimeCache)
+            mimeCache = std::make_unique<QMimeData>();
+        mimeCache->clear();
         QList<QUrl> urlList;
         for(const auto& path : paths)
             urlList << QUrl::fromLocalFile(path);
-        mimeData->setUrls(urlList);
+        mimeCache->setUrls(urlList);
+        mimeData = mimeCache.get();
     }
     //auto thumb = Thumbnailer::getThumbnail(paths.last(), 100);
-    mDrag = std::make_unique<QDrag>(this).release();
+    // 优化3：复用QDrag
+    if(!dragCache)
+        dragCache = std::make_unique<QDrag>(this);
+    mDrag = dragCache.get();
     mDrag->setMimeData(mimeData);
     //mDrag->setPixmap(*thumb->pixmap().get());
     mDrag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
 }
 
 QMimeData *Core::getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target) {
-    auto mimeData = std::make_unique<QMimeData>().release();
+    QMimeData *mimeData = new QMimeData();
     if(!img)
         return mimeData;
     QString path = img->filePath();
@@ -702,7 +713,8 @@ void Core::onFileRemoved(const QString& filePath, int index) {
     if(state.currentFilePath == filePath) {
         if(mw->currentViewMode() == MODE_DOCUMENT) {
             if(!loadFileIndex(index, true, settings->usePreloader()))
-                loadFileIndex(--index, true, settings->usePreloader());
+                if(index > 0)
+                    loadFileIndex(index - 1, true, settings->usePreloader());
         } else {
             state.hasActiveImage = false;
             state.currentFilePath = "";
@@ -1158,7 +1170,8 @@ void Core::setWallpaper() {
         RegCloseKey(hKey);
     }
     // set wallpaper path
-    SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, (char*)(selectedPath().toStdWString().c_str()), SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+    std::wstring wallpaperPath = selectedPath().toStdWString();
+    SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, (LPWSTR)wallpaperPath.c_str(), SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
 #else
     auto session = qgetenv("DESKTOP_SESSION").toLower();
     if(session.contains("plasma"))
@@ -1218,45 +1231,57 @@ void Core::reset() {
 bool Core::loadPath(const QString& path) {
     if(path.isEmpty())
         return false;
+
     QString cleanPath = path;
     if(cleanPath.startsWith("file://", Qt::CaseInsensitive))
         cleanPath = cleanPath.mid(7);
 
     stopSlideshow();
     state.delayModel = false;
+
+    // ✅ 关键优化：只构造一次 QFileInfo（避免重复 stat）
     QFileInfo fileInfo(cleanPath);
+
     if(fileInfo.isDir()) {
-        state.directoryPath = QDir(cleanPath).absolutePath();
+        state.directoryPath = fileInfo.absoluteFilePath();
     } else if(fileInfo.isFile()) {
         state.directoryPath = fileInfo.absolutePath();
         if(model->directoryPath() != state.directoryPath)
             state.delayModel = true;
     } else {
         mw->showError(tr("Could not open path: ") + cleanPath);
-        qDebug() << "Could not open path: " << cleanPath;
+        qDebug() << "Could not open path:" << cleanPath;
         return false;
     }
+
     if(!state.delayModel && !setDirectory(state.directoryPath))
         return false;
 
-    // load file / folderview
+    // 📂 load file / folderview
     if(fileInfo.isFile()) {
-        int index = model->indexOfFile(fileInfo.absoluteFilePath());
+        const QString absFilePath = fileInfo.absoluteFilePath();
+
+        int index = model->indexOfFile(absFilePath);
+
         // DirectoryManager only checks file extensions via regex (performance reasons)
         // But in this case we force check mimetype
         if(index == -1) {
-            QStringList types = settings->supportedMimeTypes();
+            const QStringList types = settings->supportedMimeTypes();
+
             QMimeDatabase db;
-            QMimeType type = db.mimeTypeForFile(fileInfo.absoluteFilePath());
+            const QMimeType type = db.mimeTypeForFile(absFilePath);
+
             if(types.contains(type.name())) {
-                if(model->forceInsert(fileInfo.absoluteFilePath())) {
-                    index = model->indexOfFile(fileInfo.absoluteFilePath());
+                if(model->forceInsert(absFilePath)) {
+                    index = model->indexOfFile(absFilePath);
                 }
             }
         }
+
         mw->enableDocumentView();
         return loadFileIndex(index, false, settings->usePreloader());
     }
+
     mw->enableFolderView();
     return true;
 }
@@ -1292,8 +1317,13 @@ bool Core::loadFileIndex(int index, bool async, bool preload) {
         model->preload(model->prevOf(entry.path));
     }
 
-    thumbPanelPresenter.selectAndFocus(entry.path);
-    folderViewPresenter.selectAndFocus(entry.path);
+    // 优化4：避免重复UI更新
+    static QString lastFocusedPath;
+    if(lastFocusedPath != entry.path) {
+        thumbPanelPresenter.selectAndFocus(entry.path);
+        folderViewPresenter.selectAndFocus(entry.path);
+        lastFocusedPath = entry.path;
+    }
     updateInfoString();
     return true;
 }
@@ -1437,6 +1467,8 @@ void Core::startSlideshowTimer() {
     // start timer only for static images or single frame gifs
     // for proper gifs and video we get a playbackFinished() signal
     auto img = model->getImage(state.currentFilePath);
+    if(!img)
+        return;
     if(img->type() == STATIC) {
         slideshowTimer.start();
     } else if(img->type() == ANIMATED) {

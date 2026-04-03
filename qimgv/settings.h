@@ -316,6 +316,75 @@ private:
     QDir *mTmpDir, *mThumbCacheDir, *mConfDir;
     ColorScheme mColorScheme;
     QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
+    
+    // 缓存支持的格式，避免重复计算
+    mutable QList<QByteArray> mCachedSupportedFormats;
+    mutable QStringList mCachedSupportedMimeTypes;
+    mutable bool mFormatsCacheValid;
+    mutable bool mMimeTypesCacheValid;
+    
+    // 缓存格式过滤器和正则表达式，避免重复构建
+    mutable QString mCachedFormatsFilter;
+    mutable bool mFormatsFilterCacheValid;
+    mutable QString mCachedFormatsRegex;
+    mutable bool mFormatsRegexCacheValid;
+    
+    // 缓存loadStylesheet()结果
+    mutable QString mCachedStylesheet;
+    mutable bool mStylesheetCacheValid;
+    
+    // 缓存浮点设置值
+    mutable float mCachedZoomStep;
+    mutable bool mZoomStepCacheValid;
+    mutable float mCachedMouseScrollingSpeed;
+    mutable bool mMouseScrollingSpeedCacheValid;
+    
+    // 缓存枚举设置值
+    mutable ScalingFilter mCachedScalingFilter;
+    mutable bool mScalingFilterCacheValid;
+    mutable QRect mCachedWindowGeometry;
+    mutable bool mWindowGeometryCacheValid;
+    mutable ImageFitMode mCachedImageFitMode;
+    mutable bool mImageFitModeCacheValid;
+    
+    // 缓存整数设置值
+    mutable int mCachedPanelPreviewsSize;
+    mutable bool mPanelPreviewsSizeCacheValid;
+    mutable int mCachedJPEGSaveQuality;
+    mutable bool mJPEGSaveQualityCacheValid;
+    
+    // 缓存字符串列表
+    mutable QStringList mCachedSavedPaths;
+    mutable bool mSavedPathsCacheValid;
+    mutable QStringList mCachedBookmarks;
+    mutable bool mBookmarksCacheValid;
+    
+    // 缓存快捷键和脚本
+    mutable QMap<QString, QString> mCachedShortcuts;
+    mutable bool mShortcutsCacheValid;
+    mutable QHash<QString, Script> mCachedScripts;
+    mutable bool mScriptsCacheValid;
+    mutable PanelPosition mCachedPanelPosition;
+    mutable bool mPanelPositionCacheValid;
+    mutable SortingMode mCachedSortingMode;
+    mutable bool mSortingModeCacheValid;
+    mutable ZoomIndicatorMode mCachedZoomIndicatorMode;
+    mutable bool mZoomIndicatorModeCacheValid;
+    mutable DefaultCropAction mCachedDefaultCropAction;
+    mutable bool mDefaultCropActionCacheValid;
+    mutable ImageFocusPoint mCachedFocusPointIn1to1Mode;
+    mutable bool mFocusPointIn1to1ModeCacheValid;
+    mutable ImageScrolling mCachedImageScrolling;
+    mutable bool mImageScrollingCacheValid;
+    mutable ViewMode mCachedDefaultViewMode;
+    mutable bool mDefaultViewModeCacheValid;
+    mutable FolderEndAction mCachedFolderEndAction;
+    mutable bool mFolderEndActionCacheValid;
+    mutable FolderViewMode mCachedFolderViewMode;
+    mutable bool mFolderViewModeCacheValid;
+    mutable ThumbPanelStyle mCachedThumbPanelStyle;
+    mutable bool mThumbPanelStyleCacheValid;
+    
     void loadTheme();
     void saveTheme();
     void createColorVariants();

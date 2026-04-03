@@ -18,12 +18,41 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     themeConf = new QSettings(mConfDir->absolutePath() + "/theme.ini", QSettings::IniFormat);
 #endif
     fillVideoFormats();
+    mFormatsCacheValid = false;
+    mMimeTypesCacheValid = false;
+    mFormatsFilterCacheValid = false;
+    mFormatsRegexCacheValid = false;
+    
+    // 初始化缓存标志
+    mStylesheetCacheValid = false;
+    mZoomStepCacheValid = false;
+    mMouseScrollingSpeedCacheValid = false;
+    mScalingFilterCacheValid = false;
+    mWindowGeometryCacheValid = false;
+    mImageFitModeCacheValid = false;
+    mPanelPreviewsSizeCacheValid = false;
+    mJPEGSaveQualityCacheValid = false;
+    mSavedPathsCacheValid = false;
+    mBookmarksCacheValid = false;
+    mShortcutsCacheValid = false;
+    mScriptsCacheValid = false;
+    mPanelPositionCacheValid = false;
+    mSortingModeCacheValid = false;
+    mZoomIndicatorModeCacheValid = false;
+    mDefaultCropActionCacheValid = false;
+    mFocusPointIn1to1ModeCacheValid = false;
+    mImageScrollingCacheValid = false;
+    mDefaultViewModeCacheValid = false;
+    mFolderEndActionCacheValid = false;
+    mFolderViewModeCacheValid = false;
+    mThumbPanelStyleCacheValid = false;
 }
 //------------------------------------------------------------------------------
 Settings::~Settings() {
     saveTheme();
     delete mThumbCacheDir;
     delete mTmpDir;
+    delete mConfDir;
     delete settingsConf;
     delete stateConf;
     delete themeConf;
@@ -80,6 +109,12 @@ QString Settings::tmpDir() {
 //------------------------------------------------------------------------------
 // this here is temporarily, will be moved to some sort of theme manager class
 void Settings::loadStylesheet() {
+    // 检查缓存是否有效
+    if (mStylesheetCacheValid) {
+        qApp->setStyleSheet(mCachedStylesheet);
+        return;
+    }
+    
     // stylesheet template file
     QFile file(":/res/styles/style-template.qss");
     if(file.open(QFile::ReadOnly)) {
@@ -214,6 +249,10 @@ void Settings::loadStylesheet() {
 
         // --- apply -------------------------------------------------
         qApp->setStyleSheet(styleSheet);
+        
+        // 缓存样式表
+        mCachedStylesheet = styleSheet;
+        mStylesheetCacheValid = true;
     }
 }
 //------------------------------------------------------------------------------
@@ -266,6 +305,7 @@ const ColorScheme& Settings::colorScheme() {
 //------------------------------------------------------------------------------
 void Settings::setColorScheme(ColorScheme scheme) {
     mColorScheme = scheme;
+    mStylesheetCacheValid = false;
     loadStylesheet();
 }
 //------------------------------------------------------------------------------
@@ -309,47 +349,58 @@ void Settings::setMpvBinary(const QString &path) {
 }
 //------------------------------------------------------------------------------
 QList<QByteArray> Settings::supportedFormats() {
-    auto formats = QImageReader::supportedImageFormats();
-    formats << "jfif";
-    if(videoPlayback())
-        formats << mVideoFormatsMap.values();
-    formats.removeAll("pdf");
-    return formats;
+    if (!mFormatsCacheValid) {
+        mCachedSupportedFormats = QImageReader::supportedImageFormats();
+        mCachedSupportedFormats << "jfif";
+        if(videoPlayback())
+            mCachedSupportedFormats << mVideoFormatsMap.values();
+        mCachedSupportedFormats.removeAll("pdf");
+        mFormatsCacheValid = true;
+    }
+    return mCachedSupportedFormats;
 }
 //------------------------------------------------------------------------------
 // (for open/save dialogs, as a single string)
 // example:  "Images (*.jpg, *.png)"
 QString Settings::supportedFormatsFilter() {
-    QString filters;
-    auto formats = supportedFormats();
-    filters.append("Supported files (");
-    for(int i = 0; i < formats.count(); i++)
-        filters.append("*." + QString(formats.at(i)) + " ");
-    filters.append(")");
-    return filters;
+    if (!mFormatsFilterCacheValid) {
+        auto formats = supportedFormats();
+        QStringList formatList;
+        formatList.reserve(formats.count());
+        for(const auto &fmt : formats)
+            formatList << "*." + QString(fmt);
+        mCachedFormatsFilter = "Supported files (" + formatList.join(" ") + ")";
+        mFormatsFilterCacheValid = true;
+    }
+    return mCachedFormatsFilter;
 }
 //------------------------------------------------------------------------------
 QString Settings::supportedFormatsRegex() {
-    QString filter;
-    QList<QByteArray> formats = supportedFormats();
-    filter.append(".*\\.(");
-    for(int i = 0; i < formats.count(); i++)
-        filter.append(QString(formats.at(i)) + "|");
-    filter.chop(1);
-    filter.append(")$");
-    return filter;
+    if (!mFormatsRegexCacheValid) {
+        auto formats = supportedFormats();
+        QStringList formatList;
+        formatList.reserve(formats.count());
+        for(const auto &fmt : formats)
+            formatList << QString(fmt);
+        mCachedFormatsRegex = ".*\\.(" + formatList.join("|") + ")$";
+        mFormatsRegexCacheValid = true;
+    }
+    return mCachedFormatsRegex;
 }
 //------------------------------------------------------------------------------
 // returns list of mime types
 QStringList Settings::supportedMimeTypes() {
-    QStringList filters;
-    QList<QByteArray> mimeTypes = QImageReader::supportedMimeTypes();
-    if(videoPlayback())
-        mimeTypes << mVideoFormatsMap.keys();
-    for(int i = 0; i < mimeTypes.count(); i++) {
-        filters << QString(mimeTypes.at(i));
+    if (!mMimeTypesCacheValid) {
+        mCachedSupportedMimeTypes.clear();
+        QList<QByteArray> mimeTypes = QImageReader::supportedMimeTypes();
+        if(videoPlayback())
+            mimeTypes << mVideoFormatsMap.keys();
+        for(int i = 0; i < mimeTypes.count(); i++) {
+            mCachedSupportedMimeTypes << QString(mimeTypes.at(i));
+        }
+        mMimeTypesCacheValid = true;
     }
-    return filters;
+    return mCachedSupportedMimeTypes;
 }
 //------------------------------------------------------------------------------
 bool Settings::videoPlayback() {
@@ -362,6 +413,10 @@ bool Settings::videoPlayback() {
 
 void Settings::setVideoPlayback(bool mode) {
     settings->settingsConf->setValue("videoPlayback", mode);
+    mFormatsCacheValid = false;
+    mMimeTypesCacheValid = false;
+    mFormatsFilterCacheValid = false;
+    mFormatsRegexCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::useSystemColorScheme() {
@@ -428,13 +483,21 @@ void Settings::setSortingMode(SortingMode mode) {
     if(mode >= 6)
         mode = SortingMode::SORT_NAME;
     settings->settingsConf->setValue("sortingMode", mode);
+    mSortingModeCacheValid = false;
 }
 
 SortingMode Settings::sortingMode() {
+    if (mSortingModeCacheValid) {
+        return mCachedSortingMode;
+    }
+    
     int mode = settings->settingsConf->value("sortingMode", 0).toInt();
     if(mode < 0 || mode >= 6)
         mode = 0;
-    return static_cast<SortingMode>(mode);
+    
+    mCachedSortingMode = static_cast<SortingMode>(mode);
+    mSortingModeCacheValid = true;
+    return mCachedSortingMode;
 }
 //------------------------------------------------------------------------------
 bool Settings::playVideoSounds() {
@@ -454,25 +517,41 @@ int Settings::volume() {
 }
 //------------------------------------------------------------------------------
 FolderViewMode Settings::folderViewMode() {
+    if (mFolderViewModeCacheValid) {
+        return mCachedFolderViewMode;
+    }
+    
     int mode = settings->settingsConf->value("folderViewMode", 2).toInt();
     if(mode < 0 || mode >= 3)
         mode = 2;
-    return static_cast<FolderViewMode>(mode);
+    
+    mCachedFolderViewMode = static_cast<FolderViewMode>(mode);
+    mFolderViewModeCacheValid = true;
+    return mCachedFolderViewMode;
 }
 
 void Settings::setFolderViewMode(FolderViewMode mode) {
     settings->settingsConf->setValue("folderViewMode", mode);
+    mFolderViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 ThumbPanelStyle Settings::thumbPanelStyle() {
+    if (mThumbPanelStyleCacheValid) {
+        return mCachedThumbPanelStyle;
+    }
+    
     int mode = settings->settingsConf->value("thumbPanelStyle", 1).toInt();
     if(mode < 0 || mode > 1)
         mode = 1;
-    return static_cast<ThumbPanelStyle>(mode);
+    
+    mCachedThumbPanelStyle = static_cast<ThumbPanelStyle>(mode);
+    mThumbPanelStyleCacheValid = true;
+    return mCachedThumbPanelStyle;
 }
 
 void Settings::setThumbPanelStyle(ThumbPanelStyle mode) {
     settings->settingsConf->setValue("thumbPanelStyle", mode);
+    mThumbPanelStyleCacheValid = false;
 }
 //------------------------------------------------------------------------------
 const QMultiMap<QByteArray, QByteArray> Settings::videoFormats() const {
@@ -480,16 +559,24 @@ const QMultiMap<QByteArray, QByteArray> Settings::videoFormats() const {
 }
 //------------------------------------------------------------------------------
 int Settings::panelPreviewsSize() {
+    if (mPanelPreviewsSizeCacheValid) {
+        return mCachedPanelPreviewsSize;
+    }
+    
     bool ok = true;
     int size = settings->settingsConf->value("panelPreviewsSize", 140).toInt(&ok);
     if(!ok)
         size = 140;
     size = qBound(100, size, 250);
+    
+    mCachedPanelPreviewsSize = size;
+    mPanelPreviewsSizeCacheValid = true;
     return size;
 }
 
 void Settings::setPanelPreviewsSize(int size) {
     settings->settingsConf->setValue("panelPreviewsSize", size);
+    mPanelPreviewsSizeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::usePreloader() {
@@ -549,17 +636,21 @@ void Settings::setLastDisplay(int display) {
 }
 //------------------------------------------------------------------------------
 PanelPosition Settings::panelPosition() {
+    if (mPanelPositionCacheValid) {
+        return mCachedPanelPosition;
+    }
+    
+    static const QHash<QString, PanelPosition> posMap = {
+        {"top", PanelPosition::PANEL_TOP},
+        {"bottom", PanelPosition::PANEL_BOTTOM},
+        {"left", PanelPosition::PANEL_LEFT},
+        {"right", PanelPosition::PANEL_RIGHT}
+    };
     QString posString = settings->settingsConf->value("panelPosition", "top").toString();
-    if(posString == "top") {
-        return PanelPosition::PANEL_TOP;
-    }
-    if(posString == "bottom") {
-        return PanelPosition::PANEL_BOTTOM;
-    }
-    if(posString == "left") {
-        return PanelPosition::PANEL_LEFT;
-    }
-    return PanelPosition::PANEL_RIGHT;
+    
+    mCachedPanelPosition = posMap.value(posString, PanelPosition::PANEL_TOP);
+    mPanelPositionCacheValid = true;
+    return mCachedPanelPosition;
 }
 
 void Settings::setPanelPosition(PanelPosition pos) {
@@ -579,6 +670,7 @@ void Settings::setPanelPosition(PanelPosition pos) {
             break;
     }
     settings->settingsConf->setValue("panelPosition", posString);
+    mPanelPositionCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::panelPinned() {
@@ -596,32 +688,48 @@ void Settings::setPanelPinned(bool mode) {
  * 3: fit window (stretch)
  */
 ImageFitMode Settings::imageFitMode() {
+    if (mImageFitModeCacheValid) {
+        return mCachedImageFitMode;
+    }
+    
     int mode = settings->settingsConf->value("defaultFitMode", 0).toInt();
     if(mode < 0 || mode > 3) {
         qDebug() << "Settings: Invalid fit mode ( " + QString::number(mode) + " ). Resetting to default.";
         mode = 0;
     }
-    return static_cast<ImageFitMode>(mode);
+    
+    mCachedImageFitMode = static_cast<ImageFitMode>(mode);
+    mImageFitModeCacheValid = true;
+    return mCachedImageFitMode;
 }
 
 void Settings::setImageFitMode(ImageFitMode mode) {
-    int modeInt = static_cast<ImageFitMode>(mode);
+    int modeInt = static_cast<int>(mode);
     if(modeInt < 0 || modeInt > 3) {
         qDebug() << "Settings: Invalid fit mode ( " + QString::number(modeInt) + " ). Resetting to default.";
         modeInt = 0;
     }
     settings->settingsConf->setValue("defaultFitMode", modeInt);
+    mImageFitModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 QRect Settings::windowGeometry() {
+    if (mWindowGeometryCacheValid) {
+        return mCachedWindowGeometry;
+    }
+    
     QRect savedRect = settings->stateConf->value("windowGeometry").toRect();
     if(savedRect.size().isEmpty())
         savedRect.setRect(100, 100, 900, 600);
+    
+    mCachedWindowGeometry = savedRect;
+    mWindowGeometryCacheValid = true;
     return savedRect;
 }
 
 void Settings::setWindowGeometry(QRect geometry) {
     settings->stateConf->setValue("windowGeometry", geometry);
+    mWindowGeometryCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::loopSlideshow() {
@@ -637,18 +745,26 @@ void Settings::sendChangeNotification() {
 }
 //------------------------------------------------------------------------------
 void Settings::readShortcuts(QMap<QString, QString> &shortcuts) {
+    if (mShortcutsCacheValid) {
+        shortcuts = mCachedShortcuts;
+        return;
+    }
+    
     settings->settingsConf->beginGroup("Controls");
     QStringList in, pair;
     in = settings->settingsConf->value("shortcuts").toStringList();
     for(int i = 0; i < in.count(); i++) {
         pair = in[i].split("=");
-        if(!pair[0].isEmpty() && !pair[1].isEmpty()) {
+        if(pair.size() >= 2 && !pair[0].isEmpty() && !pair[1].isEmpty()) {
             if(pair[1].endsWith("eq"))
                 pair[1]=pair[1].chopped(2) + "=";
             shortcuts.insert(pair[1], pair[0]);
         }
     }
     settings->settingsConf->endGroup();
+    
+    mCachedShortcuts = shortcuts;
+    mShortcutsCacheValid = true;
 }
 
 void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
@@ -664,9 +780,15 @@ void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
     }
     settings->settingsConf->setValue("shortcuts", out);
     settings->settingsConf->endGroup();
+    mShortcutsCacheValid = false;
 }
 //------------------------------------------------------------------------------
 void Settings::readScripts(QHash<QString, Script> &scripts) {
+    if (mScriptsCacheValid) {
+        scripts = mCachedScripts;
+        return;
+    }
+    
     scripts.clear();
     settings->settingsConf->beginGroup("Scripts");
     int size = settings->settingsConf->beginReadArray("script");
@@ -679,6 +801,9 @@ void Settings::readScripts(QHash<QString, Script> &scripts) {
     }
     settings->settingsConf->endArray();
     settings->settingsConf->endGroup();
+    
+    mCachedScripts = scripts;
+    mScriptsCacheValid = true;
 }
 
 void Settings::saveScripts(const QHash<QString, Script> &scripts) {
@@ -695,6 +820,7 @@ void Settings::saveScripts(const QHash<QString, Script> &scripts) {
     }
     settings->settingsConf->endArray();
     settings->settingsConf->endGroup();
+    mScriptsCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::squareThumbnails() {
@@ -730,19 +856,33 @@ void Settings::setUseThumbnailCache(bool mode) {
 }
 //------------------------------------------------------------------------------
 QStringList Settings::savedPaths() {
-    return settings->stateConf->value("savedPaths", QDir::homePath()).toStringList();
+    if (mSavedPathsCacheValid) {
+        return mCachedSavedPaths;
+    }
+    
+    mCachedSavedPaths = settings->stateConf->value("savedPaths", QDir::homePath()).toStringList();
+    mSavedPathsCacheValid = true;
+    return mCachedSavedPaths;
 }
 
 void Settings::setSavedPaths(const QStringList &paths) {
     settings->stateConf->setValue("savedPaths", paths);
+    mSavedPathsCacheValid = false;
 }
 //------------------------------------------------------------------------------
 QStringList Settings::bookmarks() {
-    return settings->stateConf->value("bookmarks").toStringList();
+    if (mBookmarksCacheValid) {
+        return mCachedBookmarks;
+    }
+    
+    mCachedBookmarks = settings->stateConf->value("bookmarks").toStringList();
+    mBookmarksCacheValid = true;
+    return mCachedBookmarks;
 }
 
 void Settings::setBookmarks(const QStringList &paths) {
     settings->stateConf->setValue("bookmarks", paths);
+    mBookmarksCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::placesPanel() {
@@ -832,15 +972,26 @@ void Settings::setExpandLimit(int value) {
 }
 //------------------------------------------------------------------------------
 int Settings::JPEGSaveQuality() {
+    if (mJPEGSaveQualityCacheValid) {
+        return mCachedJPEGSaveQuality;
+    }
+    
     int quality = std::clamp(settings->settingsConf->value("JPEGSaveQuality", 95).toInt(), 0, 100);
+    mCachedJPEGSaveQuality = quality;
+    mJPEGSaveQualityCacheValid = true;
     return quality;
 }
 
 void Settings::setJPEGSaveQuality(int value) {
     settings->settingsConf->setValue("JPEGSaveQuality", value);
+    mJPEGSaveQualityCacheValid = false;
 }
 //------------------------------------------------------------------------------
 ScalingFilter Settings::scalingFilter() {
+    if (mScalingFilterCacheValid) {
+        return mCachedScalingFilter;
+    }
+    
     int defaultFilter = 1;
 #ifdef USE_OPENCV
     // default to a nicer QI_FILTER_CV_CUBIC
@@ -853,11 +1004,15 @@ ScalingFilter Settings::scalingFilter() {
 #endif
     if(mode < 0 || mode > 4)
         mode = 1;
-    return static_cast<ScalingFilter>(mode);
+    
+    mCachedScalingFilter = static_cast<ScalingFilter>(mode);
+    mScalingFilterCacheValid = true;
+    return mCachedScalingFilter;
 }
 
 void Settings::setScalingFilter(ScalingFilter mode) {
     settings->settingsConf->setValue("scalingFilter", mode);
+    mScalingFilterCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::smoothAnimatedImages() {
@@ -942,97 +1097,161 @@ void Settings::setUnloadThumbs(bool mode) {
 }
 //------------------------------------------------------------------------------
 float Settings::zoomStep() {
+    if (mZoomStepCacheValid) {
+        return mCachedZoomStep;
+    }
+    
     bool ok = false;
     float value = settings->settingsConf->value("zoomStep", 0.2f).toFloat(&ok);
     if(!ok)
-        return 0.2f;
+        value = 0.2f;
     value = qBound(0.01f, value, 0.5f);
+    
+    mCachedZoomStep = value;
+    mZoomStepCacheValid = true;
     return value;
 }
 
 void Settings::setZoomStep(float value) {
     value = qBound(0.01f, value, 0.5f);
     settings->settingsConf->setValue("zoomStep", value);
+    mZoomStepCacheValid = false;
 }
 //------------------------------------------------------------------------------
 float Settings::mouseScrollingSpeed() {
+    if (mMouseScrollingSpeedCacheValid) {
+        return mCachedMouseScrollingSpeed;
+    }
+    
     bool ok = false;
     float value = settings->settingsConf->value("mouseScrollingSpeed", 1.0f).toFloat(&ok);
     if(!ok)
-        return 1.0f;
+        value = 1.0f;
     value = qBound(0.5f, value, 2.0f);
+    
+    mCachedMouseScrollingSpeed = value;
+    mMouseScrollingSpeedCacheValid = true;
     return value;
 }
 
 void Settings::setMouseScrollingSpeed(float value) {
     value = qBound(0.5f, value, 2.0f);
     settings->settingsConf->setValue("mouseScrollingSpeed", value);
+    mMouseScrollingSpeedCacheValid = false;
 }
 //------------------------------------------------------------------------------
 void Settings::setZoomIndicatorMode(ZoomIndicatorMode mode) {
     settings->settingsConf->setValue("zoomIndicatorMode", mode);
+    mZoomIndicatorModeCacheValid = false;
 }
 
 ZoomIndicatorMode Settings::zoomIndicatorMode() {
+    if (mZoomIndicatorModeCacheValid) {
+        return mCachedZoomIndicatorMode;
+    }
+    
     int mode = settings->settingsConf->value("zoomIndicatorMode", 0).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
-    return static_cast<ZoomIndicatorMode>(mode);
+    
+    mCachedZoomIndicatorMode = static_cast<ZoomIndicatorMode>(mode);
+    mZoomIndicatorModeCacheValid = true;
+    return mCachedZoomIndicatorMode;
 }
 //------------------------------------------------------------------------------
 void Settings::setFocusPointIn1to1Mode(ImageFocusPoint mode) {
     settings->settingsConf->setValue("focusPointIn1to1Mode", mode);
+    mFocusPointIn1to1ModeCacheValid = false;
 }
 
 ImageFocusPoint Settings::focusPointIn1to1Mode() {
+    if (mFocusPointIn1to1ModeCacheValid) {
+        return mCachedFocusPointIn1to1Mode;
+    }
+    
     int mode = settings->settingsConf->value("focusPointIn1to1Mode", 1).toInt();
     if(mode < 0 || mode > 2)
         mode = 1;
-    return static_cast<ImageFocusPoint>(mode);
+    
+    mCachedFocusPointIn1to1Mode = static_cast<ImageFocusPoint>(mode);
+    mFocusPointIn1to1ModeCacheValid = true;
+    return mCachedFocusPointIn1to1Mode;
 }
 
 void Settings::setDefaultCropAction(DefaultCropAction mode) {
     settings->settingsConf->setValue("defaultCropAction", mode);
+    mDefaultCropActionCacheValid = false;
 }
 
 DefaultCropAction Settings::defaultCropAction() {
+    if (mDefaultCropActionCacheValid) {
+        return mCachedDefaultCropAction;
+    }
+    
     int mode = settings->settingsConf->value("defaultCropAction", 0).toInt();
     if(mode < 0 || mode > 1)
         mode = 0;
-    return static_cast<DefaultCropAction>(mode);
+    
+    mCachedDefaultCropAction = static_cast<DefaultCropAction>(mode);
+    mDefaultCropActionCacheValid = true;
+    return mCachedDefaultCropAction;
 }
 
 ImageScrolling Settings::imageScrolling() {
+    if (mImageScrollingCacheValid) {
+        return mCachedImageScrolling;
+    }
+    
     int mode = settings->settingsConf->value("imageScrolling", 1).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
-    return static_cast<ImageScrolling>(mode);
+    
+    mCachedImageScrolling = static_cast<ImageScrolling>(mode);
+    mImageScrollingCacheValid = true;
+    return mCachedImageScrolling;
 }
 
 void Settings::setImageScrolling(ImageScrolling mode) {
     settings->settingsConf->setValue("imageScrolling", mode);
+    mImageScrollingCacheValid = false;
 }
 //------------------------------------------------------------------------------
 ViewMode Settings::defaultViewMode() {
+    if (mDefaultViewModeCacheValid) {
+        return mCachedDefaultViewMode;
+    }
+    
     int mode = settings->settingsConf->value("defaultViewMode", 0).toInt();
     if(mode < 0 || mode > 1)
         mode = 0;
-    return static_cast<ViewMode>(mode);
+    
+    mCachedDefaultViewMode = static_cast<ViewMode>(mode);
+    mDefaultViewModeCacheValid = true;
+    return mCachedDefaultViewMode;
 }
 
 void Settings::setDefaultViewMode(ViewMode mode) {
     settings->settingsConf->setValue("defaultViewMode", mode);
+    mDefaultViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 FolderEndAction Settings::folderEndAction() {
+    if (mFolderEndActionCacheValid) {
+        return mCachedFolderEndAction;
+    }
+    
     int mode = settings->settingsConf->value("folderEndAction", 0).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
-    return static_cast<FolderEndAction>(mode);
+    
+    mCachedFolderEndAction = static_cast<FolderEndAction>(mode);
+    mFolderEndActionCacheValid = true;
+    return mCachedFolderEndAction;
 }
 
 void Settings::setFolderEndAction(FolderEndAction mode) {
     settings->settingsConf->setValue("folderEndAction", mode);
+    mFolderEndActionCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::printLandscape() {
@@ -1197,3 +1416,4 @@ bool Settings::showHiddenFiles() {
 void Settings::setShowHiddenFiles(bool mode) {
     settings->settingsConf->setValue("showHiddenFiles", mode);
 }
+//------------------------------------------------------------------------------

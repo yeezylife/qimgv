@@ -1,7 +1,15 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QStyleFactory>
+#include <QTimer>
+#include <QDir>
 #include <QEvent>
+#include <memory>
+#include <cstdlib>
+
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 #include "appversion.h"
 #include "settings.h"
@@ -19,7 +27,10 @@
 
 //------------------------------------------------------------------------------
 void saveSettings() {
-    delete settings;
+    if (settings) {
+        delete settings;
+        settings = nullptr;
+    }
 }
 //------------------------------------------------------------------------------
 QDataStream& operator<<(QDataStream& out, const Script& v) {
@@ -140,17 +151,26 @@ int main(int argc, char *argv[]) {
 
     if(parser.isSet("build-options")) {
         auto r = std::make_unique<CmdOptionsRunner>();
-        QTimer::singleShot(0, r.get(), &CmdOptionsRunner::showBuildOptions);
+        // 确保 runner 在事件循环期间存活
+        QTimer::singleShot(0, [r = std::move(r)]() mutable {
+            r->showBuildOptions();
+        });
         return a.exec();
     }
     if(parser.isSet("gen-thumbs")) {
         int size = settings->folderViewIconSize();
-        if(parser.isSet("gen-thumbs-size"))
-            size = parser.value("gen-thumbs-size").toInt();
+        if(parser.isSet("gen-thumbs-size")) {
+            bool ok;
+            int parsedSize = parser.value("gen-thumbs-size").toInt(&ok);
+            if (ok && parsedSize > 0)
+                size = parsedSize;
+        }
 
         auto r = std::make_unique<CmdOptionsRunner>();
-        QTimer::singleShot(0, r.get(),
-                           std::bind(&CmdOptionsRunner::generateThumbs, r.get(), parser.value("gen-thumbs"), size));
+        QString dirPath = parser.value("gen-thumbs");
+        QTimer::singleShot(0, [r = std::move(r), dirPath, size]() mutable {
+            r->generateThumbs(dirPath, size);
+        });
         return a.exec();
     }
 

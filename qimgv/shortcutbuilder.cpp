@@ -135,7 +135,7 @@ QString ShortcutBuilder::fromEventNativeScanCode(QKeyEvent *event) {
     if (sequence.isEmpty())
         return {};
 
-    const QString eventText = event->text();
+    QString eventText = event->text();
 
     if (!eventText.isEmpty()) {
         const QChar keyChr = eventText.at(0);

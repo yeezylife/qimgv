@@ -28,8 +28,8 @@ Core::Core()
     slideshowTimer.setSingleShot(true);
     connect(settings, &Settings::settingsChanged, this, &Core::readSettings);
 
-    // 读取剪贴板保存格式偏好
-    lastClipboardSaveFormat = QSettings().value("clipboard/saveFormat", "jxl").toString().toLower();
+    QSettings qsettings;
+    lastClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
     if(lastClipboardSaveFormat.isEmpty())
         lastClipboardSaveFormat = "jxl";
 
@@ -56,7 +56,7 @@ void Core::showGui() {
         mw->showDefault();
     // avoid calling qApp->processEvents() for UI timing; use queued invocation
     // so setupFullUi runs when the event loop is active and the window is shown.
-    QTimer::singleShot(0, mw, &MW::setupFullUi);
+    QTimer::singleShot(0, mw.get(), &MW::setupFullUi);
 }
 
 // create MainWindow and all widgets
@@ -98,29 +98,29 @@ void Core::connectComponents() {
     connect(&folderViewPresenter, &DirectoryPresenter::droppedInto,
             this, &Core::movePathsTo);
 
-    connect(scriptManager, &ScriptManager::error, mw, &MW::showError);
+    connect(scriptManager, &ScriptManager::error, mw.get(), &MW::showError);
 
-    connect(mw, &MW::opened,                this, &Core::loadPath);
-    connect(mw, &MW::droppedIn,             this, &Core::onDropIn);
-    connect(mw, &MW::copyRequested,         this, &Core::copyCurrentFile);
-    connect(mw, &MW::moveRequested,         this, &Core::moveCurrentFile);
-    connect(mw, &MW::copyUrlsRequested,     this, &Core::copyPathsTo);
-    connect(mw, &MW::moveUrlsRequested,     this, &Core::movePathsTo);
-    connect(mw, &MW::cropRequested,         this, &Core::crop);
-    connect(mw, &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
-    connect(mw, &MW::saveAsClicked,         this, &Core::requestSavePath);
-    connect(mw, &MW::saveRequested,         this, &Core::saveCurrentFile);
-    connect(mw, &MW::saveAsRequested,       this, &Core::saveCurrentFileAs);
-    connect(mw, &MW::resizeRequested,       this, &Core::resize);
-    connect(mw, &MW::renameRequested,       this, &Core::renameCurrentSelection);
-    connect(mw, &MW::sortingSelected,       this, &Core::sortBy);
-    connect(mw, &MW::showFoldersChanged,    this, &Core::setFoldersDisplay);
-    connect(mw, &MW::discardEditsRequested, this, &Core::discardEdits);
-    connect(mw, &MW::draggedOut,            this, &Core::onDraggedOut);
+    connect(mw.get(), &MW::opened,                this, &Core::loadPath);
+    connect(mw.get(), &MW::droppedIn,             this, &Core::onDropIn);
+    connect(mw.get(), &MW::copyRequested,         this, &Core::copyCurrentFile);
+    connect(mw.get(), &MW::moveRequested,         this, &Core::moveCurrentFile);
+    connect(mw.get(), &MW::copyUrlsRequested,     this, &Core::copyPathsTo);
+    connect(mw.get(), &MW::moveUrlsRequested,     this, &Core::movePathsTo);
+    connect(mw.get(), &MW::cropRequested,         this, &Core::crop);
+    connect(mw.get(), &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
+    connect(mw.get(), &MW::saveAsClicked,         this, &Core::requestSavePath);
+    connect(mw.get(), &MW::saveRequested,         this, &Core::saveCurrentFile);
+    connect(mw.get(), &MW::saveAsRequested,       this, &Core::saveCurrentFileAs);
+    connect(mw.get(), &MW::resizeRequested,       this, &Core::resize);
+    connect(mw.get(), &MW::renameRequested,       this, &Core::renameCurrentSelection);
+    connect(mw.get(), &MW::sortingSelected,       this, &Core::sortBy);
+    connect(mw.get(), &MW::showFoldersChanged,    this, &Core::setFoldersDisplay);
+    connect(mw.get(), &MW::discardEditsRequested, this, &Core::discardEdits);
+    connect(mw.get(), &MW::draggedOut,            this, &Core::onDraggedOut);
 
-    connect(mw, &MW::playbackFinished, this, &Core::onPlaybackFinished);
+    connect(mw.get(), &MW::playbackFinished, this, &Core::onPlaybackFinished);
 
-    connect(mw, &MW::scalingRequested, this, &Core::scalingRequest);
+    connect(mw.get(), &MW::scalingRequested, this, &Core::scalingRequest);
     connect(model->scaler, &Scaler::scalingFinished, this, &Core::onScalingFinished);
 
     connect(model.get(), &DirectoryModel::fileAdded,      this, &Core::onFileAdded);
@@ -139,65 +139,65 @@ void Core::connectComponents() {
 void Core::initActions() {
     connect(actionManager, &ActionManager::nextImage, this, &Core::nextImage);
     connect(actionManager, &ActionManager::prevImage, this, &Core::prevImage);
-    connect(actionManager, &ActionManager::fitWindow, mw, &MW::fitWindow);
-    connect(actionManager, &ActionManager::fitWidth, mw, &MW::fitWidth);
-    connect(actionManager, &ActionManager::fitNormal, mw, &MW::fitOriginal);
-    connect(actionManager, &ActionManager::fitWindowStretch, mw, &MW::fitWindowStretch);
-    connect(actionManager, &ActionManager::toggleFitMode, mw, &MW::switchFitMode);
-    connect(actionManager, &ActionManager::toggleFullscreen, mw, &MW::triggerFullScreen);
-    connect(actionManager, &ActionManager::lockZoom, mw, &MW::toggleLockZoom);
-    connect(actionManager, &ActionManager::lockView, mw, &MW::toggleLockView);
-    connect(actionManager, &ActionManager::zoomIn, mw, &MW::zoomIn);
-    connect(actionManager, &ActionManager::zoomOut, mw, &MW::zoomOut);
-    connect(actionManager, &ActionManager::zoomInCursor, mw, &MW::zoomInCursor);
-    connect(actionManager, &ActionManager::zoomOutCursor, mw, &MW::zoomOutCursor);
-    connect(actionManager, &ActionManager::scrollUp, mw, &MW::scrollUp);
-    connect(actionManager, &ActionManager::scrollDown, mw, &MW::scrollDown);
-    connect(actionManager, &ActionManager::scrollLeft, mw, &MW::scrollLeft);
-    connect(actionManager, &ActionManager::scrollRight, mw, &MW::scrollRight);
+    connect(actionManager, &ActionManager::fitWindow, mw.get(), &MW::fitWindow);
+    connect(actionManager, &ActionManager::fitWidth, mw.get(), &MW::fitWidth);
+    connect(actionManager, &ActionManager::fitNormal, mw.get(), &MW::fitOriginal);
+    connect(actionManager, &ActionManager::fitWindowStretch, mw.get(), &MW::fitWindowStretch);
+    connect(actionManager, &ActionManager::toggleFitMode, mw.get(), &MW::switchFitMode);
+    connect(actionManager, &ActionManager::toggleFullscreen, mw.get(), &MW::triggerFullScreen);
+    connect(actionManager, &ActionManager::lockZoom, mw.get(), &MW::toggleLockZoom);
+    connect(actionManager, &ActionManager::lockView, mw.get(), &MW::toggleLockView);
+    connect(actionManager, &ActionManager::zoomIn, mw.get(), &MW::zoomIn);
+    connect(actionManager, &ActionManager::zoomOut, mw.get(), &MW::zoomOut);
+    connect(actionManager, &ActionManager::zoomInCursor, mw.get(), &MW::zoomInCursor);
+    connect(actionManager, &ActionManager::zoomOutCursor, mw.get(), &MW::zoomOutCursor);
+    connect(actionManager, &ActionManager::scrollUp, mw.get(), &MW::scrollUp);
+    connect(actionManager, &ActionManager::scrollDown, mw.get(), &MW::scrollDown);
+    connect(actionManager, &ActionManager::scrollLeft, mw.get(), &MW::scrollLeft);
+    connect(actionManager, &ActionManager::scrollRight, mw.get(), &MW::scrollRight);
     connect(actionManager, &ActionManager::resize, this, &Core::showResizeDialog);
     connect(actionManager, &ActionManager::flipH, this, &Core::flipH);
     connect(actionManager, &ActionManager::flipV, this, &Core::flipV);
     connect(actionManager, &ActionManager::rotateLeft, this, &Core::rotateLeft);
     connect(actionManager, &ActionManager::rotateRight, this, &Core::rotateRight);
-    connect(actionManager, &ActionManager::openSettings, mw, &MW::showSettings);
+    connect(actionManager, &ActionManager::openSettings, mw.get(), &MW::showSettings);
     connect(actionManager, &ActionManager::crop, this, &Core::toggleCropPanel);
     connect(actionManager, &ActionManager::setWallpaper, this, &Core::setWallpaper);
     connect(actionManager, &ActionManager::open, this, &Core::showOpenDialog);
     connect(actionManager, &ActionManager::save, this, &Core::saveCurrentFile);
     connect(actionManager, &ActionManager::saveAs, this, &Core::requestSavePath);
     connect(actionManager, &ActionManager::exit, this, &Core::close);
-    connect(actionManager, &ActionManager::closeFullScreenOrExit, mw, &MW::closeFullScreenOrExit);
+    connect(actionManager, &ActionManager::closeFullScreenOrExit, mw.get(), &MW::closeFullScreenOrExit);
     connect(actionManager, &ActionManager::removeFile, this, &Core::removePermanent);
     connect(actionManager, &ActionManager::moveToTrash, this, &Core::moveToTrash);
-    connect(actionManager, &ActionManager::copyFile, mw, &MW::triggerCopyOverlay);
-    connect(actionManager, &ActionManager::moveFile, mw, &MW::triggerMoveOverlay);
+    connect(actionManager, &ActionManager::copyFile, mw.get(), &MW::triggerCopyOverlay);
+    connect(actionManager, &ActionManager::moveFile, mw.get(), &MW::triggerMoveOverlay);
     connect(actionManager, &ActionManager::jumpToFirst, this, &Core::jumpToFirst);
     connect(actionManager, &ActionManager::jumpToLast, this, &Core::jumpToLast);
     connect(actionManager, &ActionManager::runScript, this, &Core::runScript);
-    connect(actionManager, &ActionManager::pauseVideo, mw, &MW::pauseVideo);
-    connect(actionManager, &ActionManager::seekVideoForward, mw, &MW::seekVideoForward);
-    connect(actionManager, &ActionManager::seekVideoBackward, mw, &MW::seekVideoBackward);
-    connect(actionManager, &ActionManager::frameStep, mw, &MW::frameStep);
-    connect(actionManager, &ActionManager::frameStepBack, mw, &MW::frameStepBack);
+    connect(actionManager, &ActionManager::pauseVideo, mw.get(), &MW::pauseVideo);
+    connect(actionManager, &ActionManager::seekVideoForward, mw.get(), &MW::seekVideoForward);
+    connect(actionManager, &ActionManager::seekVideoBackward, mw.get(), &MW::seekVideoBackward);
+    connect(actionManager, &ActionManager::frameStep, mw.get(), &MW::frameStep);
+    connect(actionManager, &ActionManager::frameStepBack, mw.get(), &MW::frameStepBack);
     connect(actionManager, &ActionManager::documentView, this, &Core::enableDocumentView);
     connect(actionManager, &ActionManager::toggleFolderView, this, &Core::toggleFolderView);
     connect(actionManager, &ActionManager::reloadImage, this, qOverload<>(&Core::reloadImage));
     connect(actionManager, &ActionManager::copyFileClipboard, this, &Core::copyFileClipboard);
     connect(actionManager, &ActionManager::copyPathClipboard, this, &Core::copyPathClipboard);
     connect(actionManager, &ActionManager::renameFile, this, &Core::showRenameDialog);
-    connect(actionManager, &ActionManager::contextMenu, mw, &MW::showContextMenu);
-    connect(actionManager, &ActionManager::toggleTransparencyGrid, mw, &MW::toggleTransparencyGrid);
+    connect(actionManager, &ActionManager::contextMenu, mw.get(), &MW::showContextMenu);
+    connect(actionManager, &ActionManager::toggleTransparencyGrid, mw.get(), &MW::toggleTransparencyGrid);
     connect(actionManager, &ActionManager::sortByName, this, &Core::sortByName);
     connect(actionManager, &ActionManager::sortByTime, this, &Core::sortByTime);
     connect(actionManager, &ActionManager::sortBySize, this, &Core::sortBySize);
-    connect(actionManager, &ActionManager::toggleImageInfo, mw, &MW::toggleImageInfoOverlay);
+    connect(actionManager, &ActionManager::toggleImageInfo, mw.get(), &MW::toggleImageInfoOverlay);
     connect(actionManager, &ActionManager::toggleShuffle, this, &Core::toggleShuffle);
-    connect(actionManager, &ActionManager::toggleScalingFilter, mw, &MW::toggleScalingFilter);
+    connect(actionManager, &ActionManager::toggleScalingFilter, mw.get(), &MW::toggleScalingFilter);
     connect(actionManager, &ActionManager::showInDirectory, this, &Core::showInDirectory);
-    connect(actionManager, &ActionManager::toggleMute, mw, &MW::toggleMute);
-    connect(actionManager, &ActionManager::volumeUp, mw, &MW::volumeUp);
-    connect(actionManager, &ActionManager::volumeDown, mw, &MW::volumeDown);
+    connect(actionManager, &ActionManager::toggleMute, mw.get(), &MW::toggleMute);
+    connect(actionManager, &ActionManager::volumeUp, mw.get(), &MW::volumeUp);
+    connect(actionManager, &ActionManager::volumeDown, mw.get(), &MW::volumeDown);
     connect(actionManager, &ActionManager::toggleSlideshow, this, &Core::toggleSlideshow);
     connect(actionManager, &ActionManager::goUp, this, &Core::loadParentDir);
     connect(actionManager, &ActionManager::discardEdits, this, &Core::discardEdits);
@@ -206,7 +206,7 @@ void Core::initActions() {
     connect(actionManager, &ActionManager::print, this, &Core::print);
     connect(actionManager, &ActionManager::toggleFullscreenInfoBar, this, &Core::toggleFullscreenInfoBar);
     connect(actionManager, &ActionManager::pasteFile, this, &Core::openFromClipboard);
-    connect(actionManager, &ActionManager::minimize, mw, &MW::minimize);
+    connect(actionManager, &ActionManager::minimize, mw.get(), &MW::minimize);
 }
 
 void Core::loadTranslation() {
@@ -1181,7 +1181,7 @@ void Core::setWallpaper() {
 void Core::print() {
     if(model->isEmpty())
         return;
-    PrintDialog p(mw);
+    PrintDialog p(mw.get());
     auto img = model->getImage(selectedPath());
     if(!img) {
         mw->showError(tr("Could not open image"));

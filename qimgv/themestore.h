@@ -34,8 +34,10 @@ public:
     ColorScheme();
     ColorScheme(BaseColorScheme base);
     void setBaseColors(BaseColorScheme base);
+
     // index of theme name
     int tid;
+
     // base
     QColor background;
     QColor background_fullscreen;
@@ -50,6 +52,7 @@ public:
     QColor scrollbar_hover;
     QColor overlay_text;
     QColor overlay;
+
     // extended
     QColor text_hc2;
     QColor text_hc;
@@ -66,7 +69,6 @@ public:
     QColor folderview_button_hover;
     QColor folderview_button_pressed;
     QColor input_field_focus;
-
 
 private:
     void createColorVariants();

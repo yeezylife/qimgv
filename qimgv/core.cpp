@@ -28,12 +28,10 @@ Core::Core()
     slideshowTimer.setSingleShot(true);
     connect(settings, &Settings::settingsChanged, this, &Core::readSettings);
 
-    // 优化5：QSettings缓存 - 初始化时读取一次
-    QSettings qsettings;
-    cachedClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
-    if(cachedClipboardSaveFormat.isEmpty())
-        cachedClipboardSaveFormat = "jxl";
-    lastClipboardSaveFormat = cachedClipboardSaveFormat;
+    // 读取剪贴板保存格式偏好
+    lastClipboardSaveFormat = QSettings().value("clipboard/saveFormat", "jxl").toString().toLower();
+    if(lastClipboardSaveFormat.isEmpty())
+        lastClipboardSaveFormat = "jxl";
 
     QVersionNumber lastVersion = settings->lastVersion();
     if(settings->firstRun())
@@ -525,10 +523,7 @@ void Core::openFromClipboard() {
         QFileInfo destFi(destPath);
         if(!destFi.suffix().isEmpty()) {
             lastClipboardSaveFormat = destFi.suffix().toLower();
-            cachedClipboardSaveFormat = lastClipboardSaveFormat;
-            // 优化5：只在格式变化时才写入QSettings
-            QSettings qsettings;
-            qsettings.setValue("clipboard/saveFormat", cachedClipboardSaveFormat);
+            QSettings().setValue("clipboard/saveFormat", lastClipboardSaveFormat);
         }
 
 

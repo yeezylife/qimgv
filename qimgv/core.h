@@ -87,8 +87,6 @@ private:
     std::unique_ptr<QMimeData> mimeCache;
     std::unique_ptr<QDrag> dragCache;
     
-    // 优化5：QSettings缓存
-    QString cachedClipboardSaveFormat;
 
     void attachModel(std::unique_ptr<DirectoryModel> _model);
     QString selectedPath();

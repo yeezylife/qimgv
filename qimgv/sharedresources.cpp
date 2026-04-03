@@ -1,43 +1,54 @@
 #include "sharedresources.h"
-#include <QFileInfo>
+
+// 资源路径常量（避免重复构造 QString）
+namespace {
+    constexpr const char* PATH_LOADING      = ":/res/icons/common/other/loading72.png";
+    constexpr const char* PATH_LOADING_2X   = ":/res/icons/common/other/loading72@2x.png";
+
+    constexpr const char* PATH_ERROR        = ":/res/icons/common/other/loading-error72.png";
+    constexpr const char* PATH_ERROR_2X     = ":/res/icons/common/other/loading-error72@2x.png";
+}
 
 SharedResources& SharedResources::getInstance() noexcept
 {
-    // C++11 线程安全懒加载
     static SharedResources instance;
     return instance;
 }
 
 QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
 {
-    std::unique_ptr<QPixmap>& targetPixmap =
-        (icon == SHR_ICON_ERROR) ? mLoadingErrorIcon72 : mLoadingIcon72;
+    // 指针选择提前完成，减少后续分支
+    std::unique_ptr<QPixmap>* target =
+        (icon == SHR_ICON_ERROR) ? &mLoadingErrorIcon72 : &mLoadingIcon72;
 
-    if (targetPixmap) {
-        return *targetPixmap;
+    if (*target) {
+        return **target;
     }
 
-    QString basePath = (icon == SHR_ICON_ERROR)
-        ? ":/res/icons/common/other/loading-error72.png"
-        : ":/res/icons/common/other/loading72.png";
+    // DPR 判断（避免重复比较）
+    const bool highDpr = (dpr >= 1.001);
 
-    QString path = basePath;
+    const char* path;
     qreal targetDpr = 1.0;
 
-    if (dpr >= 1.001) {
-        QFileInfo fi(basePath);
-        path = fi.path() + "/" + fi.completeBaseName() + "@2x." + fi.suffix();
+    if (icon == SHR_ICON_ERROR) {
+        path = highDpr ? PATH_ERROR_2X : PATH_ERROR;
+    } else {
+        path = highDpr ? PATH_LOADING_2X : PATH_LOADING;
+    }
+
+    if (highDpr) {
         targetDpr = (dpr >= 1.999) ? dpr : 2.0;
     }
 
-    auto pixmap = std::make_unique<QPixmap>(path);
+    auto pixmap = std::make_unique<QPixmap>(QString::fromUtf8(path));
 
     if (!pixmap->isNull() && targetDpr != 1.0) {
         pixmap->setDevicePixelRatio(targetDpr);
     }
 
-    targetPixmap = std::move(pixmap);
-    return *targetPixmap;
+    *target = std::move(pixmap);
+    return **target;
 }
 
 const QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr) const

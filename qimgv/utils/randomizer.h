@@ -2,12 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
-#include <iostream>
 #include <random>
 #include <vector>
-
-#include <QDebug>
-#include <QString>
 
 class Randomizer {
 public:
@@ -19,13 +15,12 @@ public:
     size_t prev();
 
     void shuffle();
-    void print();
     void setCurrent(size_t _current);
 private:
     size_t currentIndex;
-    std::vector<int> vec;
-    std::vector<int> indexMap;  // indexMap[value] = position in vec
-    std::mt19937 rng;  // 随机数生成器作为成员变量，避免重复创建
+    std::vector<size_t> vec;
+    std::vector<size_t> indexMap;  // indexMap[value] = position in vec
+    std::mt19937 rng;
     void fill();
     size_t indexOf(size_t item);
 };

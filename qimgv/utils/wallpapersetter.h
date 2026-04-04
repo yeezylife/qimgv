@@ -9,8 +9,6 @@
 class WallpaperSetter
 {
 public:
-    WallpaperSetter();
-
     // 使用常引用避免不必要的引用计数增减
     static void setWallpaper(const QString &path);
 };

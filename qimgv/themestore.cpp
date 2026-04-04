@@ -86,7 +86,9 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
         // Optimization: Construct QPalette only when needed
         QPalette p;
         BaseColorScheme base = {};
-        
+
+        base.background = p.window().color();
+        base.background_fullscreen = p.window().color();
         base.folderview_topbar = p.window().color();
         base.widget = p.window().color();
         base.widget_border = p.window().color();

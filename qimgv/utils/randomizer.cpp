@@ -17,7 +17,7 @@ void Randomizer::setCount(size_t _count) {
 void Randomizer::shuffle() {
     std::shuffle(vec.begin(), vec.end(), rng);
     for(size_t i = 0; i < vec.size(); ++i)
-        indexMap[vec[i]] = static_cast<int>(i);
+        indexMap[vec[i]] = i;
 }
 
 void Randomizer::setCurrent(size_t _current) {
@@ -27,27 +27,21 @@ void Randomizer::setCurrent(size_t _current) {
 size_t Randomizer::indexOf(size_t item) {
     if(item >= indexMap.size())
         return size_t(-1);
-    return static_cast<size_t>(indexMap[item]);
+    return indexMap[item];
 }
 
 void Randomizer::fill() {
     for(size_t i = 0; i < vec.size(); ++i) {
-        vec[i] = static_cast<int>(i);
-        indexMap[i] = static_cast<int>(i);
+        vec[i] = i;
+        indexMap[i] = i;
     }
 }
 
-void Randomizer::print() {
-    qDebug() << "---vector---";
-    for(int v : vec)
-        std::cout << v << '\n';
-    qDebug() << "----end----";
-}
-
 size_t Randomizer::next() {
+    if(vec.empty()) return 0;
     // re-shuffle when needed
     // because vector gets rearranged this will break prev()
-    if(currentIndex == vec.size() - 1) {
+    if(currentIndex >= vec.size() - 1) {
         size_t currentItem = vec[currentIndex];
         shuffle();
         setCurrent(currentItem);
@@ -57,6 +51,7 @@ size_t Randomizer::next() {
 }
 
 size_t Randomizer::prev() {
+    if(vec.empty()) return 0;
     if(currentIndex == 0) {
         size_t currentItem = vec[currentIndex];
         shuffle();

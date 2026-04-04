@@ -3,8 +3,6 @@
 #include <QProcess>
 #include <QDebug>
 
-WallpaperSetter::WallpaperSetter() = default;
-
 void WallpaperSetter::setWallpaper(const QString &path)
 {
 #ifdef _WIN32

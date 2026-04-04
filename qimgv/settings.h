@@ -312,8 +312,12 @@ public:
 
 private:
     explicit Settings(QObject *parent = nullptr);
-    QSettings *settingsConf, *stateConf, *themeConf;
-    QDir *mTmpDir, *mThumbCacheDir, *mConfDir;
+    QSettings *settingsConf = nullptr;
+    QSettings *stateConf = nullptr;
+    QSettings *themeConf = nullptr;
+    QDir *mTmpDir = nullptr;
+    QDir *mThumbCacheDir = nullptr;
+    QDir *mConfDir = nullptr;
     ColorScheme mColorScheme;
     QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
     

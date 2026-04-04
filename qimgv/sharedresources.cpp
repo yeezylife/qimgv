@@ -41,7 +41,7 @@ QPixmap& SharedResources::getPixmap(ShrIcon icon, qreal dpr)
         targetDpr = (dpr >= 1.999) ? dpr : 2.0;
     }
 
-    auto pixmap = std::make_unique<QPixmap>(QString::fromUtf8(path));
+    auto pixmap = std::make_unique<QPixmap>(QString::fromLatin1(path));
 
     if (!pixmap->isNull() && targetDpr != 1.0) {
         pixmap->setDevicePixelRatio(targetDpr);

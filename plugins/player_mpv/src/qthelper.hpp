@@ -142,13 +142,15 @@ private:
             if (!list)
                 goto fail;
             list->num = static_cast<int>(qmap.size());
-            for (int n = 0; n < qmap.size(); n++) {
-                list->keys[n] = dup_qstring(qmap.keys()[n]);
+            const auto keys = qmap.keys();
+            const auto values = qmap.values();
+            for (int n = 0; n < list->num; n++) {
+                list->keys[n] = dup_qstring(keys[n]);
                 if (!list->keys[n]) {
                     free_node(dst);
                     goto fail;
                 }
-                set(&list->values[n], qmap.values()[n]);
+                set(&list->values[n], values[n]);
             }
         } else {
             goto fail;

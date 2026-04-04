@@ -11,7 +11,6 @@
 #include "appversion.h"
 #include "settings.h"
 #include "components/directorymodel.h"
-#include "components/directorypresenter.h"
 #include "components/scriptmanager/scriptmanager.h"
 #include "gui/mainwindow.h"
 #include "utils/randomizer.h"
@@ -67,8 +66,6 @@ private:
 
     // components
     std::shared_ptr<DirectoryModel> model;
-
-    DirectoryPresenter thumbPanelPresenter, folderViewPresenter;
 
     QString lastClipboardSaveFormat = "jxl";
 
@@ -193,21 +190,16 @@ private slots:
     void sortBySize();
     void showRenameDialog();
     void onDraggedOut();
-    void onDraggedOutList(const QList<QString>& paths);
     void onDropIn(const QMimeData *mimeData, QObject* source);
     void toggleShuffle();
     void onModelLoaded();
     void outputError(const FileOpResult &error) const;
     void showOpenDialog();
     void showInDirectory();
-    void onDirectoryViewFileActivated(const QString& filePath);
     bool loadFileIndex(int index, bool async, bool preload);
     void enableDocumentView();
-    void enableFolderView();
-    void toggleFolderView();
     void toggleSlideshow();
     void onPlaybackFinished();
-    void setFoldersDisplay(bool mode);
     void loadParentDir();
     void nextDirectory();
     void prevDirectory(bool selectLast);

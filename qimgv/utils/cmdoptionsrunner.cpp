@@ -1,38 +1,6 @@
 #include "cmdoptionsrunner.h"
 #include <QStringBuilder>
 
-void CmdOptionsRunner::generateThumbs(const QString &dirPath, int size) {
-    if(size <= 50 || size > 400) {
-        qDebug() << "Error: Invalid thumbnail size.";
-        qDebug() << "Please specify a value between [50, 400].";
-        qDebug() << "Example:  qimgv --gen-thumbs=/home/user/Pictures/ --gen-thumbs-size=120";
-        QCoreApplication::exit(1);
-        return;
-    }
-
-    Thumbnailer th;
-    DirectoryManager dm;
-    if(!dm.setDirectoryRecursive(dirPath)) {
-        qDebug() << "Error: Invalid path.";
-        QCoreApplication::exit(1);
-        return;
-    }
-
-    auto list = dm.fileList();
-
-    qDebug() << "\nDirectory:" << dirPath;
-    qDebug() << "File count:" << list.size();
-    qDebug() << "Size limit:" << size << "x" << size << "px";
-    qDebug() << "Generating thumbnails...";
-
-    for(const auto &path : list)
-        th.getThumbnailAsync(path, size, false, false);
-
-    th.waitForDone();
-    qDebug() << "\nDone.";
-    QCoreApplication::quit();
-}
-
 void CmdOptionsRunner::showBuildOptions() {
     QStringList features;
 #ifdef USE_MPV

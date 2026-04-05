@@ -481,18 +481,6 @@ PathSelectorMenuItem [accessibleName="MenuItemIcon"]:hover {
     background-color: black;
 }
 
-/*----------------------------------------------------------------------------*/
-/* Thumbnails views and scrollbars */
-/*----------------------------------------------------------------------------*/
-
-ThumbnailView {
-    border-style: none;
-}
-/*----------------------------------------------------------------------------*/
-ThumbnailStrip {
-    background-color: %folderview%;
-}
-/*----------------------------------------------------------------------------*/
 PanelButtonsHolder {
     background-color: red;
     border: 1px solid blue;
@@ -595,55 +583,6 @@ FVOptionsPopup QLabel {
 
 /*----------------------------------------------------------------------------*/
 
-ThumbnailStrip QScrollBar:horizontal {
-    height: 13px;
-    background-color: %folderview%;
-}
-
-ThumbnailStrip QScrollBar::handle:horizontal {
-    background-color: %scrollbar%;
-    min-width: 60px;
-}
-
-ThumbnailStrip QScrollBar::handle:horizontal:hover {
-    background-color: %scrollbar_hover%;
-    border-color: %scrollbar_hover%;
-}
-
-ThumbnailStrip QScrollBar:vertical {
-    width: 13px;
-    background-color: %folderview%;
-}
-
-ThumbnailStrip QScrollBar::handle:vertical {
-    background-color: %scrollbar%;
-    min-height: 60px;
-}
-
-ThumbnailStrip QScrollBar::handle:vertical:hover {
-    background-color: %scrollbar_hover%;
-    border-color: %scrollbar_hover%;
-}
-
-ThumbnailStrip QScrollBar::sub-page {
-    background: none;
-}
-
-ThumbnailStrip QScrollBar::add-page {
-    background: none;
-}
-
-ThumbnailStrip QScrollBar::add-line {
-    width: 0px;
-    height: 0px;
-}
-
-ThumbnailStrip QScrollBar::sub-line {
-    width: 0px;
-    height: 0px;
-}
-
-/*----------------------------------------------------------------------------*/
 /* Right click menu */
 /*----------------------------------------------------------------------------*/
 

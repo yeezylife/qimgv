@@ -15,8 +15,6 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
         base.accent = fromHex(0xff719ccd);
         base.background = fromHex(0xff1a1a1a);
         base.background_fullscreen = fromHex(0xff1a1a1a);
-        base.folderview = fromHex(0xfff2f2f2);
-        base.folderview_topbar = fromHex(0xffffffff);
         base.icons = fromHex(0xff656768);
         base.overlay = fromHex(0xff1a1a1a);
         base.overlay_text = fromHex(0xffd2d2d2);
@@ -37,8 +35,6 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
         base.widget = fromHex(0xff232629);
         base.widget_border = fromHex(0xff26292d);
         base.accent = fromHex(0xff336ca5);
-        base.folderview = fromHex(0xff232629);
-        base.folderview_topbar = fromHex(0xff31363b);
         base.scrollbar = fromHex(0xff4f565c);
         base.overlay_text = fromHex(0xffd2d2d2);
         base.overlay = fromHex(0xff1a1a1a);
@@ -55,8 +51,6 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
         base.widget = fromHex(0xff080808);
         base.widget_border = fromHex(0xff181818);
         base.accent = fromHex(0xff5a5a5a);
-        base.folderview = fromHex(0xff111111);
-        base.folderview_topbar = fromHex(0xff111111);
         base.scrollbar = fromHex(0xff343434);
         base.overlay_text = fromHex(0xff999999);
         base.overlay = fromHex(0xff000000);
@@ -73,8 +67,6 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
         base.widget = fromHex(0xff252525);
         base.widget_border = fromHex(0xff2c2c2c);
         base.accent = fromHex(0xff8c9b81);
-        base.folderview = fromHex(0xff242424);
-        base.folderview_topbar = fromHex(0xff383838);
         base.scrollbar = fromHex(0xff5a5a5a);
         base.overlay_text = fromHex(0xffd2d2d2);
         base.overlay = fromHex(0xff1a1a1a);
@@ -89,10 +81,8 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
 
         base.background = p.window().color();
         base.background_fullscreen = p.window().color();
-        base.folderview_topbar = p.window().color();
         base.widget = p.window().color();
         base.widget_border = p.window().color();
-        base.folderview = p.base().color();
         base.text = p.text().color();
         base.icons = p.text().color();
         base.accent = p.highlight().color();
@@ -137,8 +127,6 @@ void ColorScheme::setBaseColors(BaseColorScheme base) {
     widget = base.widget;
     widget_border = base.widget_border;
     accent = base.accent;
-    folderview = base.folderview;
-    folderview_topbar = base.folderview_topbar;
     overlay = base.overlay;
     overlay_text = base.overlay_text;
     scrollbar = base.scrollbar;
@@ -150,23 +138,9 @@ void ColorScheme::setBaseColors(BaseColorScheme base) {
 void ColorScheme::createColorVariants() {
     // Optimization: Cache frequently accessed values to avoid repeated function calls
     const int widgetValue = widget.value();
-    const int folderviewTopbarValue = folderview_topbar.value(); // Fix: Cache topbar value separately
     const qreal widgetValueF = widget.valueF();
 
     if(widgetValueF <= 0.45f) { // dark theme
-        // top bar buttons
-        // Fix: Use folderviewTopbarValue instead of widgetValue, matching original logic
-        panel_button.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMin(folderviewTopbarValue + 20, 255));
-        panel_button_hover.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMin(folderviewTopbarValue + 26, 255));
-        panel_button_pressed.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMin(folderviewTopbarValue + 15, 255));
-
-        const int folderviewValue = folderview.value();
-        folderview_hc.setHsv(folderview.hue(), folderview.saturation(), qMin(folderviewValue + 12, 255));
-        folderview_hc2.setHsv(folderview.hue(), folderview.saturation(), qMin(folderviewValue + 28, 255));
-        
-        folderview_button_pressed = folderview_hc;
-        folderview_button_hover = folderview_hc2;
-
         // regular buttons - from widget bg
         // Optimization: widgetValue is correct here
         button.setHsv(widget.hue(), widget.saturation(), qMin(widgetValue + 21, 255));
@@ -183,19 +157,6 @@ void ColorScheme::createColorVariants() {
         text_lc = text.darker(115);
         text_lc2 = text.darker(160);
     } else { // light theme
-        // top bar buttons
-        // Fix: Use folderviewTopbarValue instead of widgetValue
-        panel_button.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMax(folderviewTopbarValue - 30, 0));
-        panel_button_hover.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMax(folderviewTopbarValue - 45, 0));
-        panel_button_pressed.setHsv(folderview_topbar.hue(), folderview_topbar.saturation(), qMax(folderviewTopbarValue - 55, 0));
-
-        const int folderviewValue = folderview.value();
-        folderview_hc.setHsv(folderview.hue(), folderview.saturation(), qMax(folderviewValue - 25, 0));
-        folderview_hc2.setHsv(folderview.hue(), folderview.saturation(), qMax(folderviewValue - 60, 0));
-        
-        folderview_button_pressed = folderview_hc2;
-        folderview_button_hover = folderview_hc;
-
         // regular buttons - from widget bg
         button.setHsv(widget.hue(), widget.saturation(), qMax(widgetValue - 42, 0));
         

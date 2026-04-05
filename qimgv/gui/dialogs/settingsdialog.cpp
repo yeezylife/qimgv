@@ -25,8 +25,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui->colorSelectorAccent->setDescription(tr("Accent color"));
     ui->colorSelectorBackground->setDescription(tr("Windowed mode background"));
     ui->colorSelectorFullscreen->setDescription(tr("Fullscreen mode background"));
-    ui->colorSelectorFolderview->setDescription(tr("FolderView background"));
-    ui->colorSelectorFolderviewPanel->setDescription(tr("FolderView top panel"));
     ui->colorSelectorText->setDescription(tr("Text color"));
     ui->colorSelectorWidget->setDescription(tr("Widget background"));
     ui->colorSelectorWidgetBorder->setDescription(tr("Widget border"));
@@ -68,13 +66,7 @@ SettingsDialog::~SettingsDialog() {
 //------------------------------------------------------------------------------
 void SettingsDialog::initializeLanguageMap() {
     // readable language names
-    langs.insert("de_DE", "Deutsch");
     langs.insert("en_US", "English");
-    langs.insert("es_ES", "Español");
-    langs.insert("fr_FR", "Français");
-    langs.insert("ja_JP", "日本語");
-    langs.insert("tr_TR", "Türkçe");
-    langs.insert("uk_UA", "Українська");
     langs.insert("zh_CN", "简体中文");
     // fill langs combobox, sorted by locale
     ui->langComboBox->addItems(langs.values());
@@ -162,7 +154,6 @@ void SettingsDialog::adjustSizeToContents() {
     //qDebug() << "scrollarea:" << ui->scrollArea->sizeHint() << ui->scrollArea->minimumSizeHint() << ui->scrollArea->size();
     //qDebug() << "scrollareawidget:" << ui->scrollAreaWidgetContents->sizeHint() << ui->scrollAreaWidgetContents->minimumSizeHint() << ui->scrollAreaWidgetContents->size();
     //qDebug() << "grid" << ui->gridLayout_15->sizeHint();
-    //qDebug() << "wtf" << ui->startInFolderViewCheckBox->sizeHint() << ui->startInFolderViewCheckBox->minimumSizeHint();
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::resetToDesktopTheme() {
@@ -197,7 +188,6 @@ void SettingsDialog::readSettings() {
     ui->clickableEdgesCheckBox->setChecked(settings->clickableEdges());
     ui->clickableEdgesVisibleCheckBox->setChecked(settings->clickableEdgesVisible());
     ui->clickableEdgesVisibleCheckBox->setEnabled(settings->clickableEdges());
-    ui->showHiddenFilesCheckBox->setChecked(settings->showHiddenFiles());
 
     if(settings->zoomIndicatorMode() == INDICATOR_ENABLED)
         ui->zoomIndicatorOn->setChecked(true);
@@ -302,7 +292,6 @@ void SettingsDialog::saveSettings() {
     settings->setVideoPlayback(ui->videoPlaybackCheckBox->isChecked());
     settings->setPlayVideoSounds(ui->playSoundsCheckBox->isChecked());
     settings->setTransparencyGrid(ui->transparencyGridCheckBox->isChecked());
-    settings->setShowHiddenFiles(ui->showHiddenFilesCheckBox->isChecked());
     settings->setEnableSmoothScroll(ui->enableSmoothScrollCheckBox->isChecked());
     settings->setUsePreloader(ui->usePreloaderCheckBox->isChecked());
     settings->setSmoothUpscaling(ui->smoothUpscalingCheckBox->isChecked());
@@ -394,8 +383,6 @@ void SettingsDialog::setColorScheme(ColorScheme colors) {
     ui->colorSelectorAccent->setColor(colors.accent);
     ui->colorSelectorBackground->setColor(colors.background);
     ui->colorSelectorFullscreen->setColor(colors.background_fullscreen);
-    ui->colorSelectorFolderview->setColor(colors.folderview);
-    ui->colorSelectorFolderviewPanel->setColor(colors.folderview_topbar);
     ui->colorSelectorText->setColor(colors.text);
     ui->colorSelectorIcons->setColor(colors.icons);
     ui->colorSelectorWidget->setColor(colors.widget);
@@ -411,8 +398,6 @@ void SettingsDialog::saveColorScheme() {
     base.accent = ui->colorSelectorAccent->color();
     base.background = ui->colorSelectorBackground->color();
     base.background_fullscreen = ui->colorSelectorFullscreen->color();
-    base.folderview = ui->colorSelectorFolderview->color();
-    base.folderview_topbar = ui->colorSelectorFolderviewPanel->color();
     base.text = ui->colorSelectorText->color();
     base.icons = ui->colorSelectorIcons->color();
     base.widget = ui->colorSelectorWidget->color();

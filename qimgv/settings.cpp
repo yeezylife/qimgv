@@ -1292,11 +1292,3 @@ void Settings::setClickableEdgesVisible(bool mode) {
     settingsConf->setValue("clickableEdgesVisible", mode);
 }
 //------------------------------------------------------------------------------
-bool Settings::showHiddenFiles() {
-    return settingsConf->value("showHiddenFiles", false).toBool();
-}
-
-void Settings::setShowHiddenFiles(bool mode) {
-    settingsConf->setValue("showHiddenFiles", mode);
-}
-//------------------------------------------------------------------------------

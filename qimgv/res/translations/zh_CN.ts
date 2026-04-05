@@ -1617,9 +1617,9 @@
         <translation>每张图片的内存分配限制 (MB):</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2096"/>
-        <source>Part of image that's focused after switching to 1:1</source>
-        <translation>切换到1:1后聚焦的图片部分</translation>
+        <location filename="../../gui/dialogs/settingsdialog.ui" line="4540"/>
+        <source>Mpv binary:</source>
+        <translation>Mpv播放器路径:</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4581"/>
@@ -1653,7 +1653,7 @@
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3867"/>
-        <source>Mouse & touchpad</source>
+        <source>Mouse &amp; touchpad</source>
         <translation>鼠标和触控板</translation>
     </message>
     <message>
@@ -1668,12 +1668,12 @@
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4020"/>
-        <source>Note: these will appear in "Open with" menu.</source>
+        <source>Note: these will appear in &quot;Open with&quot; menu.</source>
         <translation>提示：这些将出现在"打开方式"菜单中</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4030"/>
-        <source>Also, you can assign shortcuts to scripts (in "Controls" section).</source>
+        <source>Also, you can assign shortcuts to scripts (in &quot;Controls&quot; section).</source>
         <translation>此外，您可以为脚本分配快捷键（在"控制"部分）</translation>
     </message>
     <message>

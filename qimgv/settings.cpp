@@ -7,15 +7,15 @@ Settings::Settings(QObject *parent) : QObject(parent) {
 #if defined(__linux__) || defined(__FreeBSD__)
     // config files
     QSettings::setDefaultFormat(QSettings::NativeFormat);
-    settingsConf = new QSettings();
-    stateConf = new QSettings(QCoreApplication::organizationName(), "savedState");
-    themeConf = new QSettings(QCoreApplication::organizationName(), "theme");
+    settingsConf = std::make_unique<QSettings>();
+    stateConf = std::make_unique<QSettings>(QCoreApplication::organizationName(), "savedState");
+    themeConf = std::make_unique<QSettings>(QCoreApplication::organizationName(), "theme");
 #else
-    mConfDir = new QDir(QApplication::applicationDirPath() + "/conf");
+    mConfDir = std::make_unique<QDir>(QApplication::applicationDirPath() + "/conf");
     mConfDir->mkpath(QApplication::applicationDirPath() + "/conf");
-    settingsConf = new QSettings(mConfDir->absolutePath() + "/" + qApp->applicationName() + ".ini", QSettings::IniFormat);
-    stateConf = new QSettings(mConfDir->absolutePath() + "/savedState.ini", QSettings::IniFormat);
-    themeConf = new QSettings(mConfDir->absolutePath() + "/theme.ini", QSettings::IniFormat);
+    settingsConf = std::make_unique<QSettings>(mConfDir->absolutePath() + "/" + qApp->applicationName() + ".ini", QSettings::IniFormat);
+    stateConf = std::make_unique<QSettings>(mConfDir->absolutePath() + "/savedState.ini", QSettings::IniFormat);
+    themeConf = std::make_unique<QSettings>(mConfDir->absolutePath() + "/theme.ini", QSettings::IniFormat);
 #endif
     fillVideoFormats();
     mFormatsCacheValid = false;
@@ -48,12 +48,6 @@ Settings::Settings(QObject *parent) : QObject(parent) {
 //------------------------------------------------------------------------------
 Settings::~Settings() {
     saveTheme();
-    delete mThumbCacheDir;
-    delete mTmpDir;
-    delete mConfDir;
-    delete settingsConf;
-    delete stateConf;
-    delete themeConf;
 }
 //------------------------------------------------------------------------------
 Settings *Settings::getInstance() {
@@ -72,7 +66,7 @@ void Settings::setupCache() {
         genericCacheLocation = QDir::homePath() + "/.cache";
     genericCacheLocation.append("/" + QApplication::applicationName());
     QString cacheLocation = settingsConf->value("cacheDir", genericCacheLocation).toString();
-    mTmpDir = new QDir(cacheLocation);
+    mTmpDir = std::make_unique<QDir>(cacheLocation);
     mTmpDir->mkpath(mTmpDir->absolutePath());
     QFileInfo dirTest(mTmpDir->absolutePath());
     if(!dirTest.isDir() || !dirTest.isWritable() || !dirTest.exists()) {
@@ -82,12 +76,12 @@ void Settings::setupCache() {
         mTmpDir->setPath(genericCacheLocation);
         mTmpDir->mkpath(mTmpDir->absolutePath());
     }
-    mThumbCacheDir = new QDir(mTmpDir->absolutePath() + "/thumbnails");
+    mThumbCacheDir = std::make_unique<QDir>(mTmpDir->absolutePath() + "/thumbnails");
     mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
 #else
-    mTmpDir = new QDir(QApplication::applicationDirPath() + "/cache");
+    mTmpDir = std::make_unique<QDir>(QApplication::applicationDirPath() + "/cache");
     mTmpDir->mkpath(mTmpDir->absolutePath());
-    mThumbCacheDir = new QDir(QApplication::applicationDirPath() + "/thumbnails");
+    mThumbCacheDir = std::make_unique<QDir>(QApplication::applicationDirPath() + "/thumbnails");
     mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
 #endif
 }
@@ -119,7 +113,7 @@ void Settings::loadStylesheet() {
         QString styleSheet = QLatin1String(file.readAll());
 
         // --- color scheme ---------------------------------------------
-    auto colors = colorScheme();
+    const auto& colors = colorScheme();
         // tint color for system windows
         QPalette p;
         QColor sys_text = p.text().color();

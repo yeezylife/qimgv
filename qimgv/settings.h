@@ -16,6 +16,7 @@
 #include <QFontMetrics>
 #include <QVersionNumber>
 #include <QThread>
+#include <memory>
 #include "utils/script.h"
 #include "themestore.h"
 
@@ -293,12 +294,12 @@ public:
 
 private:
     explicit Settings(QObject *parent = nullptr);
-    QSettings *settingsConf = nullptr;
-    QSettings *stateConf = nullptr;
-    QSettings *themeConf = nullptr;
-    QDir *mTmpDir = nullptr;
-    QDir *mThumbCacheDir = nullptr;
-    QDir *mConfDir = nullptr;
+    std::unique_ptr<QSettings> settingsConf;
+    std::unique_ptr<QSettings> stateConf;
+    std::unique_ptr<QSettings> themeConf;
+    std::unique_ptr<QDir> mTmpDir;
+    std::unique_ptr<QDir> mThumbCacheDir;
+    std::unique_ptr<QDir> mConfDir;
     ColorScheme mColorScheme;
     QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
     

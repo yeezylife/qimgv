@@ -70,15 +70,6 @@ target_sources(qimgv PRIVATE
     viewers/videoplayer.cpp
     viewers/videoplayerinitproxy.cpp
     viewers/viewerwidget.cpp
-
-    folderview/foldergridview.cpp
-    folderview/folderview.cpp
-    folderview/folderviewproxy.cpp
-    folderview/filesystemmodelcustom.cpp
-    folderview/treeviewcustom.cpp
-    folderview/bookmarkswidget.cpp
-    folderview/bookmarksitem.cpp
-    folderview/fvoptionspopup.cpp
 )
 
 # UI Files
@@ -106,7 +97,4 @@ target_sources(qimgv PRIVATE
     panels/sidepanel/sidepanel.ui
 
     panels/infobar/infobar.ui
-
-    folderview/folderview.ui
-    folderview/fvoptionspopup.ui
 )

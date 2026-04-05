@@ -164,8 +164,6 @@ void ViewerWidget::disableVideoPlayer() {
 }
 
 void ViewerWidget::onScaleChanged(qreal scale) {
-    if(!this->isVisible())
-        return;
     if(scale != 1.0f) {
         zoomIndicator->setScale(scale);
         if(settings->zoomIndicatorMode() == ZoomIndicatorMode::INDICATOR_ENABLED)

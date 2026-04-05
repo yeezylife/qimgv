@@ -194,10 +194,6 @@ void Settings::loadStylesheet() {
         styleSheet.replace("%panel_button_pressed%", colors.panel_button_pressed.name());
         styleSheet.replace("%widget%",               colors.widget.name());
         styleSheet.replace("%widget_border%",        colors.widget_border.name());
-        styleSheet.replace("%folderview%",           colors.folderview.name());
-        styleSheet.replace("%folderview_topbar%",    colors.folderview_topbar.name());
-        styleSheet.replace("%folderview_hc%",        colors.folderview_hc.name());
-        styleSheet.replace("%folderview_hc2%",       colors.folderview_hc2.name());
         styleSheet.replace("%accent%",               colors.accent.name());
         styleSheet.replace("%input_field_focus%",    colors.input_field_focus.name());
         styleSheet.replace("%overlay%",              colors.overlay.name());
@@ -210,8 +206,6 @@ void Settings::loadStylesheet() {
         styleSheet.replace("%text_lc2%",             colors.text_lc2.name());
         styleSheet.replace("%scrollbar%",            colors.scrollbar.name());
         styleSheet.replace("%scrollbar_hover%",      colors.scrollbar_hover.name());
-        styleSheet.replace("%folderview_button_hover%",   colors.folderview_button_hover.name());
-        styleSheet.replace("%folderview_button_pressed%", colors.folderview_button_pressed.name());
         styleSheet.replace("%text_secondary_rgba%",  "rgba(" + QString::number(colors.text.red())   + ","
                                                              + QString::number(colors.text.green()) + ","
                                                              + QString::number(colors.text.blue())  + ",62%)");
@@ -221,14 +215,6 @@ void Settings::loadStylesheet() {
         styleSheet.replace("%overlay_rgba%",         "rgba(" + QString::number(colors.overlay.red())   + ","
                                                              + QString::number(colors.overlay.green()) + ","
                                                              + QString::number(colors.overlay.blue())  + ",90%)");
-        styleSheet.replace("%fv_backdrop_rgba%",     "rgba(" + QString::number(colors.folderview_hc2.red())   + ","
-                                                             + QString::number(colors.folderview_hc2.green()) + ","
-                                                             + QString::number(colors.folderview_hc2.blue())  + ",80%)");
-        // do not show separator line if topbar color matches folderview
-        if(colors.folderview != colors.folderview_topbar)
-            styleSheet.replace("%topbar_border_rgba%", "rgba(0,0,0,14%)");
-        else
-            styleSheet.replace("%topbar_border_rgba%", colors.folderview.name());
 
         // --- apply -------------------------------------------------
         qApp->setStyleSheet(styleSheet);
@@ -252,8 +238,6 @@ void Settings::loadTheme() {
         base.widget                = QColor(themeConf->value("widget",                "#252525").toString());
         base.widget_border         = QColor(themeConf->value("widget_border",         "#2c2c2c").toString());
         base.accent                = QColor(themeConf->value("accent",                "#8c9b81").toString());
-        base.folderview            = QColor(themeConf->value("folderview",            "#242424").toString());
-        base.folderview_topbar     = QColor(themeConf->value("folderview_topbar",     "#383838").toString());
         base.scrollbar             = QColor(themeConf->value("scrollbar",             "#5a5a5a").toString());
         base.overlay_text          = QColor(themeConf->value("overlay_text",          "#d2d2d2").toString());
         base.overlay               = QColor(themeConf->value("overlay",               "#1a1a1a").toString());
@@ -273,8 +257,6 @@ void Settings::saveTheme() {
     themeConf->setValue("widget",                mColorScheme.widget.name());
     themeConf->setValue("widget_border",         mColorScheme.widget_border.name());
     themeConf->setValue("accent",                mColorScheme.accent.name());
-    themeConf->setValue("folderview",            mColorScheme.folderview.name());
-    themeConf->setValue("folderview_topbar",     mColorScheme.folderview_topbar.name());
     themeConf->setValue("scrollbar",             mColorScheme.scrollbar.name());
     themeConf->setValue("overlay_text",          mColorScheme.overlay_text.name());
     themeConf->setValue("overlay",               mColorScheme.overlay.name());

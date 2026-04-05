@@ -16,6 +16,7 @@
 #include <QEvent>
 #include <QPixmap>
 #include <QMovie>
+#include <QPointer>
 #include <memory>
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
@@ -97,7 +98,7 @@ private:
     FloatingMessageProxy *floatingMessage = nullptr;
     CropPanel *cropPanel = nullptr;
     CropOverlay *cropOverlay = nullptr;
-    ChangelogWindow *changelogWindow = nullptr;
+    QPointer<ChangelogWindow> changelogWindow;
     ImageInfoOverlayProxy *imageInfoOverlay = nullptr;
     ControlsOverlay *controlsOverlay = nullptr;
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;

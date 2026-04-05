@@ -675,10 +675,14 @@ void MW::hideSaveOverlay() {
 }
 
 void MW::showChangelogWindow() {
+    if (changelogWindow.isNull())
+        changelogWindow = new ChangelogWindow(this);
     changelogWindow->show();
 }
 
 void MW::showChangelogWindow(const QString &text) {
+    if (changelogWindow.isNull())
+        changelogWindow = new ChangelogWindow(this);
     changelogWindow->setText(text);
     changelogWindow->show();
 }

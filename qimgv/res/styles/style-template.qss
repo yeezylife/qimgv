@@ -217,7 +217,8 @@ QComboBox QAbstractItemView {
     min-height: 22px;
 }
 
-[accessibleName="PanelComboBox"] QAbstractItemView::item:selected {
+[accessibleName="PanelComboBox"] QAbstractItemView::item:selected,
+[accessibleName="PanelComboBox"] QAbstractItemView::item:hover {
     background-color: %accent_hover_rgba%;
 }
 
@@ -411,7 +412,8 @@ SidePanel QComboBox QAbstractItemView::item {
     min-height: 22px;
 }
 
-SidePanel QComboBox QAbstractItemView::item:selected {
+SidePanel QComboBox QAbstractItemView::item:selected,
+SidePanel QComboBox QAbstractItemView::item:hover {
     background-color: %accent_hover_rgba%;
 }
 

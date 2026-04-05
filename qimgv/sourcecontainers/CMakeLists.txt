@@ -6,6 +6,5 @@ target_sources(qimgv PRIVATE
     image.cpp
     imageanimated.cpp
     imagestatic.cpp
-    thumbnail.cpp
     video.cpp
 )

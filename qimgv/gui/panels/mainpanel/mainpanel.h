@@ -3,7 +3,6 @@
 #include <QVBoxLayout>
 #include "gui/customwidgets/slidepanel.h"
 #include "gui/customwidgets/actionbutton.h"
-#include "gui/panels/mainpanel/thumbnailstripproxy.h"
 
 class MainPanel : public SlidePanel {
 Q_OBJECT
@@ -12,8 +11,6 @@ MainPanel(FloatingWidgetContainer *parent);
 ~MainPanel();
 void setPosition(PanelPosition);
 void setExitButtonEnabled(bool mode);
-std::shared_ptr<ThumbnailStripProxy> getThumbnailStrip();
-void setupThumbnailStrip();
 QSize sizeHint() const override;
 public slots:
 void readSettings();
@@ -24,7 +21,6 @@ void onPinClicked();
 private:
 QVBoxLayout buttonsLayout;
 QWidget buttonsWidget;
-std::shared_ptr<ThumbnailStripProxy> thumbnailStrip;
     ActionButton *openButton, *settingsButton, *exitButton, *pinButton;
 protected:
 virtual void paintEvent(QPaintEvent* event) override;

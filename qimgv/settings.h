@@ -81,11 +81,6 @@ enum FolderEndAction {
     FOLDER_END_GOTO_ADJACENT
 };
 
-enum ThumbPanelStyle {
-    TH_PANEL_SIMPLE,
-    TH_PANEL_EXTENDED
-};
-
 class Settings : public QObject
 {
     Q_OBJECT
@@ -110,7 +105,6 @@ public:
     void setPlayVideoSounds(bool mode);
     void setVolume(int vol);
     int volume();
-    QString thumbnailCacheDir();
     QString mpvBinary();
     void setMpvBinary(const QString &path);
     PanelPosition panelPosition();
@@ -123,19 +117,13 @@ public:
     void setPanelEnabled(bool mode);
     int lastDisplay();
     void setLastDisplay(int display);
-    bool squareThumbnails();
-    void setSquareThumbnails(bool mode);
     bool transparencyGrid();
     void setTransparencyGrid(bool mode);
     bool enableSmoothScroll();
     void setEnableSmoothScroll(bool mode);
-    bool useThumbnailCache();
-    void setUseThumbnailCache(bool mode);
     QStringList savedPaths();
     void setSavedPaths(const QStringList &paths);
     QString tmpDir();
-    int thumbnailerThreadCount();
-    void setThumbnailerThreadCount(int count);
     bool smoothUpscaling();
     void setSmoothUpscaling(bool mode);
     void setExpandImage(bool mode);
@@ -246,10 +234,6 @@ public:
     void setPrintFitToPage(bool mode);
     QString lastPrinter();
     void setLastPrinter(const QString &name);
-    bool unloadThumbs();
-    void setUnloadThumbs(bool mode);
-    ThumbPanelStyle thumbPanelStyle();
-    void setThumbPanelStyle(ThumbPanelStyle mode);
 
     bool jxlAnimation();
     void setJxlAnimation(bool mode);
@@ -298,7 +282,6 @@ private:
     std::unique_ptr<QSettings> stateConf;
     std::unique_ptr<QSettings> themeConf;
     std::unique_ptr<QDir> mTmpDir;
-    std::unique_ptr<QDir> mThumbCacheDir;
     std::unique_ptr<QDir> mConfDir;
     ColorScheme mColorScheme;
     QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
@@ -364,8 +347,6 @@ private:
     mutable bool mImageScrollingCacheValid;
     mutable FolderEndAction mCachedFolderEndAction;
     mutable bool mFolderEndActionCacheValid;
-    mutable ThumbPanelStyle mCachedThumbPanelStyle;
-    mutable bool mThumbPanelStyleCacheValid;
     
     void loadTheme();
     void saveTheme();

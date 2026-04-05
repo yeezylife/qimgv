@@ -26,8 +26,6 @@ buttonsLayout.addWidget(pinButton);
 buttonsLayout.addWidget(exitButton);
 buttonsWidget.setLayout(&buttonsLayout);
 layout()->addWidget(&buttonsWidget);
-thumbnailStrip.reset(new ThumbnailStripProxy(this));
-setWidget(thumbnailStrip);
 // 注意：不在构造函数中调用 readSettings()，避免虚函数调用问题
 // readSettings();
 //connect(settings, SIGNAL(settingsChanged()), this, SLOT(readSettings()));
@@ -73,32 +71,9 @@ void MainPanel::setExitButtonEnabled(bool mode) {
 exitButton->setHidden(!mode);
 }
 
-std::shared_ptr<ThumbnailStripProxy> MainPanel::getThumbnailStrip() {
-return thumbnailStrip;
-}
-
-void MainPanel::setupThumbnailStrip() {
-thumbnailStrip->init();
-// adjust size & position
-readSettings();
-}
-
 // 非虚辅助方法，用于安全计算尺寸（可在构造期间调用）
 QSize MainPanel::calculateSizeHint() const {
-if(!thumbnailStrip || !thumbnailStrip->isInitialized())
 return QSize(0, 0);
-// item size + spacing + scrollbar + border
-switch(settings->panelPosition()) {
-case PANEL_TOP:
-return QSize(width(), thumbnailStrip->itemSize().height() + 16);
-case PANEL_BOTTOM:
-return QSize(width(), thumbnailStrip->itemSize().height() + 16 + 3);
-case PANEL_LEFT:
-case PANEL_RIGHT:
-return QSize(thumbnailStrip->itemSize().width() + 16, height());
-default:
-return QSize(0, 0);
-}
 }
 
 // 注意：实现文件中不要加 override
@@ -123,7 +98,6 @@ if(w)
 setFixedWidth(w);
 setFixedHeight(QWIDGETSIZE_MAX);
 }
-thumbnailStrip->readSettings();
 setPosition(newPos);
 pinButton->setChecked(settings->panelPinned());
 }

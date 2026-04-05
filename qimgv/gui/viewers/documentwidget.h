@@ -13,13 +13,11 @@ class DocumentWidget : public FloatingWidgetContainer {
 public:
     DocumentWidget(std::shared_ptr<ViewerWidget> viewWidget, std::shared_ptr<InfoBarProxy> infoBar, QWidget* parent = nullptr);
     std::shared_ptr<ViewerWidget> viewWidget();
-    std::shared_ptr<ThumbnailStripProxy> thumbPanel();
     void setFocus();
     void hideFloatingPanel();
     void hideFloatingPanel(bool animated);
     void setPanelEnabled(bool mode);
     bool panelEnabled();
-    void setupMainPanel();
     void setInteractionEnabled(bool mode);
     void allowPanelInit();
 

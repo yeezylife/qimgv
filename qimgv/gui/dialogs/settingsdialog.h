@@ -79,7 +79,6 @@ private slots:
     void resetShortcuts();
     void selectMpvPath();
     void onBgOpacitySliderChanged(int value);
-    void onThumbnailerThreadsSliderChanged(int value);
     void onExpandLimitSliderChanged(int value);
     void onZoomStepSliderChanged(int value);
     void onJPEGQualitySliderChanged(int value);

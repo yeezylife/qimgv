@@ -205,7 +205,6 @@ cp mpv.exe libmpv-2.dll $PACKAGE_DIR
 # 6 - misc
 mkdir $PACKAGE_DIR/cache
 mkdir $PACKAGE_DIR/conf
-mkdir $PACKAGE_DIR/thumbnails
 cp -r $SRC_DIR/qimgv/distrib/mimedata/data $PACKAGE_DIR
 
 cd $SRC_DIR

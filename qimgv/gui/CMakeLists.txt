@@ -21,8 +21,6 @@ target_sources(qimgv PRIVATE
     customwidgets/sidepanelwidget.cpp
     customwidgets/slidepanel.cpp
     customwidgets/spinboxinputfix.cpp
-    customwidgets/thumbnailview.cpp
-    customwidgets/thumbnailwidget.cpp
     customwidgets/videoslider.cpp
     customwidgets/pushbuttonfocusind.cpp
     customwidgets/styledcombobox.cpp
@@ -58,8 +56,6 @@ target_sources(qimgv PRIVATE
 
     panels/croppanel/croppanel.cpp
     panels/mainpanel/mainpanel.cpp
-    panels/mainpanel/thumbnailstrip.cpp
-    panels/mainpanel/thumbnailstripproxy.cpp
     panels/sidepanel/sidepanel.cpp
 
     panels/infobar/infobar.cpp

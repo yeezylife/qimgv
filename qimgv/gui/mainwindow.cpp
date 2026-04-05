@@ -95,7 +95,6 @@ void MW::setupFullUi() {
     fullUiInitialized = true;
     setupCropPanel();
     docWidget->allowPanelInit();
-    docWidget->setupMainPanel();
     infoBarWindowed->init();
     infoBarFullscreen->init();
 }
@@ -869,10 +868,6 @@ void MW::setExifInfo(const QHash<QString, QString> &info) {
     m_exifInfo = info;
     if(imageInfoOverlay)
         imageInfoOverlay->setExifInfo(info);
-}
-
-std::shared_ptr<ThumbnailStripProxy> MW::getThumbnailPanel() {
-    return docWidget->thumbPanel();
 }
 
 void MW::showMessageDirectory(const QString& dirName) {

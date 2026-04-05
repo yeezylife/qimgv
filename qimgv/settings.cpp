@@ -43,7 +43,6 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mFocusPointIn1to1ModeCacheValid = false;
     mImageScrollingCacheValid = false;
     mFolderEndActionCacheValid = false;
-    mThumbPanelStyleCacheValid = false;
 }
 //------------------------------------------------------------------------------
 Settings::~Settings() {
@@ -76,23 +75,15 @@ void Settings::setupCache() {
         mTmpDir->setPath(genericCacheLocation);
         mTmpDir->mkpath(mTmpDir->absolutePath());
     }
-    mThumbCacheDir = std::make_unique<QDir>(mTmpDir->absolutePath() + "/thumbnails");
-    mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
 #else
     mTmpDir = std::make_unique<QDir>(QApplication::applicationDirPath() + "/cache");
     mTmpDir->mkpath(mTmpDir->absolutePath());
-    mThumbCacheDir = std::make_unique<QDir>(QApplication::applicationDirPath() + "/thumbnails");
-    mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
 #endif
 }
 //------------------------------------------------------------------------------
 void Settings::sync() {
     settingsConf->sync();
     stateConf->sync();
-}
-//------------------------------------------------------------------------------
-QString Settings::thumbnailCacheDir() {
-    return mThumbCacheDir->path() + "/";
 }
 //------------------------------------------------------------------------------
 QString Settings::tmpDir() {
@@ -508,25 +499,6 @@ int Settings::volume() {
     return stateConf->value("volume", 100).toInt();
 }
 //------------------------------------------------------------------------------
-ThumbPanelStyle Settings::thumbPanelStyle() {
-    if (mThumbPanelStyleCacheValid) {
-        return mCachedThumbPanelStyle;
-    }
-    
-    int mode = settingsConf->value("thumbPanelStyle", 1).toInt();
-    if(mode < 0 || mode > 1)
-        mode = 1;
-    
-    mCachedThumbPanelStyle = static_cast<ThumbPanelStyle>(mode);
-    mThumbPanelStyleCacheValid = true;
-    return mCachedThumbPanelStyle;
-}
-
-void Settings::setThumbPanelStyle(ThumbPanelStyle mode) {
-    settingsConf->setValue("thumbPanelStyle", mode);
-    mThumbPanelStyleCacheValid = false;
-}
-//------------------------------------------------------------------------------
 const QMultiMap<QByteArray, QByteArray> Settings::videoFormats() const {
     return mVideoFormatsMap;
 }
@@ -796,14 +768,6 @@ void Settings::saveScripts(const QHash<QString, Script> &scripts) {
     mScriptsCacheValid = false;
 }
 //------------------------------------------------------------------------------
-bool Settings::squareThumbnails() {
-    return settingsConf->value("squareThumbnails", false).toBool();
-}
-
-void Settings::setSquareThumbnails(bool mode) {
-    settingsConf->setValue("squareThumbnails", mode);
-}
-//------------------------------------------------------------------------------
 bool Settings::transparencyGrid() {
     return settingsConf->value("drawTransparencyGrid", false).toBool();
 }
@@ -818,14 +782,6 @@ bool Settings::enableSmoothScroll() {
 
 void Settings::setEnableSmoothScroll(bool mode) {
     settingsConf->setValue("enableSmoothScroll", mode);
-}
-//------------------------------------------------------------------------------
-bool Settings::useThumbnailCache() {
-    return settingsConf->value("thumbnailCache", true).toBool();
-}
-
-void Settings::setUseThumbnailCache(bool mode) {
-    settingsConf->setValue("thumbnailCache", mode);
 }
 //------------------------------------------------------------------------------
 QStringList Settings::savedPaths() {
@@ -899,17 +855,6 @@ int Settings::slideshowInterval() {
     if(interval <= 0)
         interval = 3000;
     return interval;
-}
-//------------------------------------------------------------------------------
-int Settings::thumbnailerThreadCount() {
-    int count = settingsConf->value("thumbnailerThreads", 4).toInt();
-    if(count < 1)
-        count = 4;
-    return count;
-}
-
-void Settings::setThumbnailerThreadCount(int count) {
-    settingsConf->setValue("thumbnailerThreads", count);
 }
 //------------------------------------------------------------------------------
 bool Settings::smoothUpscaling() {
@@ -1051,14 +996,6 @@ bool Settings::confirmTrash() {
 
 void Settings::setConfirmTrash(bool mode) {
     settingsConf->setValue("confirmTrash", mode);
-}
-//------------------------------------------------------------------------------
-bool Settings::unloadThumbs() {
-    return settingsConf->value("unloadThumbs", true).toBool();
-}
-
-void Settings::setUnloadThumbs(bool mode) {
-    settingsConf->setValue("unloadThumbs", mode);
 }
 //------------------------------------------------------------------------------
 float Settings::zoomStep() {

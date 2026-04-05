@@ -80,10 +80,6 @@ bool DocumentWidget::panelPinned() {
     return mPanelPinned;
 }
 
-std::shared_ptr<ThumbnailStripProxy> DocumentWidget::thumbPanel() {
-    return mainPanel->getThumbnailStrip();
-}
-
 void DocumentWidget::hideFloatingPanel() {
     hideFloatingPanel(false);
 }
@@ -97,8 +93,6 @@ void DocumentWidget::setPanelEnabled(bool mode) {
     mPanelEnabled = mode;
     if(!mode)
         mainPanel->hide();
-    else
-        setupMainPanel();
 }
 
 bool DocumentWidget::panelEnabled() {
@@ -107,11 +101,6 @@ bool DocumentWidget::panelEnabled() {
 
 void DocumentWidget::allowPanelInit() {
     mAllowPanelInit = true;
-}
-
-void DocumentWidget::setupMainPanel() {
-    if(mPanelEnabled && mAllowPanelInit)
-        mainPanel->setupThumbnailStrip();
 }
 
 void DocumentWidget::setInteractionEnabled(bool mode) {

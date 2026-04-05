@@ -1,8 +1,6 @@
 #include "directorypresenter.h"
-#include "sourcecontainers/thumbnail.h"
 
 DirectoryPresenter::DirectoryPresenter(QObject *parent) : QObject(parent), mShowDirs(false) {
-    connect(&thumbnailer, &Thumbnailer::thumbnailReady, this, &DirectoryPresenter::onThumbnailReady);
 }
 
 void DirectoryPresenter::unsetModel() {
@@ -33,8 +31,6 @@ void DirectoryPresenter::setView(const std::shared_ptr<IDirectoryView> &_view) {
         view->populate(mShowDirs ? qMin(static_cast<int>(model->totalCount()), INT_MAX) : qMin(static_cast<int>(model->fileCount()), INT_MAX));
     connect(viewObject, SIGNAL(itemActivated(int)),
             this, SLOT(onItemActivated(int)));
-    connect(viewObject, SIGNAL(thumbnailsRequested(QList<int>, int, bool, bool)),
-            this, SLOT(generateThumbnails(QList<int>, int, bool, bool)));
     connect(viewObject, SIGNAL(draggedOut()),
             this, SLOT(onDraggedOut()));
     connect(viewObject, SIGNAL(draggedOver(int)),
@@ -203,65 +199,6 @@ QList<QString> DirectoryPresenter::selectedPaths() const {
         }
     }
     return paths;
-}
-
-void DirectoryPresenter::generateThumbnails(const QList<int> &indexes, int size, bool crop, bool force) {
-    // 完全跳过缩略图生成
-    if(!settings->useThumbnailCache()) {
-        return;
-    }
-    
-    if(!view || !model)
-        return;
-    
-    thumbnailer.clearTasks();
-    
-    // 如果不显示目录，直接批量处理文件
-    if(!mShowDirs) {
-        for(int i : indexes)
-            thumbnailer.getThumbnailAsync(model->filePathAt(i), size, crop, force);
-        return;
-    }
-    
-    // 如果缓存的缩略图大小不匹配，则重新创建
-    if(!mCachedDirPixmap || mCachedDirSize != size) {
-        QSvgRenderer svgRenderer;
-        svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
-        int factor = qRound((size * 0.90) / static_cast<qreal>(svgRenderer.defaultSize().width()));
-        QPixmap pix(svgRenderer.defaultSize() * factor);
-        pix.fill(Qt::transparent);
-        QPainter pixPainter(&pix);
-        svgRenderer.render(&pixPainter);
-        pixPainter.end();
-        
-        ImageLib::recolor(pix, settings->colorScheme().icons);
-        mCachedDirPixmap = std::make_shared<const QPixmap>(std::move(pix));
-        mCachedDirSize = size;
-    }
-    
-    const int dirCount = model->dirCount();
-    
-    // 批量处理索引
-    for(int i : indexes) {
-        if(i < dirCount) {
-            // 使用缓存的目录图标（共享指针，避免拷贝）
-            std::shared_ptr<Thumbnail> thumb = std::make_shared<Thumbnail>(
-                model->dirNameAt(i), size, "Folder", mCachedDirPixmap);
-            view->setThumbnail(i, thumb);
-        } else {
-            QString path = model->filePathAt(i - dirCount);
-            thumbnailer.getThumbnailAsync(path, size, crop, force);
-        }
-    }
-}
-
-void DirectoryPresenter::onThumbnailReady(const std::shared_ptr<Thumbnail> &thumb, const QString &filePath) {
-    if(!view || !model)
-        return;
-    int index = model->indexOfFile(filePath);
-    if(index == -1)
-        return;
-    view->setThumbnail(mShowDirs ? model->dirCount() + index : index, thumb);
 }
 
 void DirectoryPresenter::onItemActivated(int absoluteIndex) {

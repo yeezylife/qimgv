@@ -183,13 +183,10 @@ void SettingsDialog::readSettings() {
     ui->videoPlaybackGroupContents->setEnabled(settings->videoPlayback());
     ui->playSoundsCheckBox->setChecked(settings->playVideoSounds());
     ui->enablePanelCheckBox->setChecked(settings->panelEnabled());
-    ui->thumbnailPanelGroupContents->setEnabled(settings->panelEnabled());
     ui->panelFullscreenOnlyCheckBox->setChecked(settings->panelFullscreenOnly());
-    ui->squareThumbnailsCheckBox->setChecked(settings->squareThumbnails());
     ui->transparencyGridCheckBox->setChecked(settings->transparencyGrid());
     ui->enableSmoothScrollCheckBox->setChecked(settings->enableSmoothScroll());
     ui->usePreloaderCheckBox->setChecked(settings->usePreloader());
-    ui->useThumbnailCacheCheckBox->setChecked(settings->useThumbnailCache());
     ui->smoothUpscalingCheckBox->setChecked(settings->smoothUpscaling());
     ui->expandImageCheckBox->setChecked(settings->expandImage());
     ui->expandImagesGroupContents->setEnabled(settings->expandImage());
@@ -227,11 +224,6 @@ void SettingsDialog::readSettings() {
     ui->slideshowIntervalSpinBox->setValue(settings->slideshowInterval());
     ui->imageScrollingComboBox->setCurrentIndex(settings->imageScrolling());
     ui->saveOverlayCheckBox->setChecked(settings->showSaveOverlay());
-    ui->unloadThumbsCheckBox->setChecked(settings->unloadThumbs());
-    if(settings->thumbPanelStyle() == TH_PANEL_SIMPLE)
-        ui->thumbStyleSimple->setChecked(true);
-    else
-        ui->thumbStyleExtended->setChecked(true);
     ui->animatedJxlCheckBox->setChecked(settings->jxlAnimation());
     ui->autoResizeWindowCheckBox->setChecked(settings->autoResizeWindow());
     ui->panelCenterSelectionCheckBox->setChecked(settings->panelCenterSelection());
@@ -261,10 +253,6 @@ void SettingsDialog::readSettings() {
 
     ui->expandLimitSlider->setValue(settings->expandLimit());
     onExpandLimitSliderChanged(ui->expandLimitSlider->value());
-
-    // thumbnailer threads
-    ui->thumbnailerThreadsSlider->setValue(settings->thumbnailerThreadCount());
-    onThumbnailerThreadsSliderChanged(ui->thumbnailerThreadsSlider->value());
 
     ui->memoryLimitSpinBox->setValue(settings->memoryAllocationLimit());
 
@@ -327,12 +315,10 @@ void SettingsDialog::saveSettings() {
     settings->setPlayVideoSounds(ui->playSoundsCheckBox->isChecked());
     settings->setPanelEnabled(ui->enablePanelCheckBox->isChecked());
     settings->setPanelFullscreenOnly(ui->panelFullscreenOnlyCheckBox->isChecked());
-    settings->setSquareThumbnails(ui->squareThumbnailsCheckBox->isChecked());
     settings->setTransparencyGrid(ui->transparencyGridCheckBox->isChecked());
     settings->setShowHiddenFiles(ui->showHiddenFilesCheckBox->isChecked());
     settings->setEnableSmoothScroll(ui->enableSmoothScrollCheckBox->isChecked());
     settings->setUsePreloader(ui->usePreloaderCheckBox->isChecked());
-    settings->setUseThumbnailCache(ui->useThumbnailCacheCheckBox->isChecked());
     settings->setSmoothUpscaling(ui->smoothUpscalingCheckBox->isChecked());
     settings->setExpandImage(ui->expandImageCheckBox->isChecked());
     settings->setSmoothAnimatedImages(ui->smoothAnimatedImagesCheckBox->isChecked());
@@ -379,11 +365,6 @@ void SettingsDialog::saveSettings() {
     settings->setScalingFilter(static_cast<ScalingFilter>(ui->scalingQualityComboBox->currentIndex()));
     settings->setImageScrolling(static_cast<ImageScrolling>(ui->imageScrollingComboBox->currentIndex()));
     settings->setShowSaveOverlay(ui->saveOverlayCheckBox->isChecked());
-    settings->setUnloadThumbs(ui->unloadThumbsCheckBox->isChecked());
-    if(ui->thumbStyleSimple->isChecked())
-        settings->setThumbPanelStyle(TH_PANEL_SIMPLE);
-    else
-        settings->setThumbPanelStyle(TH_PANEL_EXTENDED);
     settings->setJxlAnimation(ui->animatedJxlCheckBox->isChecked());
     settings->setAutoResizeWindow(ui->autoResizeWindowCheckBox->isChecked());
     settings->setPanelCenterSelection(ui->panelCenterSelectionCheckBox->isChecked());
@@ -401,7 +382,6 @@ void SettingsDialog::saveSettings() {
     settings->setMouseScrollingSpeed(static_cast<float>(qreal(0.5) + (qreal(ui->mouseScrollingSpeedSlider->value()) * qreal(0.25))));
     settings->setAutoResizeLimit(ui->autoResizeLimitSlider->value() * 5);
     settings->setExpandLimit(ui->expandLimitSlider->value());
-    settings->setThumbnailerThreadCount(ui->thumbnailerThreadsSlider->value());
     settings->setMemoryAllocationLimit(ui->memoryLimitSpinBox->value());
 
     settings->setUseSystemColorScheme(ui->useSystemColorsCheckBox->isChecked());
@@ -684,10 +664,6 @@ void SettingsDialog::onZoomStepSliderChanged(int value) {
 //------------------------------------------------------------------------------
 void SettingsDialog::onMouseScrollingSpeedSliderChanged(int value) {
     ui->mouseScrollingSpeedLabel->setText(QString::number(qreal(0.5) + (qreal(value) * qreal(0.25)), 'f', 2) + "x");
-}
-//------------------------------------------------------------------------------
-void SettingsDialog::onThumbnailerThreadsSliderChanged(int value) {
-    ui->thumbnailerThreadsLabel->setText(QString::number(value));
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::onBgOpacitySliderChanged(int value) {

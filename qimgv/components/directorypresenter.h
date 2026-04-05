@@ -3,7 +3,6 @@
 #include <QObject>
 #include <memory>
 #include "gui/idirectoryview.h"
-#include "components/thumbnailer/thumbnailer.h"
 #include "directorymodel.h"
 #include "sharedresources.h"
 #include <QMimeData>
@@ -50,8 +49,6 @@ public slots:
     void reloadModel();
 
 private slots:
-    void generateThumbnails(const QList<int> &indexes, int size, bool crop, bool force);
-    void onThumbnailReady(const std::shared_ptr<Thumbnail> &thumb, const QString &filePath);
     void populateView();
     void onItemActivated(int absoluteIndex);
     void onDraggedOut();
@@ -61,7 +58,6 @@ private slots:
 private:
     std::shared_ptr<IDirectoryView> view = nullptr;
     std::shared_ptr<DirectoryModel> model = nullptr;
-    Thumbnailer thumbnailer;
     bool mShowDirs = false;
     QObject *viewObject = nullptr;
     

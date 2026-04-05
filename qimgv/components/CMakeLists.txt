@@ -9,16 +9,12 @@ target_sources(qimgv PRIVATE
 
     cache/cache.cpp
     cache/cacheitem.cpp
-    cache/thumbnailcache.cpp
 
     loader/loader.cpp
     loader/loaderrunnable.cpp
 
     scaler/scaler.cpp
     scaler/scalerrunnable.cpp
-
-    thumbnailer/thumbnailer.cpp
-    thumbnailer/thumbnailerrunnable.cpp
 
     directorymanager/directorymanager.cpp
 

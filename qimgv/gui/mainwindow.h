@@ -23,7 +23,6 @@
 #include "gui/overlays/fullscreeninfooverlayproxy.h"
 #include "gui/overlays/floatingmessageproxy.h"
 #include "gui/overlays/saveconfirmoverlay.h"
-#include "gui/panels/mainpanel/thumbnailstrip.h"
 #include "gui/panels/sidepanel/sidepanel.h"
 #include "gui/panels/croppanel/croppanel.h"
 #include "gui/overlays/cropoverlay.h"
@@ -75,7 +74,6 @@ public:
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     void setCurrentInfo(int fileIndex, int fileCount, const QString& filePath, const QString& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(const QHash<QString, QString> &info);
-    std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     bool showConfirmation(const QString& title, const QString& msg);

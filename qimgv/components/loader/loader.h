@@ -3,7 +3,6 @@
 #include <QThreadPool>
 #include <QHash>
 #include <memory>
-#include "components/cache/thumbnailcache.h"
 #include "loaderrunnable.h"
 
 class Loader : public QObject {

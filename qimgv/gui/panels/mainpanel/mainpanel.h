@@ -22,8 +22,6 @@ private:
 QVBoxLayout buttonsLayout;
 QWidget buttonsWidget;
     ActionButton *openButton, *settingsButton, *exitButton, *pinButton;
-protected:
-virtual void paintEvent(QPaintEvent* event) override;
 private:
 // 非虚辅助方法，用于在构造期间安全计算尺寸
 QSize calculateSizeHint() const;

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include <QImageWriter>
 #include <QMessageBox>
+#include <QMimeData>
 using namespace Qt::StringLiterals;
 
 // TODO: nuke this and rewrite

@@ -53,7 +53,6 @@ void Actions::init() {
         {"frameStep", QVersionNumber(0,6,85)},
         {"frameStepBack", QVersionNumber(0,6,85)},
         {"documentView", QVersionNumber(0,6,88)},
-        {"toggleFolderView", QVersionNumber(0,6,88)},
         {"moveToTrash", QVersionNumber(0,6,89)},
         {"reloadImage", QVersionNumber(0,7,80)},
         {"copyFileClipboard", QVersionNumber(0,7,80)},

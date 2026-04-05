@@ -18,8 +18,6 @@
         <file>res/icons/common/buttons/panel/minimize16@2x.png</file>
         <file>res/icons/common/buttons/panel/maximize16.png</file>
         <file>res/icons/common/buttons/panel/maximize16@2x.png</file>
-        <file>res/icons/common/buttons/panel/folderview20.png</file>
-        <file>res/icons/common/buttons/panel/folderview20@2x.png</file>
         <file>res/icons/common/buttons/panel/open16.png</file>
         <file>res/icons/common/buttons/panel/open16@2x.png</file>
         <file>res/icons/common/buttons/panel/open20.png</file>
@@ -58,8 +56,6 @@
         <file>res/icons/common/menuitem/flip-v16@2x.png</file>
         <file>res/icons/common/menuitem/folder16.png</file>
         <file>res/icons/common/menuitem/folder16@2x.png</file>
-        <file>res/icons/common/menuitem/folderview16.png</file>
-        <file>res/icons/common/menuitem/folderview16@2x.png</file>
         <file>res/icons/common/menuitem/image-crop16.png</file>
         <file>res/icons/common/menuitem/image-crop16@2x.png</file>
         <file>res/icons/common/menuitem/move16.png</file>

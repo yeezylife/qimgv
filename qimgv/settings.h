@@ -74,21 +74,10 @@ enum ImageScrolling {
     SCROLL_BY_TRACKPAD_AND_WHEEL
 };
 
-enum ViewMode {
-    MODE_DOCUMENT,
-    MODE_FOLDERVIEW
-};
-
 enum FolderEndAction {
     FOLDER_END_NO_ACTION,
     FOLDER_END_LOOP,
     FOLDER_END_GOTO_ADJACENT
-};
-
-enum FolderViewMode {
-    FV_SIMPLE,
-    FV_EXTENDED,
-    FV_EXT_FOLDERS
 };
 
 enum ThumbPanelStyle {
@@ -224,9 +213,6 @@ public:
     int placesPanelWidth();
     void setPlacesPanelWidth(int width);
 
-    ViewMode defaultViewMode();
-    void setDefaultViewMode(ViewMode mode);
-
     FolderEndAction folderEndAction();
     void setFolderEndAction(FolderEndAction mode);
 
@@ -248,9 +234,6 @@ public:
     void setConfirmDelete(bool mode);
     bool confirmTrash();
     void setConfirmTrash(bool mode);
-
-    FolderViewMode folderViewMode();
-    void setFolderViewMode(FolderViewMode mode);
 
     const QMultiMap<QByteArray, QByteArray> videoFormats() const;
 
@@ -380,12 +363,8 @@ private:
     mutable bool mFocusPointIn1to1ModeCacheValid;
     mutable ImageScrolling mCachedImageScrolling;
     mutable bool mImageScrollingCacheValid;
-    mutable ViewMode mCachedDefaultViewMode;
-    mutable bool mDefaultViewModeCacheValid;
     mutable FolderEndAction mCachedFolderEndAction;
     mutable bool mFolderEndActionCacheValid;
-    mutable FolderViewMode mCachedFolderViewMode;
-    mutable bool mFolderViewModeCacheValid;
     mutable ThumbPanelStyle mCachedThumbPanelStyle;
     mutable bool mThumbPanelStyleCacheValid;
     

@@ -377,8 +377,6 @@ void Core::reloadImage(const QString& filePath) {
 }
 
 void Core::enableDocumentView() {
-    if(mw->currentViewMode() == MODE_DOCUMENT)
-        return;
     mw->enableDocumentView();
 }
 
@@ -578,14 +576,9 @@ void Core::onFileRemoved(const QString& filePath, int index) {
         state.currentFilePath = "";
     }
     if(state.currentFilePath == filePath) {
-        if(mw->currentViewMode() == MODE_DOCUMENT) {
-            if(!loadFileIndex(index, true, settings->usePreloader()))
-                if(index > 0)
-                    loadFileIndex(index - 1, true, settings->usePreloader());
-        } else {
-            state.hasActiveImage = false;
-            state.currentFilePath = "";
-        }
+        if(!loadFileIndex(index, true, settings->usePreloader()))
+            if(index > 0)
+                loadFileIndex(index - 1, true, settings->usePreloader());
     }
     updateInfoString();
 }
@@ -902,11 +895,9 @@ bool Core::saveFile(const QString &filePath, const QString &newPath) {
     discardEdits();
     state.currentFilePath = newPath;
 
-    if(mw->currentViewMode() == MODE_DOCUMENT) {
-        QTimer::singleShot(0, this, [this, newPath]() {
-            loadPath(newPath);
-        });
-    }
+    QTimer::singleShot(0, this, [this, newPath]() {
+        loadPath(newPath);
+    });
 
     return true;
 }

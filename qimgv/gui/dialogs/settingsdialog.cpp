@@ -238,11 +238,6 @@ void SettingsDialog::readSettings() {
     ui->useFixedZoomLevelsCheckBox->setChecked(settings->useFixedZoomLevels());
     ui->zoomLevels->setText(settings->zoomLevels());
 
-    if(settings->defaultViewMode() == MODE_FOLDERVIEW)
-        ui->startInFolderViewCheckBox->setChecked(true);
-    else
-        ui->startInFolderViewCheckBox->setChecked(false);
-
     if(settings->folderEndAction() == FOLDER_END_NO_ACTION)
         ui->folderEndNoAction->setChecked(true);
     else if(settings->folderEndAction() == FOLDER_END_LOOP)
@@ -372,11 +367,6 @@ void SettingsDialog::saveSettings() {
         settings->setFocusPointIn1to1Mode(FOCUS_CURSOR);
 
     settings->setSlideshowInterval(ui->slideshowIntervalSpinBox->value());
-
-    if(ui->startInFolderViewCheckBox->isChecked())
-        settings->setDefaultViewMode(MODE_FOLDERVIEW);
-    else
-        settings->setDefaultViewMode(MODE_DOCUMENT);
 
     if(ui->folderEndNoAction->isChecked())
         settings->setFolderEndAction(FOLDER_END_NO_ACTION);

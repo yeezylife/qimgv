@@ -42,9 +42,7 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mDefaultCropActionCacheValid = false;
     mFocusPointIn1to1ModeCacheValid = false;
     mImageScrollingCacheValid = false;
-    mDefaultViewModeCacheValid = false;
     mFolderEndActionCacheValid = false;
-    mFolderViewModeCacheValid = false;
     mThumbPanelStyleCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -514,25 +512,6 @@ void Settings::setVolume(int vol) {
 
 int Settings::volume() {
     return stateConf->value("volume", 100).toInt();
-}
-//------------------------------------------------------------------------------
-FolderViewMode Settings::folderViewMode() {
-    if (mFolderViewModeCacheValid) {
-        return mCachedFolderViewMode;
-    }
-    
-    int mode = settingsConf->value("folderViewMode", 2).toInt();
-    if(mode < 0 || mode >= 3)
-        mode = 2;
-    
-    mCachedFolderViewMode = static_cast<FolderViewMode>(mode);
-    mFolderViewModeCacheValid = true;
-    return mCachedFolderViewMode;
-}
-
-void Settings::setFolderViewMode(FolderViewMode mode) {
-    settingsConf->setValue("folderViewMode", mode);
-    mFolderViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 ThumbPanelStyle Settings::thumbPanelStyle() {
@@ -1214,25 +1193,6 @@ ImageScrolling Settings::imageScrolling() {
 void Settings::setImageScrolling(ImageScrolling mode) {
     settingsConf->setValue("imageScrolling", mode);
     mImageScrollingCacheValid = false;
-}
-//------------------------------------------------------------------------------
-ViewMode Settings::defaultViewMode() {
-    if (mDefaultViewModeCacheValid) {
-        return mCachedDefaultViewMode;
-    }
-    
-    int mode = settingsConf->value("defaultViewMode", 0).toInt();
-    if(mode < 0 || mode > 1)
-        mode = 0;
-    
-    mCachedDefaultViewMode = static_cast<ViewMode>(mode);
-    mDefaultViewModeCacheValid = true;
-    return mCachedDefaultViewMode;
-}
-
-void Settings::setDefaultViewMode(ViewMode mode) {
-    settingsConf->setValue("defaultViewMode", mode);
-    mDefaultViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 FolderEndAction Settings::folderEndAction() {

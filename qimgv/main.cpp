@@ -161,8 +161,6 @@ int main(int argc, char *argv[]) {
 
     if(parser.positionalArguments().count())
         core.loadPath(parser.positionalArguments().at(0));
-    else if(settings->defaultViewMode() == MODE_FOLDERVIEW)
-        core.loadPath(QDir::homePath());
 
     // defer GUI show until the event loop is running, avoiding manual processEvents call
     QTimer::singleShot(0, &core, &Core::showGui);

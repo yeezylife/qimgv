@@ -110,7 +110,6 @@ signals:
     void seekVideoBackward();
     void frameStep();
     void frameStepBack();
-    void toggleFolderView();
     void moveToTrash();
     void reloadImage();
     void copyFileClipboard();

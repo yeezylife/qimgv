@@ -43,7 +43,6 @@ MW::MW(QWidget *parent)
 /*                                                             |--[ImageViewer]
 *                        |--[DocumentWidget]--[ViewerWidget]--|
 * [MW]--[CentralWidget]--|                                    |--[VideoPlayer]
-*                        |--[FolderView]
 *
 *  (not counting floating widgets)
 *  ViewerWidget exists for input handling reasons (correct overlay hover handling)
@@ -52,15 +51,8 @@ void MW::setupUi() {
     viewerWidget.reset(new ViewerWidget(this));
     infoBarWindowed.reset(new InfoBarProxy(this));
     docWidget.reset(new DocumentWidget(viewerWidget, infoBarWindowed));
-    folderView.reset(new FolderViewProxy(this));
     
-    connect(folderView.get(), &FolderViewProxy::sortingSelected, this, &MW::sortingSelected);
-    connect(folderView.get(), &FolderViewProxy::directorySelected, this, &MW::opened);
-    connect(folderView.get(), &FolderViewProxy::copyUrlsRequested, this, &MW::copyUrlsRequested);
-    connect(folderView.get(), &FolderViewProxy::moveUrlsRequested, this, &MW::moveUrlsRequested);
-    connect(folderView.get(), &FolderViewProxy::showFoldersChanged, this, &MW::showFoldersChanged);
-    
-    centralWidget.reset(new CentralWidget(docWidget, folderView, this));
+    centralWidget.reset(new CentralWidget(docWidget, this));
     layout.addWidget(centralWidget.get());
     
     controlsOverlay = new ControlsOverlay(docWidget.get());
@@ -138,38 +130,9 @@ void MW::setupRenameOverlay() {
     connect(renameOverlay, &RenameOverlay::renameRequested, this, &MW::renameRequested);
 }
 
-void MW::toggleFolderView() {
-    hideCropPanel();
-    if(copyOverlay)
-        copyOverlay->hide();
-    if(renameOverlay)
-        renameOverlay->hide();
-    docWidget->hideFloatingPanel();
-    imageInfoOverlay->hide();
-    centralWidget->toggleViewMode();
-    onInfoUpdated();
-}
-
-void MW::enableFolderView() {
-    hideCropPanel();
-    if(copyOverlay)
-        copyOverlay->hide();
-    if(renameOverlay)
-        renameOverlay->hide();
-    docWidget->hideFloatingPanel();
-    imageInfoOverlay->hide();
-    centralWidget->showFolderView();
-    onInfoUpdated();
-}
-
 void MW::enableDocumentView() {
     setupFullUi();
-    centralWidget->showDocumentView();
     onInfoUpdated();
-}
-
-ViewMode MW::currentViewMode() {
-    return centralWidget->currentViewMode();
 }
 
 void MW::fitWindow() {
@@ -273,16 +236,13 @@ void MW::showContextMenu() {
 }
 
 void MW::onSortingChanged(SortingMode mode) {
-    folderView.get()->onSortingChanged(mode);
-    if(centralWidget.get()->currentViewMode() == ViewMode::MODE_DOCUMENT) {
-        switch(mode) {
-            case SortingMode::SORT_NAME:      showMessage("Sorting: By Name");              break;
-            case SortingMode::SORT_NAME_DESC: showMessage("Sorting: By Name (desc.)");      break;
-            case SortingMode::SORT_TIME:      showMessage("Sorting: By Time");              break;
-            case SortingMode::SORT_TIME_DESC: showMessage("Sorting: By Time (desc.)");      break;
-            case SortingMode::SORT_SIZE:      showMessage("Sorting: By File Size");         break;
-            case SortingMode::SORT_SIZE_DESC: showMessage("Sorting: By File Size (desc.)"); break;
-        }
+    switch(mode) {
+        case SortingMode::SORT_NAME:      showMessage("Sorting: By Name");              break;
+        case SortingMode::SORT_NAME_DESC: showMessage("Sorting: By Name (desc.)");      break;
+        case SortingMode::SORT_TIME:      showMessage("Sorting: By Time");              break;
+        case SortingMode::SORT_TIME_DESC: showMessage("Sorting: By Time (desc.)");      break;
+        case SortingMode::SORT_SIZE:      showMessage("Sorting: By File Size");         break;
+        case SortingMode::SORT_SIZE_DESC: showMessage("Sorting: By File Size (desc.)"); break;
     }
 }
 
@@ -292,7 +252,6 @@ void MW::setDirectoryPath(const QString& path) {
     qsizetype pos = path.lastIndexOf(u'/');
     info.directoryName = (pos >= 0) ? path.mid(pos + 1) : path;
 
-    folderView->setDirectoryPath(path);
     onInfoUpdated();
 }
 
@@ -325,8 +284,6 @@ void MW::toggleFullscreenInfoBar() {
 }
 
 void MW::toggleImageInfoOverlay() {
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
-        return;
     if(imageInfoOverlay->isHidden())
         imageInfoOverlay->show();
     else
@@ -337,7 +294,7 @@ void MW::toggleRenameOverlay(const QString& currentName) {
     if(!renameOverlay)
         setupRenameOverlay();
     if(renameOverlay->isHidden()) {
-        renameOverlay->setBackdropEnabled((centralWidget->currentViewMode() == MODE_FOLDERVIEW));
+        renameOverlay->setBackdropEnabled(false);
         renameOverlay->setName(currentName);
         renameOverlay->show();
     } else {
@@ -735,8 +692,6 @@ void MW::triggerCropPanel() {
 }
 
 void MW::showCropPanel() {
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
-        return;
     if(activeSidePanel != SIDEPANEL_CROP) {
         docWidget->hideFloatingPanel();
         sidePanel->setWidget(cropPanel);
@@ -768,8 +723,6 @@ void MW::triggerCopyOverlay() {
         return;
     if(!copyOverlay)
         setupCopyOverlay();
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
-        return;
     if(copyOverlay->operationMode() == OVERLAY_COPY) {
         copyOverlay->isHidden() ? copyOverlay->show() : copyOverlay->hide();
     } else {
@@ -783,8 +736,6 @@ void MW::triggerMoveOverlay() {
         return;
     if(!copyOverlay)
         setupCopyOverlay();
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW)
-        return;
     if(copyOverlay->operationMode() == OVERLAY_MOVE) {
         copyOverlay->isHidden() ? copyOverlay->show() : copyOverlay->hide();
     } else {
@@ -815,10 +766,6 @@ void MW::setCurrentInfo(int _index, int _fileCount, const QString& _filePath, co
 }
 
 QString MW::calculateWindowTitle() {
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW) {
-        return tr("Folder view");
-    }
-    
     if(info.fileName.isEmpty()) {
         return qApp->applicationName();
     }
@@ -866,7 +813,7 @@ QString MW::calculateWindowTitle() {
 }
 
 void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
-    if(centralWidget->currentViewMode() == MODE_FOLDERVIEW || info.fileName.isEmpty()) {
+    if(info.fileName.isEmpty()) {
         infoText = tr("No file opened.");
         sizeText.clear();
         return;
@@ -921,10 +868,6 @@ void MW::setExifInfo(const QHash<QString, QString> &info) {
     m_exifInfo = info;
     if(imageInfoOverlay)
         imageInfoOverlay->setExifInfo(info);
-}
-
-std::shared_ptr<FolderViewProxy> MW::getFolderView() {
-    return folderView;
 }
 
 std::shared_ptr<ThumbnailStripProxy> MW::getThumbnailPanel() {
@@ -1036,7 +979,6 @@ void MW::adaptToWindowState() {
             infoBarWindowed->hide();
         controlsOverlay->hide();
     }
-    folderView->onFullscreenModeChanged(isFullScreen());
     docWidget->onFullscreenModeChanged(isFullScreen());
     viewerWidget->onFullscreenModeChanged(isFullScreen());
 }

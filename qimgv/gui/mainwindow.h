@@ -38,7 +38,6 @@
 #include "settings.h"
 #include "gui/dialogs/settingsdialog.h"
 #include "gui/viewers/documentwidget.h"
-#include "gui/folderview/folderviewproxy.h"
 #include "gui/panels/infobar/infobarproxy.h"
 #ifdef USE_KDE_BLUR
 #include <KWindowEffects>
@@ -76,10 +75,7 @@ public:
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     void setCurrentInfo(int fileIndex, int fileCount, const QString& filePath, const QString& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(const QHash<QString, QString> &info);
-    std::shared_ptr<FolderViewProxy> getFolderView();
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
-
-    ViewMode currentViewMode();
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     bool showConfirmation(const QString& title, const QString& msg);
@@ -94,7 +90,6 @@ private:
     bool showInfoBarWindowed = false;
     bool maximized = false;
     std::shared_ptr<DocumentWidget> docWidget;
-    std::shared_ptr<FolderViewProxy> folderView;
     std::shared_ptr<CentralWidget> centralWidget;
     ActiveSidePanel activeSidePanel = SIDEPANEL_NONE;
     SidePanel *sidePanel = nullptr;
@@ -165,7 +160,6 @@ signals:
     void moveRequested(QString);
     void copyUrlsRequested(QList<QString>, QString);
     void moveUrlsRequested(QList<QString>, QString);
-    void showFoldersChanged(bool);
     void resizeRequested(QSize);
     void renameRequested(QString);
     void cropRequested(QRect);
@@ -205,8 +199,6 @@ public slots:
     void showDefault();
     void showCropPanel();
     void hideCropPanel();
-    void toggleFolderView();
-    void enableFolderView();
     void enableDocumentView();
     void showOpenDialog(const QString & path);
     void showSaveDialog(const QString & filePath);

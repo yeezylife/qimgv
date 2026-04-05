@@ -80,8 +80,7 @@ private:
     Randomizer randomizer;
     void syncRandomizer();
     
-    // 优化3：QMimeData/QDrag复用
-    std::unique_ptr<QMimeData> mimeCache;
+    // 优化3：QDrag复用
     std::unique_ptr<QDrag> dragCache;
     
 

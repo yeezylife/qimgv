@@ -18,7 +18,7 @@ public slots:
 
 private:
     QHBoxLayout layout;
-    ActionButton *closeButton, *settingsButton, *folderViewButton;
+    ActionButton *minimizeButton, *windowModeButton, *closeButton;
     QGraphicsOpacityEffect *fadeEffect;
     QPropertyAnimation *fadeAnimation;
     QSize contentsSize();

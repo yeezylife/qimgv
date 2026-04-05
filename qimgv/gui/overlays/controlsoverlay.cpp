@@ -3,19 +3,18 @@
 ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     FloatingWidget(parent)
 {
-    folderViewButton = new ActionButton("minimize", ":/res/icons/common/buttons/panel/minimize16.png", 30);
-    folderViewButton->setAccessibleName("ButtonSmall");
-    settingsButton = new ActionButton("toggleFullscreen", ":/res/icons/common/buttons/panel/maximize16.png", 30);
-    settingsButton->setAccessibleName("ButtonSmall");
+    minimizeButton = new ActionButton("minimize", ":/res/icons/common/buttons/panel/minimize16.png", 30);
+    minimizeButton->setAccessibleName("ButtonSmall");
+    windowModeButton = new ActionButton("toggleFullscreen", ":/res/icons/common/buttons/panel/maximize16.png", 30);
+    windowModeButton->setAccessibleName("ButtonSmall");
     closeButton = new ActionButton("exit", ":/res/icons/common/buttons/panel/close16.png", 30);
     closeButton->setAccessibleName("ButtonSmall");
-
 
     layout.setContentsMargins(0,0,0,0);
     this->setContentsMargins(0,0,0,0);
     layout.setSpacing(0);
-    layout.addWidget(folderViewButton);
-    layout.addWidget(settingsButton);
+    layout.addWidget(minimizeButton);
+    layout.addWidget(windowModeButton);
     layout.addWidget(closeButton);
     setLayout(&layout);
     

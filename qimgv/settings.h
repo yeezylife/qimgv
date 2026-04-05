@@ -157,8 +157,6 @@ public:
     SortingMode sortingMode();    
     void readScripts(QHash<QString, Script> &scripts);
     void saveScripts(const QHash<QString, Script> &scripts);
-    int folderViewIconSize();
-    void setFolderViewIconSize(int value);
 
     bool firstRun();
     void setFirstRun(bool mode);

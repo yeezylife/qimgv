@@ -926,14 +926,6 @@ void Settings::setSmoothUpscaling(bool mode) {
     settingsConf->setValue("smoothUpscaling", mode);
 }
 //------------------------------------------------------------------------------
-int Settings::folderViewIconSize() {
-    return settingsConf->value("folderViewIconSize", 120).toInt();
-}
-
-void Settings::setFolderViewIconSize(int value) {
-    settingsConf->setValue("folderViewIconSize", value);
-}
-//------------------------------------------------------------------------------
 bool Settings::expandImage() {
     return settingsConf->value("expandImage", false).toBool();
 }

@@ -136,13 +136,6 @@ void Settings::loadStylesheet() {
         int text_padding = static_cast<int>(std::lround(text_height * 0.10));
         int text_padding_large = static_cast<int>(std::lround(text_height * 0.25));
 
-        // folderview top panel item sizes
-        int top_panel_v_margin = 4;
-        // ensure at least 4px so its not too thin
-        int top_panel_text_padding = qMax(text_padding, 4);
-        // scale with font, 38px base size
-        int top_panel_height = qMax((text_height + top_panel_text_padding * 2 + top_panel_v_margin * 2), 38);
-
         // overlay headers
         // 32px base size
         int overlay_header_size = qMax(text_height + text_padding * 2, 30);
@@ -163,7 +156,6 @@ void Settings::loadStylesheet() {
         styleSheet.replace("%font_small%", QString::number(font_small)+"pt");
         styleSheet.replace("%font_large%", QString::number(font_large)+"pt");
         styleSheet.replace("%button_height%", QString::number(button_height)+"px");
-        styleSheet.replace("%top_panel_height%", QString::number(top_panel_height)+"px");
         styleSheet.replace("%overlay_header_size%", QString::number(overlay_header_size)+"px");
         styleSheet.replace("%context_menu_width%", QString::number(context_menu_width)+"px");
         styleSheet.replace("%context_menu_button_height%", QString::number(context_menu_button_height)+"px");

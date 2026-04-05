@@ -168,13 +168,13 @@ SSideBarItem[checked="true"] {
 }
 
 [accessibleName="ButtonSmall"]:hover {
-    background-color: %folderview_hc2%;
-    border: 1px solid %folderview_hc2%;
+    background-color: %button_hover%;
+    border: 1px solid %button_hover%;
 }
 
 [accessibleName="ButtonSmall"][checked="true"] {
-    background-color: %folderview_hc%;
-    border: 1px solid %folderview_hc%;
+    background-color: %button_pressed%;
+    border: 1px solid %button_pressed%;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -225,7 +225,7 @@ QComboBox QAbstractItemView {
 /* panel buttons holder widget */
 
 [accessibleName="panelButtonsWidget"] {
-    background-color: %folderview%;
+    background-color: transparent;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -285,7 +285,7 @@ FloatingWidget QLineEdit::focus {
 }
 
 RenameOverlay {
-    background-color: %fv_backdrop_rgba%;
+    background-color: %overlay_rgba%;
 }
 
 [accessibleName = "RenameOverlayWidget"] {
@@ -485,103 +485,6 @@ PanelButtonsHolder {
     background-color: red;
     border: 1px solid blue;
 }
-/*----------------------------------------------------------------------------*/
-FolderGridView {
-    background-color: %folderview%;
-}
-/*----------------------------------------------------------------------------*/
-FolderView {
-    background-color: %folderview%;
-}
-[accessibleName="FolderViewContents"] {
-    border-top: 1px solid %topbar_border_rgba%;
-}
-/*----------------------------------------------------------------------------*/
-[accessibleName="FolderViewTopBar"] {
-    background-color: %folderview_topbar%;
-    min-height: %top_panel_height%;
-    max-height: %top_panel_height%;
-}
-
-[accessibleName="PathBar"] {
-    background-color: %panel_button%;
-    border-radius: 3px;
-    margin: 4px 2px;
-}
-
-[accessibleName="PathBar"] QLabel {
-    color: %text%;
-    padding-right: 9px;
-}
-
-[accessibleName="PathBarButton"] {
-    border: 1px solid transparent;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
-    margin: 4px 2px;
-}
-
-[accessibleName="PathBarButton"]:hover {
-    background-color: %panel_button_hover%;
-    border-color: %panel_button_hover%;
-}
-
-[accessibleName="PathBarButton"]:pressed,
-[accessibleName="PathBarButton"][pressed="true"] {
-    background-color: %panel_button_pressed%;
-    border-color: %panel_button_pressed%;
-}
-
-/*----------------------------------------------------------------------------*/
-[accessibleName="FolderViewSlider"] {
-    margin-top: 1px;
-}
-
-[accessibleName="FolderViewSlider"]::groove:horizontal {
-    border-top: 1px solid %panel_button_pressed%;
-    border-bottom: 1px solid %panel_button_pressed%;
-    height: 6px;
-    margin: 0 12px;
-}
-
-[accessibleName="FolderViewSlider"]::sub-page:horizontal { /* left */
-    background: %panel_button_pressed%;
-    border: 1px solid %panel_button_pressed%;
-    height: 6px;
-}
-
-[accessibleName="FolderViewSlider"]::add-page:horizontal { /* right */
-    background: %panel_button_pressed%;
-    border: 1px solid %panel_button_pressed%;
-    height: 6px;
-}
-
-[accessibleName="FolderViewSlider"]::handle:horizontal {
-    background: %text_lc2%;
-    border: 1px solid %text_lc2%;
-    width: 12px;
-    height: 12px;
-    border-radius: 1px;
-    margin: -4px -12px;
-}
-
-[accessibleName="FolderViewSlider"]::handle:horizontal:hover {
-    background: %text%;
-    border-color: %text%;
-}
-
-/* dropdown menus */
-FVOptionsPopup {
-    padding: 5px 0px;
-    background-color: %widget%;
-    border: 1px solid %accent%;
-}
-
-FVOptionsPopup QLabel {
-    color: %text_secondary_rgba%;
-}
-
-/*----------------------------------------------------------------------------*/
 
 /* Right click menu */
 /*----------------------------------------------------------------------------*/
@@ -657,166 +560,6 @@ ZoomIndicatorOverlay QLabel {
     color: %overlay_text%;
 }
 
-/*----------------------------------------------------------------------------*/
-/* FolderView scrollbars */
-/*----------------------------------------------------------------------------*/
-
-FolderView QScrollBar:vertical {
-    width: 13px;
-    background-color: transparent;
-}
-
-FolderView QScrollBar::handle:vertical {
-    background-color: %scrollbar%;
-    min-height: 60px;
-}
-
-FolderView QScrollBar::handle:vertical:hover {
-    background-color: %scrollbar_hover%;
-}
-
-FolderView QScrollBar::sub-page {
-    background: none;
-}
-
-FolderView QScrollBar::add-page {
-    background: none;
-}
-
-FolderView QScrollBar::add-line {
-    width: 0px;
-    height: 0px;
-}
-
-FolderView QScrollBar::sub-line {
-    width: 0px;
-    height: 0px;
-}
-
-/*----------------------------------------------------------------------------*/
-/* TreeView */
-/*----------------------------------------------------------------------------*/
-
-FolderView QTreeView {
-    background-color: transparent;
-    show-decoration-selected: 1;
-}
-
-FolderView QTreeView::item {
-    border-radius: 0px; /* left padding on hover is wrong unless we add this.. wtf */
-    min-height: 24px;
-    padding: 2px;
-    color: %text_hc2%;
-}
-
-FolderView QTreeView::item:hover {
-    background-color: %folderview_hc%;
-}
-
-FolderView QTreeView::item:selected:!active,
-FolderView QTreeView::item:selected:active {
-    background-color: %folderview_hc2%;
-    border-color: %folderview_hc2%;
-}
-
-QTreeView::branch {
-    padding-left: 6px;
-}
-
-QTreeView::branch:selected {
-    background-color: %folderview_hc2%;
-}
-
-QTreeView::branch:hover:!selected {
-    background-color: %folderview_hc%;
-}
-
-QTreeView::branch:has-siblings:!adjoins-item:!selected {
-    background: transparent;
-}
-
-QTreeView::branch:has-siblings:hover:!adjoins-item:!selected {
-    background-color: %folderview_hc%;
-}
-
-QTreeView::branch:!has-children:!hover:adjoins-item:!selected {
-    background: transparent;
-}
-
-QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
-        border-image: none;
-        image: url(:/res/icons/%icontheme%/other/collapsed.png)
-}
-
-QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings {
-        border-image: none;
-        image: url(:/res/icons/%icontheme%/other/expanded.png)
-}
-
-/*----------------------------------------------------------------------------*/
-/* bookmarks widget */
-/*----------------------------------------------------------------------------*/
-
-BookmarksItem {
-    /*border-radius: 3px;*/
-}
-
-BookmarksItem:hover {
-    background-color: %folderview_hc%;
-}
-
-BookmarksItem QLabel {
-    color: %text_hc2%;
-}
-
-BookmarksItem[highlighted="true"] {
-    background-color: %folderview_hc2%;
-    border-color: %folderview_hc2%;
-}
-
-/*----------------------------------------------------------------------------*/
-/* places panel (bg) */
-/*----------------------------------------------------------------------------*/
-
-[accessibleName="PlacesPanel"] {
-    background-color: %folderview%;
-    border-right: 1px solid %folderview_hc%;
-    margin-right: 6px;
-}
-
-[accessibleName="PanelSectionHeader"] {
-    color: %text_hc%;
-    font: bold;
-}
-
-[accessibleName="PanelSectionHeader"]:hover {
-    color: %text_hc2%;
-}
-
-/*----------------------------------------------------------------------------*/
-/* places panel buttons */
-/*----------------------------------------------------------------------------*/
-
-[accessibleName="PlacesPanelButton"] {
-    border-radius: 3px;
-}
-
-[accessibleName="PlacesPanelButton"]:hover {
-    background-color: %folderview_button_hover%;
-}
-
-[accessibleName="PlacesPanelButton"]:pressed,
-[accessibleName="PlacesPanelButton"][pressed="true"] {
-    background-color: %folderview_button_pressed%;
-}
-
-/*----------------------------------------------------------------------------*/
-[accessibleName="FolderViewSplitter"]::handle {
-    background-color: %folderview%;
-}
-/*----------------------------------------------------------------------------*/
 [accessibleName="VideoPlayerInitProxy"] QLabel {
     color: #BB0000;
     font: bold;

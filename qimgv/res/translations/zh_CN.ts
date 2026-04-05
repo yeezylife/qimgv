@@ -1093,11 +1093,6 @@
         <translation>播放声音</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="962"/>
-        <source>Thumbnail panel</source>
-        <translation>缩略图面板</translation>
-    </message>
-    <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1258"/>
         <source>Position:</source>
         <translation>位置:</translation>
@@ -1565,11 +1560,6 @@
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4323"/>
         <source>Dynamically unload items to save memory</source>
         <translation>动态卸载项目以节省内存</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="4237"/>
-        <source>Thumbnailer thread count:</source>
-        <translation>创建略缩图的线程数:</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1050"/>

@@ -4822,7 +4822,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <slot>removeScript()</slot>
   <slot>editScript()</slot>
   <slot>editScript(QListWidgetItem*)</slot>
-  <slot>onThumbnailerThreadsSliderChanged(int)</slot>
   <slot>fullscreenColorDialog()</slot>
   <slot>windowColorDialog()</slot>
   <slot>highlightColorDialog()</slot>

@@ -142,10 +142,7 @@ void SettingsDialog::adjustSizeToContents() {
     ui->gridLayout->activate();
     ui->horizontalLayout_28->activate();
     ui->horizontalLayout_19->activate();
-    ui->gridLayout_3->activate();
     ui->horizontalLayout_18->activate();
-    ui->gridLayout_4->activate();
-    ui->horizontalLayout_24->activate();
     ui->gridLayout_5->activate();
     ui->slideshowGroupContents->activate();
     ui->scrollAreaWidgetContents->layout()->activate();
@@ -182,8 +179,6 @@ void SettingsDialog::readSettings() {
     ui->videoPlaybackCheckBox->setChecked(settings->videoPlayback());
     ui->videoPlaybackGroupContents->setEnabled(settings->videoPlayback());
     ui->playSoundsCheckBox->setChecked(settings->playVideoSounds());
-    ui->enablePanelCheckBox->setChecked(settings->panelEnabled());
-    ui->panelFullscreenOnlyCheckBox->setChecked(settings->panelFullscreenOnly());
     ui->transparencyGridCheckBox->setChecked(settings->transparencyGrid());
     ui->enableSmoothScrollCheckBox->setChecked(settings->enableSmoothScroll());
     ui->usePreloaderCheckBox->setChecked(settings->usePreloader());
@@ -226,7 +221,6 @@ void SettingsDialog::readSettings() {
     ui->saveOverlayCheckBox->setChecked(settings->showSaveOverlay());
     ui->animatedJxlCheckBox->setChecked(settings->jxlAnimation());
     ui->autoResizeWindowCheckBox->setChecked(settings->autoResizeWindow());
-    ui->panelCenterSelectionCheckBox->setChecked(settings->panelCenterSelection());
     ui->useFixedZoomLevelsCheckBox->setChecked(settings->useFixedZoomLevels());
     ui->zoomLevels->setText(settings->zoomLevels());
 
@@ -276,12 +270,6 @@ void SettingsDialog::readSettings() {
     // ##### UI #####
     ui->scalingQualityComboBox->setCurrentIndex(settings->scalingFilter());
     ui->fullscreenCheckBox->setChecked(settings->fullscreenMode());
-    ui->pinPanelCheckBox->setChecked(settings->panelPinned());
-    ui->panelPositionComboBox->setCurrentIndex(settings->panelPosition());
-
-    // reduce by 10x to have nice granular control in qslider
-    ui->panelSizeSlider->setValue(settings->panelPreviewsSize() / 10);
-
     ui->useSystemColorsCheckBox->setChecked(settings->useSystemColorScheme());
     ui->modifySystemSchemeLabel->setVisible(settings->useSystemColorScheme());
     ui->themeSelectorComboBox->setEnabled(!settings->useSystemColorScheme());
@@ -313,8 +301,6 @@ void SettingsDialog::saveSettings() {
 
     settings->setVideoPlayback(ui->videoPlaybackCheckBox->isChecked());
     settings->setPlayVideoSounds(ui->playSoundsCheckBox->isChecked());
-    settings->setPanelEnabled(ui->enablePanelCheckBox->isChecked());
-    settings->setPanelFullscreenOnly(ui->panelFullscreenOnlyCheckBox->isChecked());
     settings->setTransparencyGrid(ui->transparencyGridCheckBox->isChecked());
     settings->setShowHiddenFiles(ui->showHiddenFilesCheckBox->isChecked());
     settings->setEnableSmoothScroll(ui->enableSmoothScrollCheckBox->isChecked());
@@ -367,15 +353,8 @@ void SettingsDialog::saveSettings() {
     settings->setShowSaveOverlay(ui->saveOverlayCheckBox->isChecked());
     settings->setJxlAnimation(ui->animatedJxlCheckBox->isChecked());
     settings->setAutoResizeWindow(ui->autoResizeWindowCheckBox->isChecked());
-    settings->setPanelCenterSelection(ui->panelCenterSelectionCheckBox->isChecked());
     settings->setUseFixedZoomLevels(ui->useFixedZoomLevelsCheckBox->isChecked());
     settings->setZoomLevels(ui->zoomLevels->text());
-
-    settings->setPanelPinned(ui->pinPanelCheckBox->isChecked());
-    int panelPos = ui->panelPositionComboBox->currentIndex();
-    settings->setPanelPosition(static_cast<PanelPosition>(panelPos));
-
-    settings->setPanelPreviewsSize(ui->panelSizeSlider->value() * 10);
 
     settings->setJPEGSaveQuality(ui->JPEGQualitySlider->value());
     settings->setZoomStep(static_cast<float>(qreal(ui->zoomStepSlider->value()) / qreal(100)));

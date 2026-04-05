@@ -1777,19 +1777,9 @@ hr { height: 1px; border-width: 0; }
         <translation>2</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="4313"/>
-        <source>Unload off-screen thumbnails</source>
-        <translation>卸载屏幕外的缩略图</translation>
-    </message>
-    <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4337"/>
         <source>Show save overlay when editing images</source>
         <translation>在编辑图像时显示保存覆盖</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="4306"/>
-        <source>Use thumbnail cache (recommended)</source>
-        <translation>使用缩略图缓存 (推荐)</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4479"/>
@@ -1971,26 +1961,6 @@ hr { height: 1px; border-width: 0; }
         <location filename="../../main.cpp" line="133"/>
         <source>File or directory path.</source>
         <translation>文件或目录所在路径.</translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="136"/>
-        <source>Generate all thumbnails for directory.</source>
-        <translation>为该目录下的所有文件生成略缩图.</translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="137"/>
-        <source>directory-path</source>
-        <translation>目录所在路径</translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="139"/>
-        <source>Thumbnail size. Current size is used if not specified.</source>
-        <translation>缩略图大小. 如果未指定, 则使用当前大小.</translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="140"/>
-        <source>thumbnail-size</source>
-        <translation>略缩图大小</translation>
     </message>
     <message>
         <location filename="../../main.cpp" line="142"/>

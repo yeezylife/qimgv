@@ -1806,16 +1806,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="4337"/>
-        <source>Use thumbnail cache (recommended)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="4344"/>
-        <source>Unload off-screen thumbnails</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4354"/>
         <source>Dynamically unload items to save memory</source>
         <translation type="unfinished"></translation>
@@ -1986,26 +1976,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../../main.cpp" line="133"/>
         <source>File or directory path.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="136"/>
-        <source>Generate all thumbnails for directory.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="137"/>
-        <source>directory-path</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="139"/>
-        <source>Thumbnail size. Current size is used if not specified.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../main.cpp" line="140"/>
-        <source>thumbnail-size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

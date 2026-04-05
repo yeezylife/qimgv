@@ -10,6 +10,7 @@
 
 //tmp
 #include <QtSvg/QSvgRenderer>
+#include <QPixmap>
 
 class DirectoryPresenter : public QObject {
     Q_OBJECT
@@ -61,8 +62,16 @@ private:
     std::shared_ptr<IDirectoryView> view = nullptr;
     std::shared_ptr<DirectoryModel> model = nullptr;
     Thumbnailer thumbnailer;
-    bool mShowDirs;
+    bool mShowDirs = false;
+    QObject *viewObject = nullptr;
+    
+    // 目录图标缓存
+    std::shared_ptr<const QPixmap> mCachedDirPixmap;
+    int mCachedDirSize = 0;
     
     // 辅助函数：将文件索引转换为视图中的绝对索引
-    inline int fileIndexToViewIndex(int fileIndex) const;
+    int fileIndexToViewIndex(int fileIndex) const;
+    
+    // 辅助函数：获取 QObject 指针
+    QObject *viewAsObject();
 };

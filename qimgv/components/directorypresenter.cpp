@@ -6,6 +6,8 @@ DirectoryPresenter::DirectoryPresenter(QObject *parent) : QObject(parent), mShow
 }
 
 void DirectoryPresenter::unsetModel() {
+    if (!model)
+        return;
     disconnect(model.get(), &DirectoryModel::fileRemoved,  this, &DirectoryPresenter::onFileRemoved);
     disconnect(model.get(), &DirectoryModel::fileAdded,    this, &DirectoryPresenter::onFileAdded);
     disconnect(model.get(), &DirectoryModel::fileRenamed,  this, &DirectoryPresenter::onFileRenamed);
@@ -14,24 +16,30 @@ void DirectoryPresenter::unsetModel() {
     disconnect(model.get(), &DirectoryModel::dirAdded,     this, &DirectoryPresenter::onDirAdded);
     disconnect(model.get(), &DirectoryModel::dirRenamed,   this, &DirectoryPresenter::onDirRenamed);
     model = nullptr;
-    // also empty view?
+}
+
+QObject *DirectoryPresenter::viewAsObject() {
+    if (!viewObject && view)
+        viewObject = dynamic_cast<QObject *>(view.get());
+    return viewObject;
 }
 
 void DirectoryPresenter::setView(const std::shared_ptr<IDirectoryView> &_view) {
     if(view)
         return;
     view = _view;
+    viewObject = dynamic_cast<QObject *>(view.get());
     if(model)
         view->populate(mShowDirs ? qMin(static_cast<int>(model->totalCount()), INT_MAX) : qMin(static_cast<int>(model->fileCount()), INT_MAX));
-    connect(dynamic_cast<QObject *>(view.get()), SIGNAL(itemActivated(int)),
+    connect(viewObject, SIGNAL(itemActivated(int)),
             this, SLOT(onItemActivated(int)));
-    connect(dynamic_cast<QObject *>(view.get()), SIGNAL(thumbnailsRequested(QList<int>, int, bool, bool)),
+    connect(viewObject, SIGNAL(thumbnailsRequested(QList<int>, int, bool, bool)),
             this, SLOT(generateThumbnails(QList<int>, int, bool, bool)));
-    connect(dynamic_cast<QObject *>(view.get()), SIGNAL(draggedOut()),
+    connect(viewObject, SIGNAL(draggedOut()),
             this, SLOT(onDraggedOut()));
-    connect(dynamic_cast<QObject *>(view.get()), SIGNAL(draggedOver(int)),
+    connect(viewObject, SIGNAL(draggedOver(int)),
             this, SLOT(onDraggedOver(int)));
-    connect(dynamic_cast<QObject *>(view.get()), SIGNAL(droppedInto(const QMimeData*,QObject*,int)),
+    connect(viewObject, SIGNAL(droppedInto(const QMimeData*,QObject*,int)),
             this, SLOT(onDroppedInto(const QMimeData*,QObject*,int)));
 }
 
@@ -89,20 +97,23 @@ void DirectoryPresenter::onFileRenamed(const QString &fromPath, int indexFrom, c
         return;
     
     // 转换为视图索引
-    indexFrom = fileIndexToViewIndex(indexFrom);
-    indexTo = fileIndexToViewIndex(indexTo);
+    int viewIndexFrom = fileIndexToViewIndex(indexFrom);
+    int viewIndexTo = fileIndexToViewIndex(indexTo);
     
+    // removeItem 后，如果 viewIndexFrom < viewIndexTo，插入位置需要减1
     auto oldSelection = view->selection();
-    view->removeItem(indexFrom);
-    view->insertItem(indexTo);
+    view->removeItem(viewIndexFrom);
+    if(viewIndexFrom < viewIndexTo)
+        viewIndexTo--;
+    view->insertItem(viewIndexTo);
     
     // re-select if needed
-    if(oldSelection.contains(indexFrom)) {
+    if(oldSelection.contains(viewIndexFrom)) {
         if(oldSelection.count() == 1) {
-            view->select(indexTo);
-            view->focusOn(indexTo);
+            view->select(viewIndexTo);
+            view->focusOn(viewIndexTo);
         } else if(oldSelection.count() > 1) {
-            view->select(view->selection() << indexTo);
+            view->select(view->selection() << viewIndexTo);
         }
     }
 }
@@ -212,45 +223,33 @@ void DirectoryPresenter::generateThumbnails(const QList<int> &indexes, int size,
         return;
     }
     
-    // 预分配目录缩略图，避免重复创建
-    static QPixmap *cachedDirPixmap = nullptr;
-    static int cachedDirSize = 0;
-    static QSvgRenderer *cachedSvgRenderer = nullptr;
-    
     // 如果缓存的缩略图大小不匹配，则重新创建
-    if(!cachedDirPixmap || cachedDirSize != size) {
-        if(cachedDirPixmap) {
-            delete cachedDirPixmap;
-            cachedDirPixmap = nullptr;
-        }
-        if(cachedSvgRenderer) {
-            delete cachedSvgRenderer;
-            cachedSvgRenderer = nullptr;
-        }
-        
-        cachedSvgRenderer = new QSvgRenderer();
-        cachedSvgRenderer->load(QString(":/res/icons/common/other/folder32-scalable.svg"));
-        int factor = qRound((size * 0.90) / static_cast<qreal>(cachedSvgRenderer->defaultSize().width()));
-        cachedDirPixmap = new QPixmap(cachedSvgRenderer->defaultSize() * factor);
-        cachedDirPixmap->fill(Qt::transparent);
-        QPainter pixPainter(cachedDirPixmap);
-        cachedSvgRenderer->render(&pixPainter);
+    if(!mCachedDirPixmap || mCachedDirSize != size) {
+        QSvgRenderer svgRenderer;
+        svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
+        int factor = qRound((size * 0.90) / static_cast<qreal>(svgRenderer.defaultSize().width()));
+        QPixmap pix(svgRenderer.defaultSize() * factor);
+        pix.fill(Qt::transparent);
+        QPainter pixPainter(&pix);
+        svgRenderer.render(&pixPainter);
         pixPainter.end();
         
-        ImageLib::recolor(*cachedDirPixmap, settings->colorScheme().icons);
-        cachedDirSize = size;
+        ImageLib::recolor(pix, settings->colorScheme().icons);
+        mCachedDirPixmap = std::make_shared<const QPixmap>(std::move(pix));
+        mCachedDirSize = size;
     }
+    
+    const int dirCount = model->dirCount();
     
     // 批量处理索引
     for(int i : indexes) {
-        if(i < model->dirCount()) {
-            // 使用缓存的目录图标
-            std::shared_ptr<QPixmap> dirPixmap = std::make_shared<QPixmap>(*cachedDirPixmap);
+        if(i < dirCount) {
+            // 使用缓存的目录图标（共享指针，避免拷贝）
             std::shared_ptr<Thumbnail> thumb = std::make_shared<Thumbnail>(
-                model->dirNameAt(i), size, "Folder", dirPixmap);
+                model->dirNameAt(i), size, "Folder", mCachedDirPixmap);
             view->setThumbnail(i, thumb);
         } else {
-            QString path = model->filePathAt(i - model->dirCount());
+            QString path = model->filePathAt(i - dirCount);
             thumbnailer.getThumbnailAsync(path, size, crop, force);
         }
     }

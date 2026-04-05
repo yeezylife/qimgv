@@ -73,7 +73,7 @@ void Settings::setupCache() {
     if(genericCacheLocation.isEmpty())
         genericCacheLocation = QDir::homePath() + "/.cache";
     genericCacheLocation.append("/" + QApplication::applicationName());
-    QString cacheLocation = settings->settingsConf->value("cacheDir", genericCacheLocation).toString();
+    QString cacheLocation = settingsConf->value("cacheDir", genericCacheLocation).toString();
     mTmpDir = new QDir(cacheLocation);
     mTmpDir->mkpath(mTmpDir->absolutePath());
     QFileInfo dirTest(mTmpDir->absolutePath());
@@ -95,8 +95,8 @@ void Settings::setupCache() {
 }
 //------------------------------------------------------------------------------
 void Settings::sync() {
-    settings->settingsConf->sync();
-    settings->stateConf->sync();
+    settingsConf->sync();
+    stateConf->sync();
 }
 //------------------------------------------------------------------------------
 QString Settings::thumbnailCacheDir() {
@@ -121,7 +121,7 @@ void Settings::loadStylesheet() {
         QString styleSheet = QLatin1String(file.readAll());
 
         // --- color scheme ---------------------------------------------
-        auto colors = settings->colorScheme();
+    auto colors = colorScheme();
         // tint color for system windows
         QPalette p;
         QColor sys_text = p.text().color();
@@ -257,7 +257,7 @@ void Settings::loadStylesheet() {
 }
 //------------------------------------------------------------------------------
 void Settings::loadTheme() {
-    if(settings->useSystemColorScheme()) {
+    if(useSystemColorScheme()) {
         setColorScheme(ThemeStore::colorScheme(ColorSchemes::COLORS_SYSTEM));
     } else {
         BaseColorScheme base;
@@ -280,7 +280,7 @@ void Settings::loadTheme() {
     }
 }
 void Settings::saveTheme() {
-    if(settings->useSystemColorScheme())
+    if(useSystemColorScheme())
         return;
     themeConf->beginGroup("Colors");
     themeConf->setValue("background",            mColorScheme.background.name());
@@ -327,7 +327,7 @@ void Settings::fillVideoFormats() {
 }
 //------------------------------------------------------------------------------
 QString Settings::mpvBinary() {
-    QString mpvPath = settings->settingsConf->value("mpvBinary", "").toString();
+    QString mpvPath = settingsConf->value("mpvBinary", "").toString();
     if(!QFile::exists(mpvPath)) {
     #ifdef _WIN32
         mpvPath = QCoreApplication::applicationDirPath() + "/mpv.exe";
@@ -344,7 +344,7 @@ QString Settings::mpvBinary() {
 
 void Settings::setMpvBinary(const QString &path) {
     if(QFile::exists(path)) {
-        settings->settingsConf->setValue("mpvBinary", path);
+        settingsConf->setValue("mpvBinary", path);
     }
 }
 //------------------------------------------------------------------------------
@@ -405,14 +405,14 @@ QStringList Settings::supportedMimeTypes() {
 //------------------------------------------------------------------------------
 bool Settings::videoPlayback() {
 #ifdef USE_MPV
-    return settings->settingsConf->value("videoPlayback", true).toBool();
+    return settingsConf->value("videoPlayback", true).toBool();
 #else
     return false;
 #endif
 }
 
 void Settings::setVideoPlayback(bool mode) {
-    settings->settingsConf->setValue("videoPlayback", mode);
+    settingsConf->setValue("videoPlayback", mode);
     mFormatsCacheValid = false;
     mMimeTypesCacheValid = false;
     mFormatsFilterCacheValid = false;
@@ -420,37 +420,37 @@ void Settings::setVideoPlayback(bool mode) {
 }
 //------------------------------------------------------------------------------
 bool Settings::useSystemColorScheme() {
-    return settings->settingsConf->value("useSystemColorScheme", false).toBool();
+    return settingsConf->value("useSystemColorScheme", false).toBool();
 }
 
 void Settings::setUseSystemColorScheme(bool mode) {
-    settings->settingsConf->setValue("useSystemColorScheme", mode);
+    settingsConf->setValue("useSystemColorScheme", mode);
 }
 //------------------------------------------------------------------------------
 QVersionNumber Settings::lastVersion() {
-    int vmajor = settings->settingsConf->value("lastVerMajor", 0).toInt();
-    int vminor = settings->settingsConf->value("lastVerMinor", 0).toInt();
-    int vmicro = settings->settingsConf->value("lastVerMicro", 0).toInt();
+    int vmajor = settingsConf->value("lastVerMajor", 0).toInt();
+    int vminor = settingsConf->value("lastVerMinor", 0).toInt();
+    int vmicro = settingsConf->value("lastVerMicro", 0).toInt();
     return QVersionNumber(vmajor, vminor, vmicro);
 }
 
 void Settings::setLastVersion(const QVersionNumber &ver) {
-    settings->settingsConf->setValue("lastVerMajor", ver.majorVersion());
-    settings->settingsConf->setValue("lastVerMinor", ver.minorVersion());
-    settings->settingsConf->setValue("lastVerMicro", ver.microVersion());
+    settingsConf->setValue("lastVerMajor", ver.majorVersion());
+    settingsConf->setValue("lastVerMinor", ver.minorVersion());
+    settingsConf->setValue("lastVerMicro", ver.microVersion());
 }
 //------------------------------------------------------------------------------
 void Settings::setShowChangelogs(bool mode) {
-    settings->settingsConf->setValue("showChangelogs", mode);
+    settingsConf->setValue("showChangelogs", mode);
 }
 
 bool Settings::showChangelogs() {
-    return settings->settingsConf->value("showChangelogs", true).toBool();
+    return settingsConf->value("showChangelogs", true).toBool();
 }
 //------------------------------------------------------------------------------
 qreal Settings::backgroundOpacity() {
     bool ok = false;
-    qreal value = settings->settingsConf->value("backgroundOpacity", 1.0).toReal(&ok);
+    qreal value = settingsConf->value("backgroundOpacity", 1.0).toReal(&ok);
     if(!ok)
         return 0.0;
     if(value > 1.0)
@@ -465,24 +465,24 @@ void Settings::setBackgroundOpacity(qreal value) {
         value = 1.0;
     else if(value < 0.0)
         value = 0.0;
-    settings->settingsConf->setValue("backgroundOpacity", value);
+    settingsConf->setValue("backgroundOpacity", value);
 }
 //------------------------------------------------------------------------------
 bool Settings::blurBackground() {
 #ifndef USE_KDE_BLUR
     return false;
 #endif
-    return settings->settingsConf->value("blurBackground", true).toBool();
+    return settingsConf->value("blurBackground", true).toBool();
 }
 
 void Settings::setBlurBackground(bool mode) {
-    settings->settingsConf->setValue("blurBackground", mode);
+    settingsConf->setValue("blurBackground", mode);
 }
 //------------------------------------------------------------------------------
 void Settings::setSortingMode(SortingMode mode) {
     if(mode >= 6)
         mode = SortingMode::SORT_NAME;
-    settings->settingsConf->setValue("sortingMode", mode);
+    settingsConf->setValue("sortingMode", mode);
     mSortingModeCacheValid = false;
 }
 
@@ -491,7 +491,7 @@ SortingMode Settings::sortingMode() {
         return mCachedSortingMode;
     }
     
-    int mode = settings->settingsConf->value("sortingMode", 0).toInt();
+    int mode = settingsConf->value("sortingMode", 0).toInt();
     if(mode < 0 || mode >= 6)
         mode = 0;
     
@@ -501,19 +501,19 @@ SortingMode Settings::sortingMode() {
 }
 //------------------------------------------------------------------------------
 bool Settings::playVideoSounds() {
-    return settings->settingsConf->value("playVideoSounds", false).toBool();
+    return settingsConf->value("playVideoSounds", false).toBool();
 }
 
 void Settings::setPlayVideoSounds(bool mode) {
-    settings->settingsConf->setValue("playVideoSounds", mode);
+    settingsConf->setValue("playVideoSounds", mode);
 }
 //------------------------------------------------------------------------------
 void Settings::setVolume(int vol) {
-    settings->stateConf->setValue("volume", vol);
+    stateConf->setValue("volume", vol);
 }
 
 int Settings::volume() {
-    return settings->stateConf->value("volume", 100).toInt();
+    return stateConf->value("volume", 100).toInt();
 }
 //------------------------------------------------------------------------------
 FolderViewMode Settings::folderViewMode() {
@@ -521,7 +521,7 @@ FolderViewMode Settings::folderViewMode() {
         return mCachedFolderViewMode;
     }
     
-    int mode = settings->settingsConf->value("folderViewMode", 2).toInt();
+    int mode = settingsConf->value("folderViewMode", 2).toInt();
     if(mode < 0 || mode >= 3)
         mode = 2;
     
@@ -531,7 +531,7 @@ FolderViewMode Settings::folderViewMode() {
 }
 
 void Settings::setFolderViewMode(FolderViewMode mode) {
-    settings->settingsConf->setValue("folderViewMode", mode);
+    settingsConf->setValue("folderViewMode", mode);
     mFolderViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -540,7 +540,7 @@ ThumbPanelStyle Settings::thumbPanelStyle() {
         return mCachedThumbPanelStyle;
     }
     
-    int mode = settings->settingsConf->value("thumbPanelStyle", 1).toInt();
+    int mode = settingsConf->value("thumbPanelStyle", 1).toInt();
     if(mode < 0 || mode > 1)
         mode = 1;
     
@@ -550,7 +550,7 @@ ThumbPanelStyle Settings::thumbPanelStyle() {
 }
 
 void Settings::setThumbPanelStyle(ThumbPanelStyle mode) {
-    settings->settingsConf->setValue("thumbPanelStyle", mode);
+    settingsConf->setValue("thumbPanelStyle", mode);
     mThumbPanelStyleCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -564,7 +564,7 @@ int Settings::panelPreviewsSize() {
     }
     
     bool ok = true;
-    int size = settings->settingsConf->value("panelPreviewsSize", 140).toInt(&ok);
+    int size = settingsConf->value("panelPreviewsSize", 140).toInt(&ok);
     if(!ok)
         size = 140;
     size = qBound(100, size, 250);
@@ -575,64 +575,64 @@ int Settings::panelPreviewsSize() {
 }
 
 void Settings::setPanelPreviewsSize(int size) {
-    settings->settingsConf->setValue("panelPreviewsSize", size);
+    settingsConf->setValue("panelPreviewsSize", size);
     mPanelPreviewsSizeCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::usePreloader() {
-    return settings->settingsConf->value("usePreloader", true).toBool();
+    return settingsConf->value("usePreloader", true).toBool();
 }
 
 void Settings::setUsePreloader(bool mode) {
-    settings->settingsConf->setValue("usePreloader", mode);
+    settingsConf->setValue("usePreloader", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::keepFitMode() {
-    return settings->settingsConf->value("keepFitMode", false).toBool();
+    return settingsConf->value("keepFitMode", false).toBool();
 }
 
 void Settings::setKeepFitMode(bool mode) {
-    settings->settingsConf->setValue("keepFitMode", mode);
+    settingsConf->setValue("keepFitMode", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::fullscreenMode() {
-    return settings->settingsConf->value("openInFullscreen", false).toBool();
+    return settingsConf->value("openInFullscreen", false).toBool();
 }
 
 void Settings::setFullscreenMode(bool mode) {
-    settings->settingsConf->setValue("openInFullscreen", mode);
+    settingsConf->setValue("openInFullscreen", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::maximizedWindow() {
-    return settings->stateConf->value("maximizedWindow", false).toBool();
+    return stateConf->value("maximizedWindow", false).toBool();
 }
 
 void Settings::setMaximizedWindow(bool mode) {
-    settings->stateConf->setValue("maximizedWindow", mode);
+    stateConf->setValue("maximizedWindow", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::panelEnabled() {
-    return settings->settingsConf->value("panelEnabled", true).toBool();
+    return settingsConf->value("panelEnabled", true).toBool();
 }
 
 void Settings::setPanelEnabled(bool mode) {
-    settings->settingsConf->setValue("panelEnabled", mode);
+    settingsConf->setValue("panelEnabled", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::panelFullscreenOnly() {
-    return settings->settingsConf->value("panelFullscreenOnly", true).toBool();
+    return settingsConf->value("panelFullscreenOnly", true).toBool();
 }
 
 void Settings::setPanelFullscreenOnly(bool mode) {
-    settings->settingsConf->setValue("panelFullscreenOnly", mode);
+    settingsConf->setValue("panelFullscreenOnly", mode);
 }
 //------------------------------------------------------------------------------
 int Settings::lastDisplay() {
-    return settings->stateConf->value("lastDisplay", 0).toInt();
+    return stateConf->value("lastDisplay", 0).toInt();
 }
 
 void Settings::setLastDisplay(int display) {
-    settings->stateConf->setValue("lastDisplay", display);
+    stateConf->setValue("lastDisplay", display);
 }
 //------------------------------------------------------------------------------
 PanelPosition Settings::panelPosition() {
@@ -646,7 +646,7 @@ PanelPosition Settings::panelPosition() {
         {"left", PanelPosition::PANEL_LEFT},
         {"right", PanelPosition::PANEL_RIGHT}
     };
-    QString posString = settings->settingsConf->value("panelPosition", "top").toString();
+    QString posString = settingsConf->value("panelPosition", "top").toString();
     
     mCachedPanelPosition = posMap.value(posString, PanelPosition::PANEL_TOP);
     mPanelPositionCacheValid = true;
@@ -669,16 +669,16 @@ void Settings::setPanelPosition(PanelPosition pos) {
             posString = "right";
             break;
     }
-    settings->settingsConf->setValue("panelPosition", posString);
+    settingsConf->setValue("panelPosition", posString);
     mPanelPositionCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::panelPinned() {
-    return settings->settingsConf->value("panelPinned", false).toBool();
+    return settingsConf->value("panelPinned", false).toBool();
 }
 
 void Settings::setPanelPinned(bool mode) {
-    settings->settingsConf->setValue("panelPinned", mode);
+    settingsConf->setValue("panelPinned", mode);
 }
 //------------------------------------------------------------------------------
 /*
@@ -692,7 +692,7 @@ ImageFitMode Settings::imageFitMode() {
         return mCachedImageFitMode;
     }
     
-    int mode = settings->settingsConf->value("defaultFitMode", 0).toInt();
+    int mode = settingsConf->value("defaultFitMode", 0).toInt();
     if(mode < 0 || mode > 3) {
         qDebug() << "Settings: Invalid fit mode ( " + QString::number(mode) + " ). Resetting to default.";
         mode = 0;
@@ -709,7 +709,7 @@ void Settings::setImageFitMode(ImageFitMode mode) {
         qDebug() << "Settings: Invalid fit mode ( " + QString::number(modeInt) + " ). Resetting to default.";
         modeInt = 0;
     }
-    settings->settingsConf->setValue("defaultFitMode", modeInt);
+    settingsConf->setValue("defaultFitMode", modeInt);
     mImageFitModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -718,7 +718,7 @@ QRect Settings::windowGeometry() {
         return mCachedWindowGeometry;
     }
     
-    QRect savedRect = settings->stateConf->value("windowGeometry").toRect();
+    QRect savedRect = stateConf->value("windowGeometry").toRect();
     if(savedRect.size().isEmpty())
         savedRect.setRect(100, 100, 900, 600);
     
@@ -728,16 +728,16 @@ QRect Settings::windowGeometry() {
 }
 
 void Settings::setWindowGeometry(QRect geometry) {
-    settings->stateConf->setValue("windowGeometry", geometry);
+    stateConf->setValue("windowGeometry", geometry);
     mWindowGeometryCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::loopSlideshow() {
-    return settings->settingsConf->value("loopSlideshow", false).toBool();
+    return settingsConf->value("loopSlideshow", false).toBool();
 }
 
 void Settings::setLoopSlideshow(bool mode) {
-    settings->settingsConf->setValue("loopSlideshow", mode);
+    settingsConf->setValue("loopSlideshow", mode);
 }
 //------------------------------------------------------------------------------
 void Settings::sendChangeNotification() {
@@ -750,9 +750,9 @@ void Settings::readShortcuts(QMap<QString, QString> &shortcuts) {
         return;
     }
     
-    settings->settingsConf->beginGroup("Controls");
+    settingsConf->beginGroup("Controls");
     QStringList in, pair;
-    in = settings->settingsConf->value("shortcuts").toStringList();
+    in = settingsConf->value("shortcuts").toStringList();
     for(int i = 0; i < in.count(); i++) {
         pair = in[i].split("=");
         if(pair.size() >= 2 && !pair[0].isEmpty() && !pair[1].isEmpty()) {
@@ -761,14 +761,14 @@ void Settings::readShortcuts(QMap<QString, QString> &shortcuts) {
             shortcuts.insert(pair[1], pair[0]);
         }
     }
-    settings->settingsConf->endGroup();
+    settingsConf->endGroup();
     
     mCachedShortcuts = shortcuts;
     mShortcutsCacheValid = true;
 }
 
 void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
-    settings->settingsConf->beginGroup("Controls");
+    settingsConf->beginGroup("Controls");
     QMapIterator<QString, QString> i(shortcuts);
     QStringList out;
     while(i.hasNext()) {
@@ -778,8 +778,8 @@ void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
         else
             out << i.value() + "=" + i.key();
     }
-    settings->settingsConf->setValue("shortcuts", out);
-    settings->settingsConf->endGroup();
+    settingsConf->setValue("shortcuts", out);
+    settingsConf->endGroup();
     mShortcutsCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -790,69 +790,69 @@ void Settings::readScripts(QHash<QString, Script> &scripts) {
     }
     
     scripts.clear();
-    settings->settingsConf->beginGroup("Scripts");
-    int size = settings->settingsConf->beginReadArray("script");
+    settingsConf->beginGroup("Scripts");
+    int size = settingsConf->beginReadArray("script");
     for(int i=0; i < size; i++) {
-        settings->settingsConf->setArrayIndex(i);
-        QString name = settings->settingsConf->value("name").toString();
-        QVariant value = settings->settingsConf->value("value");
+        settingsConf->setArrayIndex(i);
+        QString name = settingsConf->value("name").toString();
+        QVariant value = settingsConf->value("value");
         Script scr = value.value<Script>();
         scripts.insert(name, scr);
     }
-    settings->settingsConf->endArray();
-    settings->settingsConf->endGroup();
+    settingsConf->endArray();
+    settingsConf->endGroup();
     
     mCachedScripts = scripts;
     mScriptsCacheValid = true;
 }
 
 void Settings::saveScripts(const QHash<QString, Script> &scripts) {
-    settings->settingsConf->beginGroup("Scripts");
-    settings->settingsConf->beginWriteArray("script");
+    settingsConf->beginGroup("Scripts");
+    settingsConf->beginWriteArray("script");
     QHashIterator<QString, Script> i(scripts);
     int counter = 0;
     while(i.hasNext()) {
         i.next();
-        settings->settingsConf->setArrayIndex(counter);
-        settings->settingsConf->setValue("name", i.key());
-        settings->settingsConf->setValue("value", QVariant::fromValue(i.value()));
+        settingsConf->setArrayIndex(counter);
+        settingsConf->setValue("name", i.key());
+        settingsConf->setValue("value", QVariant::fromValue(i.value()));
         counter++;
     }
-    settings->settingsConf->endArray();
-    settings->settingsConf->endGroup();
+    settingsConf->endArray();
+    settingsConf->endGroup();
     mScriptsCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::squareThumbnails() {
-    return settings->settingsConf->value("squareThumbnails", false).toBool();
+    return settingsConf->value("squareThumbnails", false).toBool();
 }
 
 void Settings::setSquareThumbnails(bool mode) {
-    settings->settingsConf->setValue("squareThumbnails", mode);
+    settingsConf->setValue("squareThumbnails", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::transparencyGrid() {
-    return settings->settingsConf->value("drawTransparencyGrid", false).toBool();
+    return settingsConf->value("drawTransparencyGrid", false).toBool();
 }
 
 void Settings::setTransparencyGrid(bool mode) {
-    settings->settingsConf->setValue("drawTransparencyGrid", mode);
+    settingsConf->setValue("drawTransparencyGrid", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::enableSmoothScroll() {
-    return settings->settingsConf->value("enableSmoothScroll", true).toBool();
+    return settingsConf->value("enableSmoothScroll", true).toBool();
 }
 
 void Settings::setEnableSmoothScroll(bool mode) {
-    settings->settingsConf->setValue("enableSmoothScroll", mode);
+    settingsConf->setValue("enableSmoothScroll", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::useThumbnailCache() {
-    return settings->settingsConf->value("thumbnailCache", true).toBool();
+    return settingsConf->value("thumbnailCache", true).toBool();
 }
 
 void Settings::setUseThumbnailCache(bool mode) {
-    settings->settingsConf->setValue("thumbnailCache", mode);
+    settingsConf->setValue("thumbnailCache", mode);
 }
 //------------------------------------------------------------------------------
 QStringList Settings::savedPaths() {
@@ -860,13 +860,13 @@ QStringList Settings::savedPaths() {
         return mCachedSavedPaths;
     }
     
-    mCachedSavedPaths = settings->stateConf->value("savedPaths", QDir::homePath()).toStringList();
+    mCachedSavedPaths = stateConf->value("savedPaths", QDir::homePath()).toStringList();
     mSavedPathsCacheValid = true;
     return mCachedSavedPaths;
 }
 
 void Settings::setSavedPaths(const QStringList &paths) {
-    settings->stateConf->setValue("savedPaths", paths);
+    stateConf->setValue("savedPaths", paths);
     mSavedPathsCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -875,100 +875,100 @@ QStringList Settings::bookmarks() {
         return mCachedBookmarks;
     }
     
-    mCachedBookmarks = settings->stateConf->value("bookmarks").toStringList();
+    mCachedBookmarks = stateConf->value("bookmarks").toStringList();
     mBookmarksCacheValid = true;
     return mCachedBookmarks;
 }
 
 void Settings::setBookmarks(const QStringList &paths) {
-    settings->stateConf->setValue("bookmarks", paths);
+    stateConf->setValue("bookmarks", paths);
     mBookmarksCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::placesPanel() {
-    return settings->stateConf->value("placesPanel", true).toBool();
+    return stateConf->value("placesPanel", true).toBool();
 }
 
 void Settings::setPlacesPanel(bool mode) {
-    settings->stateConf->setValue("placesPanel", mode);
+    stateConf->setValue("placesPanel", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::placesPanelBookmarksExpanded() {
-    return settings->stateConf->value("placesPanelBookmarksExpanded", true).toBool();
+    return stateConf->value("placesPanelBookmarksExpanded", true).toBool();
 }
 
 void Settings::setPlacesPanelBookmarksExpanded(bool mode) {
-    settings->stateConf->setValue("placesPanelBookmarksExpanded", mode);
+    stateConf->setValue("placesPanelBookmarksExpanded", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::placesPanelTreeExpanded() {
-    return settings->stateConf->value("placesPanelTreeExpanded", true).toBool();
+    return stateConf->value("placesPanelTreeExpanded", true).toBool();
 }
 
 void Settings::setPlacesPanelTreeExpanded(bool mode) {
-    settings->stateConf->setValue("placesPanelTreeExpanded", mode);
+    stateConf->setValue("placesPanelTreeExpanded", mode);
 }
 //------------------------------------------------------------------------------
 int Settings::placesPanelWidth() {
-    return settings->stateConf->value("placesPanelWidth", 260).toInt();
+    return stateConf->value("placesPanelWidth", 260).toInt();
 }
 
 void Settings::setPlacesPanelWidth(int width) {
-    settings->stateConf->setValue("placesPanelWidth", width);
+    stateConf->setValue("placesPanelWidth", width);
 }
 //------------------------------------------------------------------------------
 void Settings::setSlideshowInterval(int ms) {
-    settings->settingsConf->setValue("slideshowInterval", ms);
+    settingsConf->setValue("slideshowInterval", ms);
 }
 
 int Settings::slideshowInterval() {
-    int interval = settings->settingsConf->value("slideshowInterval", 3000).toInt();
+    int interval = settingsConf->value("slideshowInterval", 3000).toInt();
     if(interval <= 0)
         interval = 3000;
     return interval;
 }
 //------------------------------------------------------------------------------
 int Settings::thumbnailerThreadCount() {
-    int count = settings->settingsConf->value("thumbnailerThreads", 4).toInt();
+    int count = settingsConf->value("thumbnailerThreads", 4).toInt();
     if(count < 1)
         count = 4;
     return count;
 }
 
 void Settings::setThumbnailerThreadCount(int count) {
-    settings->settingsConf->setValue("thumbnailerThreads", count);
+    settingsConf->setValue("thumbnailerThreads", count);
 }
 //------------------------------------------------------------------------------
 bool Settings::smoothUpscaling() {
-    return settings->settingsConf->value("smoothUpscaling", true).toBool();
+    return settingsConf->value("smoothUpscaling", true).toBool();
 }
 
 void Settings::setSmoothUpscaling(bool mode) {
-    settings->settingsConf->setValue("smoothUpscaling", mode);
+    settingsConf->setValue("smoothUpscaling", mode);
 }
 //------------------------------------------------------------------------------
 int Settings::folderViewIconSize() {
-    return settings->settingsConf->value("folderViewIconSize", 120).toInt();
+    return settingsConf->value("folderViewIconSize", 120).toInt();
 }
 
 void Settings::setFolderViewIconSize(int value) {
-    settings->settingsConf->setValue("folderViewIconSize", value);
+    settingsConf->setValue("folderViewIconSize", value);
 }
 //------------------------------------------------------------------------------
 bool Settings::expandImage() {
-    return settings->settingsConf->value("expandImage", false).toBool();
+    return settingsConf->value("expandImage", false).toBool();
 }
 
 void Settings::setExpandImage(bool mode) {
-    settings->settingsConf->setValue("expandImage", mode);
+    settingsConf->setValue("expandImage", mode);
 }
 //------------------------------------------------------------------------------
 int Settings::expandLimit() {
-    return settings->settingsConf->value("expandLimit", 2).toInt();
+    return settingsConf->value("expandLimit", 2).toInt();
 }
 
 void Settings::setExpandLimit(int value) {
-    settings->settingsConf->setValue("expandLimit", value);
+    settingsConf->setValue("expandLimit", value);
 }
 //------------------------------------------------------------------------------
 int Settings::JPEGSaveQuality() {
@@ -976,14 +976,14 @@ int Settings::JPEGSaveQuality() {
         return mCachedJPEGSaveQuality;
     }
     
-    int quality = std::clamp(settings->settingsConf->value("JPEGSaveQuality", 95).toInt(), 0, 100);
+    int quality = std::clamp(settingsConf->value("JPEGSaveQuality", 95).toInt(), 0, 100);
     mCachedJPEGSaveQuality = quality;
     mJPEGSaveQualityCacheValid = true;
     return quality;
 }
 
 void Settings::setJPEGSaveQuality(int value) {
-    settings->settingsConf->setValue("JPEGSaveQuality", value);
+    settingsConf->setValue("JPEGSaveQuality", value);
     mJPEGSaveQualityCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -997,7 +997,7 @@ ScalingFilter Settings::scalingFilter() {
     // default to a nicer QI_FILTER_CV_CUBIC
     defaultFilter = 3;
 #endif
-    int mode = settings->settingsConf->value("scalingFilter", defaultFilter).toInt();
+    int mode = settingsConf->value("scalingFilter", defaultFilter).toInt();
 #ifndef USE_OPENCV
     if(mode > 2)
         mode = 1;
@@ -1011,89 +1011,89 @@ ScalingFilter Settings::scalingFilter() {
 }
 
 void Settings::setScalingFilter(ScalingFilter mode) {
-    settings->settingsConf->setValue("scalingFilter", mode);
+    settingsConf->setValue("scalingFilter", mode);
     mScalingFilterCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::smoothAnimatedImages() {
-    return settings->settingsConf->value("smoothAnimatedImages", true).toBool();
+    return settingsConf->value("smoothAnimatedImages", true).toBool();
 }
 
 void Settings::setSmoothAnimatedImages(bool mode) {
-    settings->settingsConf->setValue("smoothAnimatedImages", mode);
+    settingsConf->setValue("smoothAnimatedImages", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::infoBarFullscreen() {
-    return settings->settingsConf->value("infoBarFullscreen", true).toBool();
+    return settingsConf->value("infoBarFullscreen", true).toBool();
 }
 
 void Settings::setInfoBarFullscreen(bool mode) {
-    settings->settingsConf->setValue("infoBarFullscreen", mode);
+    settingsConf->setValue("infoBarFullscreen", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::infoBarWindowed() {
-    return settings->settingsConf->value("infoBarWindowed", false).toBool();
+    return settingsConf->value("infoBarWindowed", false).toBool();
 }
 
 void Settings::setInfoBarWindowed(bool mode) {
-    settings->settingsConf->setValue("infoBarWindowed", mode);
+    settingsConf->setValue("infoBarWindowed", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::windowTitleExtendedInfo() {
-    return settings->settingsConf->value("windowTitleExtendedInfo", true).toBool();
+    return settingsConf->value("windowTitleExtendedInfo", true).toBool();
 }
 
 void Settings::setWindowTitleExtendedInfo(bool mode) {
-    settings->settingsConf->setValue("windowTitleExtendedInfo", mode);
+    settingsConf->setValue("windowTitleExtendedInfo", mode);
 }
 
 //------------------------------------------------------------------------------
 bool Settings::cursorAutohide() {
-    return settings->settingsConf->value("cursorAutohiding", true).toBool();
+    return settingsConf->value("cursorAutohiding", true).toBool();
 }
 
 void Settings::setCursorAutohide(bool mode) {
-    settings->settingsConf->setValue("cursorAutohiding", mode);
+    settingsConf->setValue("cursorAutohiding", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::firstRun() {
-    return settings->settingsConf->value("firstRun", true).toBool();
+    return settingsConf->value("firstRun", true).toBool();
 }
 
 void Settings::setFirstRun(bool mode) {
-    settings->settingsConf->setValue("firstRun", mode);
+    settingsConf->setValue("firstRun", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::showSaveOverlay() {
-    return settings->settingsConf->value("showSaveOverlay", true).toBool();
+    return settingsConf->value("showSaveOverlay", true).toBool();
 }
 
 void Settings::setShowSaveOverlay(bool mode) {
-    settings->settingsConf->setValue("showSaveOverlay", mode);
+    settingsConf->setValue("showSaveOverlay", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::confirmDelete() {
-    return settings->settingsConf->value("confirmDelete", true).toBool();
+    return settingsConf->value("confirmDelete", true).toBool();
 }
 
 void Settings::setConfirmDelete(bool mode) {
-    settings->settingsConf->setValue("confirmDelete", mode);
+    settingsConf->setValue("confirmDelete", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::confirmTrash() {
-    return settings->settingsConf->value("confirmTrash", true).toBool();
+    return settingsConf->value("confirmTrash", true).toBool();
 }
 
 void Settings::setConfirmTrash(bool mode) {
-    settings->settingsConf->setValue("confirmTrash", mode);
+    settingsConf->setValue("confirmTrash", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::unloadThumbs() {
-    return settings->settingsConf->value("unloadThumbs", true).toBool();
+    return settingsConf->value("unloadThumbs", true).toBool();
 }
 
 void Settings::setUnloadThumbs(bool mode) {
-    settings->settingsConf->setValue("unloadThumbs", mode);
+    settingsConf->setValue("unloadThumbs", mode);
 }
 //------------------------------------------------------------------------------
 float Settings::zoomStep() {
@@ -1102,7 +1102,7 @@ float Settings::zoomStep() {
     }
     
     bool ok = false;
-    float value = settings->settingsConf->value("zoomStep", 0.2f).toFloat(&ok);
+    float value = settingsConf->value("zoomStep", 0.2f).toFloat(&ok);
     if(!ok)
         value = 0.2f;
     value = qBound(0.01f, value, 0.5f);
@@ -1114,7 +1114,7 @@ float Settings::zoomStep() {
 
 void Settings::setZoomStep(float value) {
     value = qBound(0.01f, value, 0.5f);
-    settings->settingsConf->setValue("zoomStep", value);
+    settingsConf->setValue("zoomStep", value);
     mZoomStepCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -1124,7 +1124,7 @@ float Settings::mouseScrollingSpeed() {
     }
     
     bool ok = false;
-    float value = settings->settingsConf->value("mouseScrollingSpeed", 1.0f).toFloat(&ok);
+    float value = settingsConf->value("mouseScrollingSpeed", 1.0f).toFloat(&ok);
     if(!ok)
         value = 1.0f;
     value = qBound(0.5f, value, 2.0f);
@@ -1136,12 +1136,12 @@ float Settings::mouseScrollingSpeed() {
 
 void Settings::setMouseScrollingSpeed(float value) {
     value = qBound(0.5f, value, 2.0f);
-    settings->settingsConf->setValue("mouseScrollingSpeed", value);
+    settingsConf->setValue("mouseScrollingSpeed", value);
     mMouseScrollingSpeedCacheValid = false;
 }
 //------------------------------------------------------------------------------
 void Settings::setZoomIndicatorMode(ZoomIndicatorMode mode) {
-    settings->settingsConf->setValue("zoomIndicatorMode", mode);
+    settingsConf->setValue("zoomIndicatorMode", mode);
     mZoomIndicatorModeCacheValid = false;
 }
 
@@ -1150,7 +1150,7 @@ ZoomIndicatorMode Settings::zoomIndicatorMode() {
         return mCachedZoomIndicatorMode;
     }
     
-    int mode = settings->settingsConf->value("zoomIndicatorMode", 0).toInt();
+    int mode = settingsConf->value("zoomIndicatorMode", 0).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
     
@@ -1160,7 +1160,7 @@ ZoomIndicatorMode Settings::zoomIndicatorMode() {
 }
 //------------------------------------------------------------------------------
 void Settings::setFocusPointIn1to1Mode(ImageFocusPoint mode) {
-    settings->settingsConf->setValue("focusPointIn1to1Mode", mode);
+    settingsConf->setValue("focusPointIn1to1Mode", mode);
     mFocusPointIn1to1ModeCacheValid = false;
 }
 
@@ -1169,7 +1169,7 @@ ImageFocusPoint Settings::focusPointIn1to1Mode() {
         return mCachedFocusPointIn1to1Mode;
     }
     
-    int mode = settings->settingsConf->value("focusPointIn1to1Mode", 1).toInt();
+    int mode = settingsConf->value("focusPointIn1to1Mode", 1).toInt();
     if(mode < 0 || mode > 2)
         mode = 1;
     
@@ -1179,7 +1179,7 @@ ImageFocusPoint Settings::focusPointIn1to1Mode() {
 }
 
 void Settings::setDefaultCropAction(DefaultCropAction mode) {
-    settings->settingsConf->setValue("defaultCropAction", mode);
+    settingsConf->setValue("defaultCropAction", mode);
     mDefaultCropActionCacheValid = false;
 }
 
@@ -1188,7 +1188,7 @@ DefaultCropAction Settings::defaultCropAction() {
         return mCachedDefaultCropAction;
     }
     
-    int mode = settings->settingsConf->value("defaultCropAction", 0).toInt();
+    int mode = settingsConf->value("defaultCropAction", 0).toInt();
     if(mode < 0 || mode > 1)
         mode = 0;
     
@@ -1202,7 +1202,7 @@ ImageScrolling Settings::imageScrolling() {
         return mCachedImageScrolling;
     }
     
-    int mode = settings->settingsConf->value("imageScrolling", 1).toInt();
+    int mode = settingsConf->value("imageScrolling", 1).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
     
@@ -1212,7 +1212,7 @@ ImageScrolling Settings::imageScrolling() {
 }
 
 void Settings::setImageScrolling(ImageScrolling mode) {
-    settings->settingsConf->setValue("imageScrolling", mode);
+    settingsConf->setValue("imageScrolling", mode);
     mImageScrollingCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -1221,7 +1221,7 @@ ViewMode Settings::defaultViewMode() {
         return mCachedDefaultViewMode;
     }
     
-    int mode = settings->settingsConf->value("defaultViewMode", 0).toInt();
+    int mode = settingsConf->value("defaultViewMode", 0).toInt();
     if(mode < 0 || mode > 1)
         mode = 0;
     
@@ -1231,7 +1231,7 @@ ViewMode Settings::defaultViewMode() {
 }
 
 void Settings::setDefaultViewMode(ViewMode mode) {
-    settings->settingsConf->setValue("defaultViewMode", mode);
+    settingsConf->setValue("defaultViewMode", mode);
     mDefaultViewModeCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -1240,7 +1240,7 @@ FolderEndAction Settings::folderEndAction() {
         return mCachedFolderEndAction;
     }
     
-    int mode = settings->settingsConf->value("folderEndAction", 0).toInt();
+    int mode = settingsConf->value("folderEndAction", 0).toInt();
     if(mode < 0 || mode > 2)
         mode = 0;
     
@@ -1250,7 +1250,7 @@ FolderEndAction Settings::folderEndAction() {
 }
 
 void Settings::setFolderEndAction(FolderEndAction mode) {
-    settings->settingsConf->setValue("folderEndAction", mode);
+    settingsConf->setValue("folderEndAction", mode);
     mFolderEndActionCacheValid = false;
 }
 //------------------------------------------------------------------------------
@@ -1295,34 +1295,34 @@ void Settings::setLastPrinter(const QString &name) {
 }
 //------------------------------------------------------------------------------
 bool Settings::jxlAnimation() {
-    return settings->settingsConf->value("jxlAnimation", false).toBool();
+    return settingsConf->value("jxlAnimation", false).toBool();
 }
 
 void Settings::setJxlAnimation(bool mode) {
-    settings->settingsConf->setValue("jxlAnimation", mode);
+    settingsConf->setValue("jxlAnimation", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::autoResizeWindow() {
-    return settings->settingsConf->value("autoResizeWindow", false).toBool();
+    return settingsConf->value("autoResizeWindow", false).toBool();
 }
 
 void Settings::setAutoResizeWindow(bool mode) {
-    settings->settingsConf->setValue("autoResizeWindow", mode);
+    settingsConf->setValue("autoResizeWindow", mode);
 }
 //------------------------------------------------------------------------------
 int Settings::autoResizeLimit() {
-    int limit = settings->settingsConf->value("autoResizeLimit", 90).toInt();
+    int limit = settingsConf->value("autoResizeLimit", 90).toInt();
     if(limit < 30 || limit > 100)
         limit = 90;
     return limit;
 }
 
 void Settings::setAutoResizeLimit(int percent) {
-    settings->settingsConf->setValue("autoResizeLimit", percent);
+    settingsConf->setValue("autoResizeLimit", percent);
 }
 //------------------------------------------------------------------------------
 int Settings::memoryAllocationLimit() {
-    int limit = settings->settingsConf->value("memoryAllocationLimit", 1024).toInt();
+    int limit = settingsConf->value("memoryAllocationLimit", 1024).toInt();
     if(limit < 512)
         limit = 512;
     else if(limit > 8192)
@@ -1331,15 +1331,15 @@ int Settings::memoryAllocationLimit() {
 }
 
 void Settings::setMemoryAllocationLimit(int limitMB) {
-    settings->settingsConf->setValue("memoryAllocationLimit", limitMB);
+    settingsConf->setValue("memoryAllocationLimit", limitMB);
 }
 //------------------------------------------------------------------------------
 bool Settings::panelCenterSelection() {
-    return settings->settingsConf->value("panelCenterSelection", false).toBool();
+    return settingsConf->value("panelCenterSelection", false).toBool();
 }
 
 void Settings::setPanelCenterSelection(bool mode) {
-    settings->settingsConf->setValue("panelCenterSelection", mode);
+    settingsConf->setValue("panelCenterSelection", mode);
 }
 //------------------------------------------------------------------------------
 QString Settings::language() {
@@ -1351,11 +1351,11 @@ void Settings::setLanguage(const QString &lang) {
 }
 //------------------------------------------------------------------------------
 bool Settings::useFixedZoomLevels() {
-    return settings->settingsConf->value("useFixedZoomLevels", false).toBool();
+    return settingsConf->value("useFixedZoomLevels", false).toBool();
 }
 
 void Settings::setUseFixedZoomLevels(bool mode) {
-    settings->settingsConf->setValue("useFixedZoomLevels", mode);
+    settingsConf->setValue("useFixedZoomLevels", mode);
 }
 //------------------------------------------------------------------------------
 QString Settings::defaultZoomLevels() {
@@ -1370,50 +1370,50 @@ void Settings::setZoomLevels(const QString &levels) {
 }
 //------------------------------------------------------------------------------
 bool Settings::unlockMinZoom() {
-    return settings->settingsConf->value("unlockMinZoom", true).toBool();
+    return settingsConf->value("unlockMinZoom", true).toBool();
 }
 
 void Settings::setUnlockMinZoom(bool mode) {
-    settings->settingsConf->setValue("unlockMinZoom", mode);
+    settingsConf->setValue("unlockMinZoom", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::sortFolders() {
-    return settings->settingsConf->value("sortFolders", true).toBool();
+    return settingsConf->value("sortFolders", true).toBool();
 }
 
 void Settings::setSortFolders(bool mode) {
-    settings->settingsConf->setValue("sortFolders", mode);
+    settingsConf->setValue("sortFolders", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::trackpadDetection() {
-    return settings->settingsConf->value("trackpadDetection", true).toBool();
+    return settingsConf->value("trackpadDetection", true).toBool();
 }
 
 void Settings::setTrackpadDetection(bool mode) {
-    settings->settingsConf->setValue("trackpadDetection", mode);
+    settingsConf->setValue("trackpadDetection", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::clickableEdges() {
-    return settings->settingsConf->value("clickableEdges", false).toBool();
+    return settingsConf->value("clickableEdges", false).toBool();
 }
 
 void Settings::setClickableEdges(bool mode) {
-    settings->settingsConf->setValue("clickableEdges", mode);
+    settingsConf->setValue("clickableEdges", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::clickableEdgesVisible() {
-    return settings->settingsConf->value("clickableEdgesVisible", true).toBool();
+    return settingsConf->value("clickableEdgesVisible", true).toBool();
 }
 
 void Settings::setClickableEdgesVisible(bool mode) {
-    settings->settingsConf->setValue("clickableEdgesVisible", mode);
+    settingsConf->setValue("clickableEdgesVisible", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::showHiddenFiles() {
-    return settings->settingsConf->value("showHiddenFiles", false).toBool();
+    return settingsConf->value("showHiddenFiles", false).toBool();
 }
 
 void Settings::setShowHiddenFiles(bool mode) {
-    settings->settingsConf->setValue("showHiddenFiles", mode);
+    settingsConf->setValue("showHiddenFiles", mode);
 }
 //------------------------------------------------------------------------------

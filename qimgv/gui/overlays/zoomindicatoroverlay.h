@@ -1,10 +1,7 @@
 #pragma once
 
 #include "gui/customwidgets/overlaywidget.h"
-#include <QApplication>
-#include <QLabel>
 #include <QTimer>
-#include <QHBoxLayout>
 
 class ZoomIndicatorOverlay : public OverlayWidget {
     Q_OBJECT
@@ -14,14 +11,20 @@ public:
     void setScale(qreal scale);
     void show();
     void show(int duration);
+
 protected:
-    virtual void recalculateGeometry();
+    void recalculateGeometry() override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
-    QFontMetrics fm;
-    QHBoxLayout layout;
-    QLabel label;
-    QTimer visibilityTimer;
-    int hideDelay;
-};
+    void updateCache();          // 更新缓存的文本尺寸和字体度量
 
+    QTimer visibilityTimer;
+    int hideDelay = 2000;
+
+    QString m_text;
+    QFontMetrics m_fm;
+    int m_textWidth = 0;
+    int m_ascent = 0;
+    int m_descent = 0;
+};

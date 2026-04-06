@@ -71,8 +71,8 @@ void DocumentInfo::detectFormat() {
 
     mMimeType = mimeDb.mimeTypeForFile(fileInfo.filePath(), QMimeDatabase::MatchContent);
 
-    QByteArray mimeName = mMimeType.name().toUtf8();
-    QByteArray suffix = fileInfo.suffix().toLower().toUtf8();
+    QByteArray mimeName = mMimeType.name().toLatin1();
+    QByteArray suffix = fileInfo.suffix().toLower().toLatin1();
 
     if(mimeName == "image/jpeg") {
 

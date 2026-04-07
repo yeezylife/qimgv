@@ -34,7 +34,7 @@ void WindowsWorker::requestDirectoryHandle(const QString& path) {
         QMutexLocker locker(&pathMutex);
         if (path == pendingPath && hDirectory) return;
         pendingPath = path;
-        shouldCancel = (hDirectory != nullptr);
+        shouldCancel = (hDirectory.get() != nullptr);
     }
     needsRestart.store(true, std::memory_order_release);
     // 立即中断当前阻塞的 ReadDirectoryChangesW，让循环快速响应新路径

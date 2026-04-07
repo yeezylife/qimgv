@@ -479,8 +479,11 @@ void Core::openFromClipboard() {
                 QFile::remove(tmpPath);
             }
         }
-        if(success)
-            loadPath(destPath);
+        if(success) {
+            QTimer::singleShot(0, this, [this, destPath]() {
+                loadPath(destPath);
+            });
+        }
     }
 }
 

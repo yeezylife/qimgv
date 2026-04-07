@@ -53,8 +53,6 @@ void WindowsWatcher::setWatchPath(const QString &path)
 {
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
-    // 仅保存路径，不再同步获取句柄
-    // 实际的 CreateFileW 调用将在 worker 线程中执行
     d->currentDirectory = path;
 }
 
@@ -63,13 +61,20 @@ void WindowsWatcher::requestWatchPath(const QString& path)
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
     
-    // 通过异步方式请求句柄，避免阻塞主线程
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
     if (windowsWorker && d->workerThread->isRunning()) {
         QMetaObject::invokeMethod(windowsWorker, "requestDirectoryHandle",
                                   Qt::QueuedConnection, Q_ARG(QString, path));
     } else {
-        // 线程未启动时也保存路径，让 run() 中获取
         windowsWorker->setWatchPath(path);
+    }
+}
+
+void WindowsWatcher::cancelIo()
+{
+    Q_D(WindowsWatcher);
+    auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
+    if (windowsWorker) {
+        QMetaObject::invokeMethod(windowsWorker, "cancelIo", Qt::QueuedConnection);
     }
 }

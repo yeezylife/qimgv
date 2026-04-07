@@ -5,7 +5,7 @@
 #include <QThread>
 
 WindowsWorker::WindowsWorker() {
-    buffer.resize(131072); // 128KB，提高高并发场景下的事件处理能力
+    buffer.resize(131072); // 128KB
 }
 
 void WindowsWorker::setDirectoryHandle(ScopedHandle handle) {
@@ -13,13 +13,31 @@ void WindowsWorker::setDirectoryHandle(ScopedHandle handle) {
 }
 
 void WindowsWorker::setWatchPath(const QString& path) {
+    QMutexLocker locker(&pathMutex);
     watchPath = path;
+    pendingPath = path;
+}
+
+void WindowsWorker::cancelIo() {
+    HANDLE hDir = hDirectory.get();
+    if (hDir) {
+        CancelIoEx(hDir, nullptr);
+    }
 }
 
 void WindowsWorker::requestDirectoryHandle(const QString& path) {
-    watchPath = path;
+    {
+        QMutexLocker locker(&pathMutex);
+        if (path == pendingPath && hDirectory) return;
+        pendingPath = path;
+    }
+    needsRestart.store(true, std::memory_order_release);
+}
+
+HANDLE WindowsWorker::openDirectoryHandle(const QString& path) {
     HANDLE hDir = INVALID_HANDLE_VALUE;
-    
+    int delay = 10;  // 指数退避起始
+
     while (isRunning.load(std::memory_order_acquire) && hDir == INVALID_HANDLE_VALUE) {
         hDir = CreateFileW(
             reinterpret_cast<LPCWSTR>(path.utf16()),
@@ -32,53 +50,87 @@ void WindowsWorker::requestDirectoryHandle(const QString& path) {
 
         if (hDir == INVALID_HANDLE_VALUE) {
             if (GetLastError() == ERROR_SHARING_VIOLATION) {
-                QThread::msleep(50);
+                QThread::msleep(delay);
+                delay = std::min(delay * 2, 200);
             } else {
                 break;
             }
         }
     }
 
-    if (hDir != INVALID_HANDLE_VALUE) {
-        hDirectory = ScopedHandle(hDir);
-    }
+    return hDir;
 }
 
 void WindowsWorker::run() {
     emit started();
-    // 如果没有预先设置句柄，则尝试在 run 中请求
-    if (!hDirectory && !watchPath.isEmpty()) {
-        requestDirectoryHandle(watchPath);
+
+    QString currentPath;
+    {
+        QMutexLocker locker(&pathMutex);
+        currentPath = pendingPath.isEmpty() ? watchPath : pendingPath;
     }
+
+    if (!hDirectory && !currentPath.isEmpty()) {
+        HANDLE hDir = openDirectoryHandle(currentPath);
+        if (hDir) {
+            hDirectory = ScopedHandle(hDir);
+        }
+    }
+
     if (!hDirectory) {
         emit finished();
         return;
     }
 
-    DWORD bytesReturned = 0;
-    constexpr DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | 
-                                   FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | 
+    constexpr DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME |
+                                   FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE |
                                    FILE_NOTIFY_CHANGE_LAST_WRITE;
 
-    while (isRunning.load(std::memory_order_acquire) &&
-           ReadDirectoryChangesW(hDirectory.get(), buffer.data(), buffer.size(), FALSE, notifyFilter, &bytesReturned, nullptr, nullptr)) {
-        if (bytesReturned == 0) {
+    while (isRunning.load(std::memory_order_acquire)) {
+        if (needsRestart.exchange(false, std::memory_order_acquire)) {
+            QString newPath;
+            {
+                QMutexLocker locker(&pathMutex);
+                newPath = pendingPath;
+            }
+
+            hDirectory.close();
+
+            currentPath = newPath;
+            HANDLE hDir = openDirectoryHandle(currentPath);
+            if (hDir) {
+                hDirectory = ScopedHandle(hDir);
+            }
+
+            if (!hDirectory) {
+                emit finished();
+                return;
+            }
             continue;
         }
+
+        DWORD bytesReturned = 0;
+        if (!ReadDirectoryChangesW(hDirectory.get(), buffer.data(), buffer.size(), FALSE,
+                                    notifyFilter, &bytesReturned, nullptr, nullptr)) {
+            // 被 CancelIoEx 中断 → 正常切换
+            if (needsRestart.load(std::memory_order_acquire)) {
+                continue;
+            }
+            // 真正的 I/O 错误 → 退出
+            break;
+        }
+
+        if (bytesReturned == 0) continue;
 
         auto notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(buffer.data());
         do {
             const auto len = notify->FileNameLength / sizeof(WCHAR);
-            if (len == 0 || len > 4096) {
-                break;
-            }
+            if (len == 0 || len > 4096) break;
 
             const QString fileName(reinterpret_cast<const QChar*>(notify->FileName), static_cast<qsizetype>(len));
             emit notifyEvent(fileName, notify->Action);
 
-            if (notify->NextEntryOffset == 0) {
-                break;
-            }
+            if (notify->NextEntryOffset == 0) break;
             notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(
                 reinterpret_cast<std::byte*>(notify) + notify->NextEntryOffset);
         } while (true);

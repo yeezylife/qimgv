@@ -5,14 +5,15 @@
 #include "../watcherworker.h"
 #include <windows.h>
 #include <QString>
+#include <QMutex>
+#include <algorithm>
 #include <utility>
 
-// RAII 封装 Windows 句柄，明确所有权
 class ScopedHandle {
 public:
     ScopedHandle() noexcept = default;
     explicit ScopedHandle(HANDLE h) noexcept : handle_(h) {}
-    ~ScopedHandle() noexcept { reset(); }
+    ~ScopedHandle() noexcept { close(); }
 
     ScopedHandle(const ScopedHandle&) = delete;
     ScopedHandle& operator=(const ScopedHandle&) = delete;
@@ -20,17 +21,19 @@ public:
     ScopedHandle(ScopedHandle&& other) noexcept : handle_(other.release()) {}
     ScopedHandle& operator=(ScopedHandle&& other) noexcept {
         if (this != &other) {
-            reset();
+            close();
             handle_ = other.release();
         }
         return *this;
     }
 
-    void reset(HANDLE h = INVALID_HANDLE_VALUE) noexcept {
+    void reset(HANDLE h = INVALID_HANDLE_VALUE) noexcept { close(); handle_ = h; }
+
+    void close() noexcept {
         if (handle_ != INVALID_HANDLE_VALUE) {
             CloseHandle(handle_);
+            handle_ = INVALID_HANDLE_VALUE;
         }
-        handle_ = h;
     }
 
     HANDLE get() const noexcept { return handle_; }
@@ -49,7 +52,8 @@ public:
     void run() override;
     void setDirectoryHandle(ScopedHandle handle);
     void setWatchPath(const QString& path);
-    void requestDirectoryHandle(const QString& path);
+    Q_INVOKABLE void requestDirectoryHandle(const QString& path);
+    Q_INVOKABLE void cancelIo();  // 从主线程直接调用
 
 signals:
     void notifyEvent(const QString& fileName, DWORD action);
@@ -57,9 +61,14 @@ signals:
     void started();
 
 private:
+    HANDLE openDirectoryHandle(const QString& path);
+
     ScopedHandle hDirectory;
     QString watchPath;
+    QString pendingPath;
     QByteArray buffer;
+    std::atomic<bool> needsRestart{false};
+    QMutex pathMutex;
 };
 
 #endif // WINDOWSWORKER_H

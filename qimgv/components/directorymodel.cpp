@@ -245,14 +245,19 @@ bool DirectoryModel::saveFile(const QString &filePath, const QString &destPath) 
             dirManager.updateFileEntry(destPath);
             emit fileModified(destPath);
         } else {
-            // manually add if we are saving to the same dir
+            // save to new path (save as)
+            // only manage files in the same directory
             QFileInfo fiSrc(filePath);
             QFileInfo fiDest(destPath);
-            // handle same dir
             if(fiSrc.absolutePath() == fiDest.absolutePath()) {
-                // overwrite
-                if(!dirManager.containsFile(destPath) && dirManager.insertFileEntry(destPath))
+                if(dirManager.containsFile(destPath)) {
+                    // destination file exists - overwrite
+                    dirManager.updateFileEntry(destPath);
                     emit fileModified(destPath);
+                } else if(dirManager.insertFileEntry(destPath)) {
+                    // new file added
+                    emit fileAdded(destPath);
+                }
             }
         }
         return true;

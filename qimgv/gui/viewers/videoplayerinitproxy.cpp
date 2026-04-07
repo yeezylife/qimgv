@@ -65,13 +65,20 @@ inline bool VideoPlayerInitProxy::initPlayer() {
     if(player)
         return true;
 
-    // 搜索插件文件
-    QFileInfo pluginFile;
-    for(const auto& dir : libDirs) {
-        pluginFile.setFile(dir + "/" + libFile);
-        if(pluginFile.isFile() && pluginFile.isReadable()) {
-            playerLib.setFileName(pluginFile.absoluteFilePath());
-            break;
+    // 只在未初始化时搜索和设置一次，避免 QLibrary::setFileName 导致 DLL 重加载
+    if(!playerLibInitialized) {
+        QFileInfo pluginFile;
+        for(const auto& dir : libDirs) {
+            pluginFile.setFile(dir + "/" + libFile);
+            if(pluginFile.isFile() && pluginFile.isReadable()) {
+                playerLib.setFileName(pluginFile.absoluteFilePath());
+                playerLibInitialized = true;
+                break;
+            }
+        }
+        
+        if(!playerLibInitialized) {
+            return false;
         }
     }
     

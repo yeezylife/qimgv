@@ -52,8 +52,9 @@ public:
     void run() override;
     void setDirectoryHandle(ScopedHandle handle);
     void setWatchPath(const QString& path);
-    Q_INVOKABLE void requestDirectoryHandle(const QString& path);
-    Q_INVOKABLE void cancelIo();  // 从主线程直接调用
+    // 这些方法可被任意线程直接调用，内部通过原子变量和互斥锁保证线程安全
+    void requestDirectoryHandle(const QString& path);
+    void cancelIo();
 
 signals:
     void notifyEvent(const QString& fileName, DWORD action);

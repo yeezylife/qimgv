@@ -56,17 +56,26 @@ void WindowsWatcher::setWatchPath(const QString &path)
     d->currentDirectory = path;
 }
 
+void WindowsWatcher::stopObserving()
+{
+    Q_D(WindowsWatcher);
+    if (!d->workerThread || !d->workerThread->isRunning())
+        return;
+
+    // 先中断阻塞的 I/O，让工作线程能快速退出
+    cancelIo();
+    DirectoryWatcher::stopObserving();
+}
+
 void WindowsWatcher::requestWatchPath(const QString& path)
 {
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
     
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
-    if (windowsWorker && d->workerThread->isRunning()) {
-        QMetaObject::invokeMethod(windowsWorker, "requestDirectoryHandle",
-                                  Qt::QueuedConnection, Q_ARG(QString, path));
-    } else {
-        windowsWorker->setWatchPath(path);
+    if (windowsWorker) {
+        // 直接调用而非 invokeMethod，避免依赖事件队列
+        windowsWorker->requestDirectoryHandle(path);
     }
 }
 
@@ -75,6 +84,7 @@ void WindowsWatcher::cancelIo()
     Q_D(WindowsWatcher);
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
     if (windowsWorker) {
-        QMetaObject::invokeMethod(windowsWorker, "cancelIo", Qt::QueuedConnection);
+        // 直接调用而非 invokeMethod
+        windowsWorker->cancelIo();
     }
 }

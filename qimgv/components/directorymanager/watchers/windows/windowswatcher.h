@@ -12,6 +12,7 @@ class WindowsWatcher : public DirectoryWatcher
 public:
     explicit WindowsWatcher(QObject* parent = nullptr);
     void setWatchPath(const QString& path) override;
+    void stopObserving() override;
     void requestWatchPath(const QString& path);
     void cancelIo();  // 中断阻塞中的 ReadDirectoryChangesW
 

@@ -26,12 +26,19 @@ void WindowsWorker::cancelIo() {
 }
 
 void WindowsWorker::requestDirectoryHandle(const QString& path) {
+    bool shouldCancel = false;
     {
         QMutexLocker locker(&pathMutex);
         if (path == pendingPath && hDirectory) return;
         pendingPath = path;
+        shouldCancel = (hDirectory != nullptr);
     }
     needsRestart.store(true, std::memory_order_release);
+    // 立即中断当前阻塞的 ReadDirectoryChangesW，让循环快速响应新路径
+    if (shouldCancel) {
+        HANDLE hDir = hDirectory.get();
+        if (hDir) CancelIoEx(hDir, nullptr);
+    }
 }
 
 HANDLE WindowsWorker::openDirectoryHandle(const QString& path) {

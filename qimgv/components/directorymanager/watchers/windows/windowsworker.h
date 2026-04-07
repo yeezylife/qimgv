@@ -50,7 +50,7 @@ public:
     explicit WindowsWorker();
     ~WindowsWorker() override = default;
     void run() override;
-    void setDirectoryHandle(ScopedHandle handle);
+    void setRunning(bool running);
     void setWatchPath(const QString& path);
     // 这些方法可被任意线程直接调用，内部通过原子变量和互斥锁保证线程安全
     void requestDirectoryHandle(const QString& path);

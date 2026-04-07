@@ -8,8 +8,11 @@ WindowsWorker::WindowsWorker() {
     buffer.resize(131072); // 128KB
 }
 
-void WindowsWorker::setDirectoryHandle(ScopedHandle handle) {
-    hDirectory = std::move(handle);
+void WindowsWorker::setRunning(bool running) {
+    isRunning.store(running, std::memory_order_release);
+    if (!running) {
+        cancelIo();  // 中断阻塞的 I/O，让 run() 快速退出
+    }
 }
 
 void WindowsWorker::setWatchPath(const QString& path) {

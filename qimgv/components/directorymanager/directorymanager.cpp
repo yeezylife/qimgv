@@ -73,22 +73,22 @@ auto DirectoryManager::compareFunction() -> CompareFunction {
 }
 
 void DirectoryManager::startFileWatcher(const QString &directoryPath) {
-    if(directoryPath == "") return;
+    if(directoryPath.isEmpty()) return;
     bool isFirstTime = !watcher;
-    if(isFirstTime)
+    if(isFirstTime) {
         watcher = DirectoryWatcher::newInstance();
-    connect(watcher, &DirectoryWatcher::fileCreated, this, &DirectoryManager::onFileAddedExternal, Qt::UniqueConnection);
-    connect(watcher, &DirectoryWatcher::fileDeleted, this, &DirectoryManager::onFileRemovedExternal, Qt::UniqueConnection);
-    connect(watcher, &DirectoryWatcher::fileModified, this, &DirectoryManager::onFileModifiedExternal, Qt::UniqueConnection);
-    connect(watcher, &DirectoryWatcher::fileRenamed, this, &DirectoryManager::onFileRenamedExternal, Qt::UniqueConnection);
-    // 先中断阻塞中的 ReadDirectoryChangesW，再停止旧 watcher
-    if (!isFirstTime && watcher->isObserving()) {
-        static_cast<WindowsWatcher*>(watcher)->cancelIo();
+        connect(watcher, &DirectoryWatcher::fileCreated, this, &DirectoryManager::onFileAddedExternal, Qt::UniqueConnection);
+        connect(watcher, &DirectoryWatcher::fileDeleted, this, &DirectoryManager::onFileRemovedExternal, Qt::UniqueConnection);
+        connect(watcher, &DirectoryWatcher::fileModified, this, &DirectoryManager::onFileModifiedExternal, Qt::UniqueConnection);
+        connect(watcher, &DirectoryWatcher::fileRenamed, this, &DirectoryManager::onFileRenamedExternal, Qt::UniqueConnection);
     }
-    stopFileWatcher();
-    // 使用异步方式设置路径，避免阻塞主线程
+    // 线程正在运行时，使用平滑路径切换（不重启线程）
+    if(!isFirstTime && watcher->isObserving()) {
+        watcher->requestWatchPath(directoryPath);
+        return;
+    }
+    // 首次启动：设置路径并启动
     watcher->setWatchPath(directoryPath);
-    watcher->requestWatchPath(directoryPath);
     watcher->observe();
 }
 

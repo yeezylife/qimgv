@@ -34,11 +34,6 @@ public:
 public slots:
     void dispatchNotify(const QString& fileName, DWORD action);
 
-private:
-    // 注意：oldFileName仅在dispatchNotify槽函数中读写，该槽函数在worker线程中执行。
-    // 由于重命名事件总是成对出现（FILE_ACTION_RENAMED_OLD_NAME后跟FILE_ACTION_RENAMED_NEW_NAME），
-    // 且Qt信号槽连接保证同一线程内的顺序调用，因此线程安全。
-    QString oldFileName;
 };
 
 #endif // WINDOWSWATCHER_P_H

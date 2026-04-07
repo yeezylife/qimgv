@@ -10,8 +10,10 @@ WindowsWorker::WindowsWorker() {
 
 void WindowsWorker::setRunning(bool running) {
     isRunning.store(running, std::memory_order_release);
+
     if (!running) {
-        cancelIo();  // 中断阻塞的 I/O，让 run() 快速退出
+        needsRestart.store(false, std::memory_order_release); // ⭐ 防止退出时误重启
+        cancelIo();  // 中断阻塞 I/O
     }
 }
 
@@ -92,11 +94,20 @@ void WindowsWorker::run() {
         return;
     }
 
-    constexpr DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME |
-                                   FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE |
-                                   FILE_NOTIFY_CHANGE_LAST_WRITE;
+    constexpr DWORD notifyFilter =
+        FILE_NOTIFY_CHANGE_FILE_NAME |
+        FILE_NOTIFY_CHANGE_DIR_NAME |
+        FILE_NOTIFY_CHANGE_ATTRIBUTES |
+        FILE_NOTIFY_CHANGE_SIZE |
+        FILE_NOTIFY_CHANGE_LAST_WRITE;
 
-    while (isRunning.load(std::memory_order_acquire)) {
+    while (true) {
+        // ⭐ 优先检查运行状态（避免卡住）
+        if (!isRunning.load(std::memory_order_acquire)) {
+            break;
+        }
+
+        // ⭐ restart 逻辑
         if (needsRestart.exchange(false, std::memory_order_acquire)) {
             QString newPath;
             {
@@ -113,38 +124,63 @@ void WindowsWorker::run() {
             }
 
             if (!hDirectory) {
-                emit finished();
-                return;
+                break;
             }
             continue;
         }
 
         DWORD bytesReturned = 0;
-        if (!ReadDirectoryChangesW(hDirectory.get(), buffer.data(), buffer.size(), FALSE,
-                                    notifyFilter, &bytesReturned, nullptr, nullptr)) {
-            // 被 CancelIoEx 中断 → 正常切换
+
+        if (!ReadDirectoryChangesW(
+                hDirectory.get(),
+                buffer.data(),
+                buffer.size(),
+                FALSE,
+                notifyFilter,
+                &bytesReturned,
+                nullptr,
+                nullptr)) {
+
+            // ⭐ 被 cancel 且正在退出 → 直接结束
+            if (!isRunning.load(std::memory_order_acquire)) {
+                break;
+            }
+
+            // ⭐ 被 restart 打断
             if (needsRestart.load(std::memory_order_acquire)) {
                 continue;
             }
-            // 真正的 I/O 错误 → 退出
+
+            // 真错误
             break;
         }
 
-        if (bytesReturned == 0) continue;
+        if (bytesReturned == 0) {
+            continue;
+        }
 
         auto notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(buffer.data());
+
         do {
             const auto len = notify->FileNameLength / sizeof(WCHAR);
             if (len == 0 || len > 4096) break;
 
-            const QString fileName(reinterpret_cast<const QChar*>(notify->FileName), static_cast<qsizetype>(len));
+            const QString fileName(
+                reinterpret_cast<const QChar*>(notify->FileName),
+                static_cast<qsizetype>(len));
+
             emit notifyEvent(fileName, notify->Action);
 
             if (notify->NextEntryOffset == 0) break;
+
             notify = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(
                 reinterpret_cast<std::byte*>(notify) + notify->NextEntryOffset);
+
         } while (true);
     }
+
+    // ⭐ 确保 handle 关闭（避免悬挂）
+    hDirectory.close();
 
     emit finished();
 }

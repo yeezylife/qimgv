@@ -202,7 +202,6 @@ void DirectoryModel::moveFileTo(const QString &srcFile, const QString &destDirPa
 
 // -----------------------------------------------------------------------------
 bool DirectoryModel::setDirectory(const QString &path) {
-    cache.clear();
     return dirManager.setDirectory(path);
 }
 

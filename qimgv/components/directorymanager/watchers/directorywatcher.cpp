@@ -117,7 +117,13 @@ void DirectoryWatcher::stopObserving()
         return;
 
     d->worker->setRunning(false);
+    d->workerThread->requestInterruption();
     d->workerThread->quit();
-    d->workerThread->wait(kThreadWaitMs);
-    emit observingStopped();
+    // 不阻塞主线程，线程退出后通过 finished 信号通知清理
+}
+
+void DirectoryWatcher::requestWatchPath(const QString& path)
+{
+    // 子类重写以处理异步路径设置
+    Q_UNUSED(path);
 }

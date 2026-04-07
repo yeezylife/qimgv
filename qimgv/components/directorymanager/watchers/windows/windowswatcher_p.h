@@ -33,6 +33,7 @@ public:
 
 public slots:
     void dispatchNotify(const QString& fileName, DWORD action);
+    void onWorkerRequestPath(const QString& path);
 
 private:
     // 注意：oldFileName仅在dispatchNotify槽函数中读写，该槽函数在worker线程中执行。

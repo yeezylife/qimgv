@@ -12,6 +12,7 @@ class WindowsWatcher : public DirectoryWatcher
 public:
     explicit WindowsWatcher(QObject* parent = nullptr);
     void setWatchPath(const QString& path) override;
+    void requestWatchPath(const QString& path) override;
 
 private:
     Q_DECLARE_PRIVATE(WindowsWatcher)

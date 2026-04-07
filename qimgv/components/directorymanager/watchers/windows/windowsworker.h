@@ -48,6 +48,8 @@ public:
     ~WindowsWorker() override = default;
     void run() override;
     void setDirectoryHandle(ScopedHandle handle);
+    void setWatchPath(const QString& path);
+    void requestDirectoryHandle(const QString& path);
 
 signals:
     void notifyEvent(const QString& fileName, DWORD action);
@@ -56,6 +58,7 @@ signals:
 
 private:
     ScopedHandle hDirectory;
+    QString watchPath;
     QByteArray buffer;
 };
 

@@ -10,34 +10,6 @@ WindowsWatcherPrivate::WindowsWatcherPrivate(WindowsWatcher* qq)
     connect(windowsWorker, &WindowsWorker::notifyEvent, this, &WindowsWatcherPrivate::dispatchNotify);
 }
 
-ScopedHandle WindowsWatcherPrivate::requestDirectoryHandle(const QString& path)
-{
-    HANDLE hDirectory;
-    do {
-        // 优化：直接使用 QString::utf16() 避免了 toStdWString() 产生的 std::wstring 临时对象内存分配和拷贝
-        hDirectory = CreateFileW(
-            reinterpret_cast<LPCWSTR>(path.utf16()),
-            FILE_LIST_DIRECTORY,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            nullptr,
-            OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS,
-            nullptr);
-
-        if (hDirectory == INVALID_HANDLE_VALUE) {
-            if (GetLastError() == ERROR_SHARING_VIOLATION) {
-                // 优化：缩短等待时间，提高 UI 响应速度（从 1000ms 减少到 100ms）
-                QThread::msleep(100);
-            } else {
-                qDebug() << lastError();
-                return ScopedHandle();
-            }
-        }
-    } while (hDirectory == INVALID_HANDLE_VALUE);
-
-    return ScopedHandle(hDirectory);
-}
-
 void WindowsWatcherPrivate::dispatchNotify(const QString& fileName, DWORD action)
 {
     Q_Q(WindowsWatcher);
@@ -71,8 +43,6 @@ WindowsWatcher::WindowsWatcher(QObject* parent)
     : DirectoryWatcher(new WindowsWatcherPrivate(this))
 {
     Q_D(WindowsWatcher);
-    // 基类已经完成 worker 的 moveToThread 以及 started -> startWorker 的连接
-    // 这里只需要额外连接 worker 的 finished 信号来停止线程，以及转发 started/finished 信号
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
     connect(windowsWorker, &WindowsWorker::finished, d->workerThread.data(), &QThread::quit);
     connect(windowsWorker, &WindowsWorker::started, this, &WindowsWatcher::observingStarted);
@@ -83,13 +53,23 @@ void WindowsWatcher::setWatchPath(const QString &path)
 {
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
+    // 仅保存路径，不再同步获取句柄
+    // 实际的 CreateFileW 调用将在 worker 线程中执行
+    d->currentDirectory = path;
+}
 
-    ScopedHandle hDirectory = d->requestDirectoryHandle(path);
-    if (!hDirectory) {
-        qDebug() << "requestDirectoryHandle: INVALID_HANDLE_VALUE";
-        return;
-    }
-
+void WindowsWatcher::requestWatchPath(const QString& path)
+{
+    Q_D(WindowsWatcher);
+    DirectoryWatcher::setWatchPath(path);
+    
+    // 通过异步方式请求句柄，避免阻塞主线程
     auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
-    windowsWorker->setDirectoryHandle(std::move(hDirectory));
+    if (windowsWorker && d->workerThread->isRunning()) {
+        QMetaObject::invokeMethod(windowsWorker, "requestDirectoryHandle",
+                                  Qt::QueuedConnection, Q_ARG(QString, path));
+    } else {
+        // 线程未启动时也保存路径，让 run() 中获取
+        windowsWorker->setWatchPath(path);
+    }
 }

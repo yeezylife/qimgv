@@ -19,6 +19,7 @@ public:
 public Q_SLOTS:
     void observe();
     void stopObserving();
+    void requestWatchPath(const QString& path);
 
 Q_SIGNALS:
     void fileCreated(const QString& filePath);

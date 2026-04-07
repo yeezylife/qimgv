@@ -80,7 +80,9 @@ void DirectoryManager::startFileWatcher(const QString &directoryPath) {
     connect(watcher, &DirectoryWatcher::fileDeleted, this, &DirectoryManager::onFileRemovedExternal, Qt::UniqueConnection);
     connect(watcher, &DirectoryWatcher::fileModified, this, &DirectoryManager::onFileModifiedExternal, Qt::UniqueConnection);
     connect(watcher, &DirectoryWatcher::fileRenamed, this, &DirectoryManager::onFileRenamedExternal, Qt::UniqueConnection);
+    // 使用异步方式设置路径，避免阻塞主线程
     watcher->setWatchPath(directoryPath);
+    watcher->requestWatchPath(directoryPath);
     watcher->observe();
 }
 

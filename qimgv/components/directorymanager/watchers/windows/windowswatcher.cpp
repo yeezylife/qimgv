@@ -54,6 +54,11 @@ void WindowsWatcher::setWatchPath(const QString &path)
     Q_D(WindowsWatcher);
     DirectoryWatcher::setWatchPath(path);
     d->currentDirectory = path;
+    
+    auto windowsWorker = static_cast<WindowsWorker*>(d->worker.data());
+    if (windowsWorker) {
+        windowsWorker->setWatchPath(path);
+    }
 }
 
 void WindowsWatcher::stopObserving()

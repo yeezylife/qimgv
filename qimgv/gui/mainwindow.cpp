@@ -391,11 +391,6 @@ void MW::saveCurrentDisplay() {
 
 void MW::showEvent(QShowEvent *event) {
     FloatingWidgetContainer::showEvent(event);
-
-    // ⭐⭐⭐ 关键：在窗口刚出现时立刻画一帧
-    update();
-    repaint();   // 强制同步绘制，避免第一帧白屏
-
     if (!firstShowHandled) {
         firstShowHandled = true;
         QTimer::singleShot(0, this, [this] {

@@ -42,6 +42,9 @@ public:
     Core();
     void showGui();
 
+signals:
+    void firstImageReady();
+
 public slots:
     void updateInfoString();
     bool loadPath(const QString& path);

@@ -158,11 +158,15 @@ int main(int argc, char *argv[]) {
     QObject::connect(&a, &MacOSApplication::fileOpened, &core, &Core::loadPath);
 #endif
 
-    if(parser.positionalArguments().count())
+    bool hasInitialFile = parser.positionalArguments().count();
+    if(hasInitialFile) {
+        // 有打开的文件时：先加载图片，准备好再显示窗口
+        QObject::connect(&core, &Core::firstImageReady, &core, &Core::showGui, Qt::SingleShotConnection);
         core.loadPath(parser.positionalArguments().at(0));
-
-    // defer GUI show until the event loop is running, avoiding manual processEvents call
-    QTimer::singleShot(0, &core, &Core::showGui);
+    } else {
+        // 没有文件时：直接显示窗口
+        QTimer::singleShot(0, &core, &Core::showGui);
+    }
 
     return a.exec();
 }

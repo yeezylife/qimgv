@@ -43,8 +43,13 @@ void Core::readSettings() {
 }
 
 void Core::showGui() {
+    // ⭐⭐⭐ 终极保险：没有图就不允许显示
+    if(!state.currentImg)
+        return;
+
     if(mw && !mw->isVisible())
         mw->showDefault();
+
     QTimer::singleShot(0, mw.get(), &MW::setupFullUi);
 }
 
@@ -1311,10 +1316,10 @@ void Core::onModelItemReady(const std::shared_ptr<Image>& img, const QString &pa
     if(path == state.currentFilePath) {
         state.currentImg = img;
         guiSetImage(img);
+        emit firstImageReady();
         updateInfoString();
 
         if(state.delayModel) {
-            this->showGui();
             state.delayModel = false;
             QTimer::singleShot(40, this, SLOT(modelDelayLoad()));
         }

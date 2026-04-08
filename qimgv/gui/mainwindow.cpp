@@ -8,9 +8,10 @@ using namespace Qt::StringLiterals;
 MW::MW(QWidget *parent)
 : FloatingWidgetContainer(parent)
 {
-    // 优化：移除 WA_TranslucentBackground，减少 DWM 合成开销
-    // setAttribute(Qt::WA_TranslucentBackground, true);
-    
+    // ⭐⭐⭐ 核心：彻底禁止系统/Qt 擦背景（消灭闪白根源）
+    setAttribute(Qt::WA_OpaquePaintEvent);
+    setAttribute(Qt::WA_NoSystemBackground);
+
     layout.setContentsMargins(0,0,0,0);
     layout.setSpacing(0);
     setMinimumSize(10,10);
@@ -390,6 +391,11 @@ void MW::saveCurrentDisplay() {
 
 void MW::showEvent(QShowEvent *event) {
     FloatingWidgetContainer::showEvent(event);
+
+    // ⭐⭐⭐ 关键：在窗口刚出现时立刻画一帧
+    update();
+    repaint();   // 强制同步绘制，避免第一帧白屏
+
     if (!firstShowHandled) {
         firstShowHandled = true;
         QTimer::singleShot(0, this, [this] {
@@ -985,8 +991,12 @@ void MW::adaptToWindowState() {
 
 void MW::paintEvent(QPaintEvent *event) {
     QPainter p(this);
-    p.fillRect(rect(), Qt::black);
-    FloatingWidgetContainer::paintEvent(event);
+
+    // ⭐ 第一帧就强制填满（关键）
+    p.fillRect(rect(), QColor(0x1a, 0x1a, 0x1a));
+
+    // 再让子控件绘制
+    QWidget::paintEvent(event);
 }
 
 void MW::leaveEvent(QEvent *event) {

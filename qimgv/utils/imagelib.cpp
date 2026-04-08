@@ -189,7 +189,7 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
         cv::addWeighted(dstMat, 1.0 + amount, blurred, -amount, 0, dstMat);
     }
 
-    // 原版调用，正确且高效
-    return QtOcv::mat2Image(dstMat, order, srcRef.format());
+    // 零拷贝返回：cv::Mat 内部引用计数自动管理生命周期，安全共享
+    return QtOcv::mat2Image_shared(dstMat, srcRef.format());
 }
 #endif

@@ -646,34 +646,61 @@ QStringList DirectoryManager::fileList() const {
 void DirectoryManager::onFileRemovedExternal(const QString &fileName) {
     if(mIgnoreWatcherEvents)
         return;
-    QString fullPath = watcher->watchPath() + "/" + fileName;
-    removeDirEntry(fullPath);
+
+    const QString fullPath = QDir(watcher->watchPath()).filePath(fileName);
+
+    // ⭐ 两边都尝试（无需判断类型）
     removeFileEntry(fullPath);
+    removeDirEntry(fullPath);
 }
 
 void DirectoryManager::onFileAddedExternal(const QString &fileName) {
     if(mIgnoreWatcherEvents)
         return;
-    QString fullPath = watcher->watchPath() + "/" + fileName;
-    if(isDir(fullPath))
+
+    const QString fullPath = QDir(watcher->watchPath()).filePath(fileName);
+
+    // ⭐ 优先按 file 处理（更常见），失败再当 dir
+    if (!insertFileEntry(fullPath)) {
         insertDirEntry(fullPath);
-    else
-        insertFileEntry(fullPath);
+    }
 }
 
 void DirectoryManager::onFileRenamedExternal(const QString &oldName, const QString &newName) {
     if(mIgnoreWatcherEvents)
         return;
-    QString oldPath = watcher->watchPath() + "/" + oldName;
-    QString newPath = watcher->watchPath() + "/" + newName;
-    if(isDir(newPath))
+
+    const QString base = watcher->watchPath();
+    const QString oldPath = QDir(base).filePath(oldName);
+    const QString newPath = QDir(base).filePath(newName);
+
+    // ⭐ 优先用已有索引判断（避免文件系统时序问题）
+    if (containsDir(oldPath)) {
         renameDirEntry(DirPath(oldPath), DirName(newName));
-    else
+        return;
+    }
+
+    if (containsFile(oldPath)) {
         renameFileEntry(FilePath(oldPath), FileName(newName));
+        return;
+    }
+
+    // ⭐ fallback（极少情况：例如 watcher 丢事件 / 初始不同步）
+    if (isDir(newPath)) {
+        renameDirEntry(DirPath(oldPath), DirName(newName));
+    } else {
+        renameFileEntry(FilePath(oldPath), FileName(newName));
+    }
 }
 
 void DirectoryManager::onFileModifiedExternal(const QString &fileName) {
     if(mIgnoreWatcherEvents)
         return;
-    updateFileEntry(watcher->watchPath() + "/" + fileName);
+
+    const QString fullPath = QDir(watcher->watchPath()).filePath(fileName);
+
+    // ⭐ 只在已存在时更新，避免无意义 filesystem 调用
+    if (containsFile(fullPath)) {
+        updateFileEntry(fullPath);
+    }
 }

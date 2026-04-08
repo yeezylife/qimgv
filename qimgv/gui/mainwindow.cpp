@@ -413,8 +413,8 @@ bool MW::event(QEvent *event) {
         maximized = isMaximized();
 
     if(type == QEvent::Move || type == QEvent::Resize) {
-        if(!windowGeometryChangeTimer.isActive())
-            windowGeometryChangeTimer.start();
+        // ⭐ 直接 restart，比 isActive 判断更平滑
+        windowGeometryChangeTimer.start();
     }
 
     return QWidget::event(event);
@@ -514,12 +514,14 @@ QString MW::getSaveFileName(const QString & filePath) {
 
     const auto writerFormats = QImageWriter::supportedImageFormats();
 
-    // 用 QSet 做去重检测，避免 join O(N²)
+    // ⭐ 关键优化：QSet 加速 contains
+    QSet<QByteArray> writerSet(writerFormats.begin(), writerFormats.end());
+
     QSet<QString> addedFormats;
     addedFormats.reserve(writerFormats.size());
 
     auto addFilter = [&](const QByteArray& format, const QString& description) {
-        if(writerFormats.contains(format)) {
+        if(writerSet.contains(format)) {
             filters.append(description);
             addedFormats.insert(QString::fromUtf8(format));
         }
@@ -774,46 +776,56 @@ QString MW::calculateWindowTitle() {
     if(info.fileName.isEmpty()) {
         return qApp->applicationName();
     }
-    
-    QString windowTitle = info.fileName;
-    
+
+    QString windowTitle;
+    windowTitle.reserve(128); // ⭐ 避免反复 realloc
+
+    // 预取状态（避免重复调用）
+    const bool zoomLock = viewerWidget->lockZoomEnabled();
+    const bool viewLock = viewerWidget->lockViewEnabled();
+
     if(settings->windowTitleExtendedInfo()) {
-        QString posString;
-        if(info.fileCount)
-            posString = u"[ %1/%2 ]"_s.arg(info.index + 1).arg(info.fileCount);
-        
-        QString resString;
-        if(info.imageSize.width())
-            resString = u"%1 x %2"_s.arg(info.imageSize.width()).arg(info.imageSize.height());
-        
-        QString sizeString;
-        if(info.fileSize)
-            sizeString = locale().formattedDataSize(info.fileSize, 1);
-        
-        if(!posString.isEmpty())
-            windowTitle.prepend(posString + u"  "_s);
-        if(!resString.isEmpty())
-            windowTitle.append(u"  -  "_s + resString);
-        if(!sizeString.isEmpty())
-            windowTitle.append(u"  -  "_s + sizeString);
+        if(info.fileCount) {
+            windowTitle += u"[ "_s
+                         + QString::number(info.index + 1)
+                         + u"/"_s
+                         + QString::number(info.fileCount)
+                         + u" ]  "_s;
+        }
     }
-    
+
+    windowTitle += info.fileName;
+
+    if(settings->windowTitleExtendedInfo()) {
+        if(info.imageSize.width()) {
+            windowTitle += u"  -  "_s
+                         + QString::number(info.imageSize.width())
+                         + u" x "_s
+                         + QString::number(info.imageSize.height());
+        }
+
+        if(info.fileSize) {
+            windowTitle += u"  -  "_s
+                         + locale().formattedDataSize(info.fileSize, 1);
+        }
+    }
+
     QString states;
-    if(info.slideshow)
-        states.append(u" [slideshow]"_s);
-    if(info.shuffle)
-        states.append(u" [shuffle]"_s);
-    if(viewerWidget->lockZoomEnabled())
-        states.append(u" [zoom lock]"_s);
-    if(viewerWidget->lockViewEnabled())
-        states.append(u" [view lock]"_s);
-    
-    if(!settings->infoBarWindowed() && !states.isEmpty())
-        windowTitle.append(u" -"_s + states);
-    
-    if(info.edited)
-        windowTitle.prepend(u"* "_s);
-    
+    states.reserve(64);
+
+    if(info.slideshow) states += u" [slideshow]"_s;
+    if(info.shuffle)   states += u" [shuffle]"_s;
+    if(zoomLock)       states += u" [zoom lock]"_s;
+    if(viewLock)       states += u" [view lock]"_s;
+
+    if(!settings->infoBarWindowed() && !states.isEmpty()) {
+        windowTitle += u" -"_s + states;
+    }
+
+    if(info.edited) {
+        windowTitle.prepend(u"* "_s); // 这里 prepend 影响很小（短字符串）
+    }
+
     return windowTitle;
 }
 
@@ -824,29 +836,39 @@ void MW::calculateInfoBarContent(QString& infoText, QString& sizeText) {
         return;
     }
 
+    const bool zoomLock = viewerWidget->lockZoomEnabled();
+    const bool viewLock = viewerWidget->lockViewEnabled();
+
     infoText = info.fileName;
     if(info.edited)
         infoText += u"  *"_s;
 
     QString resString;
-    if(info.imageSize.width())
-        resString = u"%1 x %2"_s.arg(info.imageSize.width()).arg(info.imageSize.height());
+    if(info.imageSize.width()) {
+        resString = QString::number(info.imageSize.width())
+                  + u" x "_s
+                  + QString::number(info.imageSize.height());
+    }
 
     QString sizeString;
     if(info.fileSize)
         sizeString = locale().formattedDataSize(info.fileSize, 1);
 
-    sizeText.reserve(resString.size() + sizeString.size() + 16);
-    sizeText = resString;
+    sizeText.clear();
+    sizeText.reserve(resString.size() + sizeString.size() + 32);
+
+    sizeText += resString;
     if(!resString.isEmpty() && !sizeString.isEmpty())
         sizeText += u"  "_s;
     sizeText += sizeString;
 
     QString states;
+    states.reserve(64);
+
     if(info.slideshow) states += u" [slideshow]"_s;
     if(info.shuffle)   states += u" [shuffle]"_s;
-    if(viewerWidget->lockZoomEnabled()) states += u" [zoom lock]"_s;
-    if(viewerWidget->lockViewEnabled()) states += u" [view lock]"_s;
+    if(zoomLock)       states += u" [zoom lock]"_s;
+    if(viewLock)       states += u" [view lock]"_s;
 
     if(!settings->infoBarWindowed() && !states.isEmpty())
         sizeText += u" "_s + states;

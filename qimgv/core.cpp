@@ -43,12 +43,18 @@ void Core::readSettings() {
 }
 
 void Core::showGui() {
-    // ⭐⭐⭐ 终极保险：没有图就不允许显示
-    if(!state.currentImg)
-        return;
 
-    if(mw && !mw->isVisible())
+    if(mw && !mw->isVisible()) {
+        // ⭐ 关键：先设置为透明（避免首帧被看到）
+        mw->setWindowOpacity(0.0);
+
         mw->showDefault();
+
+        // ⭐ 下一帧再显示出来
+        QTimer::singleShot(0, mw.get(), [this]() {
+            mw->setWindowOpacity(1.0);
+        });
+    }
 
     QTimer::singleShot(0, mw.get(), &MW::setupFullUi);
 }

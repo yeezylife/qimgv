@@ -749,25 +749,16 @@ void ImageViewerV2::requestScaling()
         return;
     }
 
-    if (!smoothUpscaling && scale >= 1.0) {
-        lastRequestedScale = -1.0f;
-        return;
-    }
-
     if (scaleTimer->isActive())
         scaleTimer->stop();
 
-    if (scale < FAST_SCALE_THRESHOLD) {
-        const QSize requested = scaledSizeR() * dpr;
-        if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
-            // avoid repeated identical scale requests
-            return;
-        }
-        lastRequestedScale = static_cast<float>(scale);
-        emit scalingRequested(requested, mScalingFilter);
-    } else {
-        lastRequestedScale = -1.0f;
+    const QSize requested = scaledSizeR() * dpr;
+    if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
+        // avoid repeated identical scale requests
+        return;
     }
+    lastRequestedScale = static_cast<float>(scale);
+    emit scalingRequested(requested, mScalingFilter);
 }
 
 void ImageViewerV2::enableDrags()

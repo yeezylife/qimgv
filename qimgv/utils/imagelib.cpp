@@ -21,7 +21,7 @@ static void initVipsOnce()
             qFatal("Failed to init libvips");
         }
         // 使用系统线程数，避免和 Qt 线程池冲突
-        vips_concurrency(QThread::idealThreadCount());
+        vips_concurrency_set(QThread::idealThreadCount());
     });
 }
 
@@ -40,7 +40,7 @@ static VImage vipsFromQImage(const QImage &img)
 
     return VImage::new_from_memory_copy(
         src.constBits(),
-        static_cast<size_t>(src.width() * src.height() * 4),
+        static_cast<size_t>(src.width()) * src.height() * 4,
         src.width(),
         src.height(),
         4,
@@ -91,7 +91,7 @@ static QImage qimageFromVips(const VImage &img)
         static_cast<uchar *>(data),
         out.width(),
         out.height(),
-        out.width() * 4,
+        static_cast<qsizetype>(out.width()) * 4,
         QImage::Format_RGBA8888,
         [](void *p) { g_free(p); },
         data
@@ -165,7 +165,7 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
     return src.transformed(transform, Qt::SmoothTransformation);
 }
 
-QImage ImageLib::rotated(const QImage &src, int grad) {
+QImage ImageLib::rotated(QImage src, int grad) {
     if (grad % 360 == 0) {
         return src;
     }
@@ -182,7 +182,7 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
     return QImage();
 }
 
-QImage ImageLib::cropped(const QImage &src, QRect newRect) {
+QImage ImageLib::cropped(QImage src, QRect newRect) {
     if (src.rect() == newRect) {
         return src;
     }

@@ -114,7 +114,7 @@ private:
                 continue;
             // 修复警告：移除 std::forward，直接传递参数
             // 这样可以确保在循环的每次迭代中，参数都是有效的（通过引用或拷贝）
-            QImage result = editFunc(*img->getImage(), as...);
+            QImage result = editFunc(std::move(*img->getImage()), as...);
             
             // 优化：使用 std::make_unique 代替裸 new，异常安全且简洁
             // 结果指针会自动转换为 setEditedImage 所需的 unique_ptr<const QImage>

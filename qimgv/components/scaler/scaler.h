@@ -17,7 +17,7 @@ public:
     ~Scaler() override;
 
 signals:
-    // 值传递，支持 std::move 避免拷贝
+    // ✅ 保持值语义 + move 优化
     void scalingFinished(QPixmap result, ScalerRequest request);
     void acceptScalingResult(QImage image, ScalerRequest req);
 
@@ -38,6 +38,7 @@ private:
     bool buffered;
     bool running;
     
+    // ⚠️ 这里保持值语义（不能 move，否则逻辑错）
     ScalerRequest bufferedRequest;
     ScalerRequest startedRequest;
 

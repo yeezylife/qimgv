@@ -15,11 +15,11 @@ class ImageLib {
 public:
     static QImage rotatedRaw(const QImage &src, int grad);
     // Take by-value so callers can move images in to avoid copies (Qt6 move-friendly)
-    static QImage rotated(const QImage &src, int grad);
+    static QImage rotated(QImage src, int grad);
 
     static QImage croppedRaw(const QImage &src, QRect newRect);
     // By-value to enable move optimization
-    static QImage cropped(const QImage &src, QRect newRect);
+    static QImage cropped(QImage src, QRect newRect);
 
     // Accept by-value for operations that produce a new image; callers may move
     static QImage flippedHRaw(QImage src);

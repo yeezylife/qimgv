@@ -29,7 +29,6 @@ public:
 
     // Scale helpers accept by-value to allow move-optimization
     static QImage scaled(QImage source, QSize destSize, ScalingFilter filter);
-    static QImage scaled_Qt(const QImage &source, QSize destSize, bool smooth);
 
 #ifdef USE_OPENCV
     static QImage scaled_CV(QImage source, QSize destSize, cv::InterpolationFlags filter, int sharpen);

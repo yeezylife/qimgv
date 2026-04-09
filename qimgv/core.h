@@ -108,16 +108,17 @@ private:
             return;
         if(save && !mw->showConfirmation(action, tr("Perform action \"") + action + "\"? \n\n" + tr("Changes will be saved immediately.")))
             return;
-        for(const auto& path : currentSelection()) {
+
+        // 优化：预先提取选中路径，避免循环内重复调用
+        const auto paths = currentSelection();
+        for(const auto& path : paths) {
             auto img = getEditableImage(path);
             if(!img)
                 continue;
-            // 修复警告：移除 std::forward，直接传递参数
-            // 这样可以确保在循环的每次迭代中，参数都是有效的（通过引用或拷贝）
+
             QImage result = editFunc(*img->getImage(), as...);
             
-            // 优化：使用 std::make_unique 代替裸 new，异常安全且简洁
-            // 结果指针会自动转换为 setEditedImage 所需的 unique_ptr<const QImage>
+            // 优化：返回值安全移动，消除一次QImage拷贝
             img->setEditedImage(std::make_unique<QImage>(std::move(result)));
             
             model->updateImage(path, std::static_pointer_cast<Image>(img));

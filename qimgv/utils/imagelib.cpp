@@ -140,17 +140,6 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     }
 }
 
-QImage ImageLib::scaled_Qt(const QImage &source, QSize destSize, bool smooth) {
-    if (source.isNull()) return QImage();
-    if (destSize == source.size()) {
-        return source; // 源与目标大小相同，直接返回（但 source 是 const&，会拷贝）
-    }
-    
-    // 🚀 直接调用，Qt内部已对 KeepAspectRatio 做过极致优化，无需手动判断宽高
-    Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
-    return source.scaled(destSize, Qt::KeepAspectRatio, mode);
-}
-
 #ifdef USE_OPENCV
 QImage ImageLib::scaled_CV(QImage source, QSize destSize,
                            cv::InterpolationFlags filter, int sharpen)

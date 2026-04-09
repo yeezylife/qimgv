@@ -5,16 +5,16 @@
   <h1 align="center">qimgv —— 现代化高性能图片查看工具</h1>
 
   <p align="center">
-    <strong>基于 Qt6 和 C++17 重构，流畅、高效、智能</strong>
+    <strong>基于 Qt6 和 C++23 重构，流畅、高效、智能</strong>
   </p>
 
   <h2>📖 项目简介</h2>
-  <p>该项目的代码经过全面重构，基于 Qt6 和 C++17 架构，采用最新的编程技术和最佳实践，提供了流畅、高效的图片浏览体验。</p>
+  <p>该项目的代码经过全面重构，基于 Qt6 和 C++23 架构，采用最新的编程技术和最佳实践，提供了流畅、高效的图片浏览体验。</p>
 
   <h2>✨ 核心特性</h2>
   <ul>
     <li><strong>高性能渲染</strong>：利用 Qt6 的硬件加速和优化算法</li>
-    <li><strong>现代化架构</strong>：基于 C++17 特性的模块化设计</li>
+    <li><strong>现代化架构</strong>：基于 C++23 特性的模块化设计</li>
     <li><strong>智能内存管理</strong>：使用智能指针和 RAII 原则</li>
     <li><strong>编译优化</strong>：采用Clang最新版编译x64-V3版本，开启AVX2支持，性能更佳</li>
   </ul>
@@ -23,11 +23,11 @@
 
   <h3>性能优化</h3>
   <ol>
-    <li><strong>Qt6 + C++17 新特性</strong>
+    <li><strong>Qt6 + C++23 新特性</strong>
       <ul>
-        <li>使用现代 C++17 特性提升代码质量和性能</li>
+        <li>使用现代 C++23 特性提升代码质量和性能</li>
         <li>利用 Qt6 的最新优化和硬件加速功能</li>
-        <li>采用范围 for 循环、结构化绑定等现代语法</li>
+        <li>采用范围 for 循环、结构化绑定、std::atomic原子智能指针等现代语法</li>
       </ul>
     </li>
     <li><strong>智能缓存系统</strong>
@@ -101,7 +101,7 @@
   <h2>📋 系统要求</h2>
   <ul>
     <li><strong>操作系统</strong>：Windows 10+</li>
-    <li><strong>编译器</strong>：支持 C++17 的编译器（MSVC 2019+、GCC 7+、Clang 5+）</li>
+    <li><strong>编译器</strong>：支持 C++23 的编译器（MSVC 2019+、GCC 7+、Clang 5+）</li>
     <li><strong>依赖库</strong>：Qt6（6.2+）、OpenCV等</li>
   </ul>
 
@@ -145,16 +145,16 @@
   <h1 align="center">qimgv – Modern High-Performance Image Browsing Tool</h1>
 
   <p align="center">
-    <strong>Completely refactored with Qt6 and C++17, delivering smooth, efficient, and intelligent image viewing.</strong>
+    <strong>Completely refactored with Qt6 and C++23, delivering smooth, efficient, and intelligent image viewing.</strong>
   </p>
 
   <h2>📖 Project Overview</h2>
-  <p>The codebase has been fully rewritten using Qt6 and C++17 standards, incorporating the latest programming techniques and best practices to provide a fluid and efficient image browsing experience.</p>
+  <p>The codebase has been fully rewritten using Qt6 and C++23 standards, incorporating the latest programming techniques and best practices to provide a fluid and efficient image browsing experience.</p>
 
   <h2>✨ Key Features</h2>
   <ul>
     <li><strong>High-Performance Rendering</strong>: Leverages Qt6 hardware acceleration and optimized algorithms.</li>
-    <li><strong>Modern Architecture</strong>: Modular design based on C++17 features.</li>
+    <li><strong>Modern Architecture</strong>: Modular design based on C++23 features.</li>
     <li><strong>Intelligent Memory Management</strong>: Utilizes smart pointers and RAII principles.</li>
     <li><strong>Compilation Optimization</strong>: Compiled with the latest Clang using x64-V3 architecture, adding AVX2 support for better performance.</li>
   </ul>
@@ -163,11 +163,11 @@
 
   <h3>Performance Optimizations</h3>
   <ol>
-    <li><strong>Qt6 + C++17 New Features</strong>
+    <li><strong>Qt6 + C++23 New Features</strong>
       <ul>
-        <li>Modern C++17 features improve code quality and performance.</li>
+        <li>Modern C++23 features improve code quality and performance.</li>
         <li>Qt6's latest optimizations and hardware acceleration.</li>
-        <li>Range-based for loops, structured bindings, and other modern syntax.</li>
+        <li>Range-based for loops, structured bindings, std::atomic and other modern syntax.</li>
       </ul>
     </li>
     <li><strong>Intelligent Caching System</strong>
@@ -241,7 +241,7 @@
   <h2>📋 System Requirements</h2>
   <ul>
     <li><strong>OS</strong>: Windows 10+</li>
-    <li><strong>Compiler</strong>: C++17 compatible (MSVC 2019+, GCC 7+, Clang 5+)</li>
+    <li><strong>Compiler</strong>: C++23 compatible (MSVC 2019+, GCC 7+, Clang 5+)</li>
     <li><strong>Libraries</strong>: Qt6 (6.2+), OpenCV, etc.</li>
   </ul>
 

@@ -1,10 +1,11 @@
 #pragma once
+
 #include <QImage>
 #include <QPainter>
 #include <QColor>
 #include <QRect>
 #include <QSize>
-#include <memory>
+
 #include "settings.h"
 
 #ifdef USE_OPENCV
@@ -13,30 +14,55 @@
 
 class ImageLib {
 public:
+    // ============================
+    // 旋转
+    // ============================
     static QImage rotatedRaw(const QImage &src, int grad);
-    // Take by-value so callers can move images in to avoid copies (Qt6 move-friendly)
-    static QImage rotated(const QImage &src, int grad);
 
+    // 按值传递：允许调用方 std::move，避免不必要拷贝
+    static QImage rotated(QImage src, int grad);
+
+    // ============================
+    // 裁剪
+    // ============================
     static QImage croppedRaw(const QImage &src, QRect newRect);
-    // By-value to enable move optimization
-    static QImage cropped(const QImage &src, QRect newRect);
 
-    // Accept by-value for operations that produce a new image; callers may move
+    // 按值：支持 move 优化
+    static QImage cropped(QImage src, QRect newRect);
+
+    // ============================
+    // 翻转（天然适合按值）
+    // ============================
     static QImage flippedHRaw(QImage src);
     static QImage flippedH(QImage src);
+
     static QImage flippedVRaw(QImage src);
     static QImage flippedV(QImage src);
 
-    // Scale helpers accept by-value to allow move-optimization
+    // ============================
+    // 缩放（主入口）
+    // ============================
+    // ⭐ 按值传递：允许 move + 避免 detach
     static QImage scaled(QImage source, QSize destSize, ScalingFilter filter);
+
+    // Qt fallback（小图 / 无 vips）
     static QImage scaled_Qt(const QImage &source, QSize destSize, bool smooth);
 
 #ifdef USE_OPENCV
-    static QImage scaled_CV(QImage source, QSize destSize, cv::InterpolationFlags filter, int sharpen);
+    // OpenCV 路径（可选）
+    static QImage scaled_CV(QImage source,
+                           QSize destSize,
+                           cv::InterpolationFlags filter,
+                           int sharpen);
 #endif
 
-    // EXIF 处理：也改为返回 QImage 以保持一致性
+    // ============================
+    // EXIF 方向修正
+    // ============================
     static QImage exifRotated(QImage src, int orientation);
 
+    // ============================
+    // Pixmap 重着色（UI 用）
+    // ============================
     static void recolor(QPixmap &pixmap, const QColor &color);
 };

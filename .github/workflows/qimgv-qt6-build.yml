@@ -36,11 +36,12 @@ jobs:
             mingw-w64-clang-x86_64-kimageformats
             mingw-w64-clang-x86_64-libjxl
             mingw-w64-clang-x86_64-libraw
-            mingw-w64-clang-x86_64-opencv
+
             mingw-w64-clang-x86_64-mpv
             mingw-w64-clang-x86_64-lcms2
             mingw-w64-clang-x86_64-libavif
             mingw-w64-clang-x86_64-libheif
+            mingw-w64-clang-x86_64-libvips
             python3
 
       - uses: actions/checkout@v6
@@ -65,7 +66,7 @@ jobs:
             -DCMAKE_CXX_EXTENSIONS=OFF \
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
-            -DOPENCV_SUPPORT=ON \
+            -DLIBVIPS_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
             -DCMAKE_CXX_FLAGS="\
               -DNDEBUG \

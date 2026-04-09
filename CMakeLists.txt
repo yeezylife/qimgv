@@ -22,7 +22,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # USER OPTIONS
 # Usage: cmake -DVIDEO_SUPPORT=ON [...]
 option(VIDEO_SUPPORT "Enable video support" ON)
-option(OPENCV_SUPPORT "Enable HQ scaling via OpenCV" ON)
+option(LIBVIPS_SUPPORT "Enable high performance scaling via libvips" ON)
 option(KDE_SUPPORT "Support blur when using KDE" OFF)
 option(USE_QT5 "Build with Qt5 if available" OFF)
 
@@ -62,9 +62,9 @@ if(KDE_SUPPORT)
     find_package(KF6WindowSystem REQUIRED)
 endif()
 
-if(OPENCV_SUPPORT)
+if(LIBVIPS_SUPPORT)
     find_package(PkgConfig REQUIRED)
-    find_package(OpenCV REQUIRED core imgproc)
+    pkg_check_modules(VIPS REQUIRED vips-cpp)
 endif()
 
 ##############################################################

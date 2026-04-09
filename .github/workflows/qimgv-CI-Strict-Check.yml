@@ -28,11 +28,12 @@ jobs:
             mingw-w64-clang-x86_64-kimageformats
             mingw-w64-clang-x86_64-libjxl
             mingw-w64-clang-x86_64-libraw
-            mingw-w64-clang-x86_64-opencv
+
             mingw-w64-clang-x86_64-mpv
             mingw-w64-clang-x86_64-lcms2
             mingw-w64-clang-x86_64-libavif
             mingw-w64-clang-x86_64-libheif
+            mingw-w64-clang-x86_64-libvips
 
       - uses: actions/checkout@v6
 
@@ -45,7 +46,7 @@ jobs:
             -DCMAKE_CXX_EXTENSIONS=OFF \
             -DUSE_QT5=OFF \
             -DVIDEO_SUPPORT=ON \
-            -DOPENCV_SUPPORT=ON \
+            -DLIBVIPS_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
             -DCMAKE_CXX_CLANG_TIDY="clang-tidy;-checks=-*,bugprone-*,clang-analyzer-*,performance-*,concurrency-*,modernize-use-transparent-functors,modernize-use-nullptr,modernize-use-equals-default,modernize-use-equals-delete,modernize-deprecated-headers,readability-container-size-empty,readability-string-compare,readability-redundant-member-init,readability-redundant-declaration,readability-redundant-string-cstr,misc-unused-using-decls,readability-else-after-return,-bugprone-easily-swappable-parameters,-bugprone-derived-method-shadowing-base-method,-performance-enum-size,-bugprone-reserved-identifier" \
             -DCMAKE_CXX_FLAGS="\

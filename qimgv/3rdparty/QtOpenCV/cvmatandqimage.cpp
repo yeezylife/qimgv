@@ -76,9 +76,9 @@ cv::Mat reorderChannels(const cv::Mat &src, MatColorOrder from, MatColorOrder to
         if ((from == MatColorOrder::RGB && to == MatColorOrder::BGR) ||
             (from == MatColorOrder::BGR && to == MatColorOrder::RGB)) {
             cv::cvtColor(src, dst, cv::COLOR_RGB2BGR);
-        } else {
-            dst = src.clone(); 
-        }
+    } else {
+        dst = src;
+    }
         return dst;
     }
 

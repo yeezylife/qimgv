@@ -27,7 +27,7 @@ QImage ImageLib::rotatedRaw(const QImage &src, int grad) {
 QImage ImageLib::rotated(const QImage &src, int grad) {
     // 旋转角度为 360° 的整数倍，无需变换，直接返回源图像（注意：src 是 const&，返回时会拷贝，但避免了 transform 开销）
     if (grad % 360 == 0) {
-        return src;
+        return std::move(src);
     }
     return rotatedRaw(src, grad);
 }
@@ -42,7 +42,7 @@ QImage ImageLib::croppedRaw(const QImage &src, QRect newRect) {
 QImage ImageLib::cropped(const QImage &src, QRect newRect) {
     // 裁剪区域等于原图大小，直接返回源图像
     if (src.rect() == newRect) {
-        return src;
+        return std::move(src);
     }
     return croppedRaw(src, newRect);
 }
@@ -71,7 +71,7 @@ QImage ImageLib::flippedV(QImage src) {
 // --- EXIF 旋转：transformed 没有 && 版本，只能深拷贝 ---
 
 QImage ImageLib::exifRotated(QImage src, int orientation) {
-    if (src.isNull() || orientation <= 1) return src;
+    if (src.isNull() || orientation <= 1) return std::move(src);
 
     QTransform trans;
     bool needsTransform = true;

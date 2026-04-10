@@ -87,7 +87,7 @@ QImage ImageLib::exifRotated(QImage src, int orientation) {
         default: needsTransform = false; break;
     }
 
-    return needsTransform ? src.transformed(trans, Qt::SmoothTransformation) : src;
+    return needsTransform ? src.transformed(trans, Qt::SmoothTransformation) : std::move(src);
 }
 
 // --- 缩放：Qt 路径 ---

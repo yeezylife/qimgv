@@ -1,7 +1,7 @@
 #include "scalerrunnable.h"
 #include "utils/imagelib.h"
 #include "settings.h"
-#include <utility> // 确保 std::move 可用
+#include <utility>
 
 ScalerRunnable::ScalerRunnable(const ScalerRequest& request)
     : m_request(request)
@@ -10,24 +10,24 @@ ScalerRunnable::ScalerRunnable(const ScalerRequest& request)
 
 void ScalerRunnable::run()
 {
-    // 1. 发送开始信号 (由于后续还要用 m_request，这里不能 move)
+    // 1️⃣ 开始信号（不能 move）
     emit started(m_request);
 
     const auto& imageContainer = m_request.imageRef();
     if (!imageContainer)
     {
-        emit finished(QImage(), m_request);
+        emit finished(QSharedPointer<QImage>(), m_request);
         return;
     }
 
     auto imgPtr = imageContainer->getImage();
     if (!imgPtr || imgPtr->isNull())
     {
-        emit finished(QImage(), m_request);
+        emit finished(QSharedPointer<QImage>(), m_request);
         return;
     }
 
-    // 2. 缩放逻辑
+    // 2️⃣ 缩放
     const QImage& sourceImage = *imgPtr;
     ScalingFilter effectiveFilter = m_request.filter();
     const QSize& targetSize = m_request.sizeRef();
@@ -43,8 +43,9 @@ void ScalerRunnable::run()
                                      targetSize,
                                      filterToUse);
 
-    // 3. 发送完成信号
-    // 优化：使用 std::move(scaled) 将缩放后的图片转移给接收者
-    // 优化：同时 move(m_request)，因为 run 结束了，当前对象的成员已无用
-    emit finished(std::move(scaled), std::move(m_request));
+    // 3️⃣ 🚀 关键优化：直接转为 shared pointer（零额外拷贝）
+    auto sharedImage = QSharedPointer<QImage>::create(std::move(scaled));
+
+    // m_request 生命周期结束 → move
+    emit finished(std::move(sharedImage), std::move(m_request));
 }

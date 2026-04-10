@@ -5,7 +5,7 @@
 #include <QMutex>
 #include <QImage>
 #include <QPixmap>
-#include <utility>
+#include <QSharedPointer>
 #include "components/cache/cache.h"
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -17,17 +17,22 @@ public:
     ~Scaler() override;
 
 signals:
-    // ✅ 保持值语义 + move 优化
+    // ✅ 用 QSharedPointer 避免深拷贝
     void scalingFinished(QPixmap result, ScalerRequest request);
-    void acceptScalingResult(QImage image, ScalerRequest req);
+
+    // ✅ 内部传递也用 shared
+    void acceptScalingResult(QSharedPointer<QImage> image, ScalerRequest req);
 
 public slots:
     void requestScaled(const ScalerRequest &req);
 
 private slots:
     void onTaskStart(const ScalerRequest &req);
-    void onTaskFinish(QImage scaled, ScalerRequest req);
-    void slotForwardScaledResult(QImage image, ScalerRequest req);
+
+    // ✅ 接收 shared pointer
+    void onTaskFinish(QSharedPointer<QImage> scaled, ScalerRequest req);
+
+    void slotForwardScaledResult(QSharedPointer<QImage> image, ScalerRequest req);
 
 private:
     void startRequest(const ScalerRequest &req);
@@ -37,10 +42,9 @@ private:
 
     bool buffered;
     bool running;
-    
-    // ⚠️ 这里保持值语义（不能 move，否则逻辑错）
+
     ScalerRequest bufferedRequest;
     ScalerRequest startedRequest;
 
-    mutable QMutex mutex; 
+    mutable QMutex mutex;
 };

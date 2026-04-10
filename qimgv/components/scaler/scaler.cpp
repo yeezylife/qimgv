@@ -104,7 +104,7 @@ void Scaler::onTaskFinish(QSharedPointer<QImage> scaled, ScalerRequest req) {
     }
 }
 
-void Scaler::slotForwardScaledResult(QSharedPointer<QImage> image, ScalerRequest req) {
+void Scaler::slotForwardScaledResult(const QSharedPointer<QImage>& image, ScalerRequest req) {
     // ✅ 这里只发生一次真正的像素转换（不可避免）
     QPixmap result = QPixmap::fromImage(*image);
 

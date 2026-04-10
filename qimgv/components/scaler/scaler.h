@@ -32,7 +32,7 @@ private slots:
     // ✅ 接收 shared pointer
     void onTaskFinish(QSharedPointer<QImage> scaled, ScalerRequest req);
 
-    void slotForwardScaledResult(QSharedPointer<QImage> image, ScalerRequest req);
+    void slotForwardScaledResult(const QSharedPointer<QImage>& image, ScalerRequest req);
 
 private:
     void startRequest(const ScalerRequest &req);

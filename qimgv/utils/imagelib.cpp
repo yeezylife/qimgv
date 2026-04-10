@@ -96,7 +96,7 @@ QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
     if (source.isNull()) return QImage();
 
     if (destSize == source.size()) {
-        return source; // move elision
+        return std::move(source);   // ✅ 消除不必要的深拷贝
     }
 
     QImage scaleTarget = std::move(source);
@@ -145,7 +145,9 @@ QImage ImageLib::scaled_CV(QImage source, QSize destSize,
                            cv::InterpolationFlags filter, int sharpen)
 {
     if (source.isNull()) return QImage();
-    if (destSize == source.size()) return source;
+    if (destSize == source.size()) {
+        return std::move(source);   // ✅ 消除不必要的深拷贝
+    }
 
     // 避免 QImage 隐式 detach
     const QImage& srcRef = source;

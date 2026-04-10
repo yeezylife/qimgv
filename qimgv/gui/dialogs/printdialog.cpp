@@ -109,7 +109,7 @@ void PrintDialog::updatePreview() {
     pagePixmap.setDevicePixelRatio(qApp->devicePixelRatio());
     auto scaledImg = img->scaled(imgRectScaled.size() * qApp->devicePixelRatio(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if(ui->grayscale->isChecked())
-        scaledImg = scaledImg.convertToFormat(QImage::Format_Grayscale8);
+        scaledImg = std::move(scaledImg).convertToFormat(QImage::Format_Grayscale8);
     scaledImg.setDevicePixelRatio(qApp->devicePixelRatio());
     QPainter p(&pagePixmap);
     p.fillRect(pagePixmap.rect(), QColor(255,255,255));

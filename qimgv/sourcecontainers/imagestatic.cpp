@@ -62,7 +62,7 @@ void ImageStatic::loadGeneric() {
 
     // Format_Mono 转换
     if (image.format() == QImage::Format_Mono) {
-        image = image.convertToFormat(QImage::Format_Grayscale8);
+        image = std::move(image).convertToFormat(QImage::Format_Grayscale8);
     }
 
     if (image.isNull()) {

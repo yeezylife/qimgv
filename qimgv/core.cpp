@@ -1065,9 +1065,10 @@ bool Core::loadPath(const QString& path) {
     if(path.isEmpty())
         return false;
 
-    QString cleanPath = path;
-    if(cleanPath.startsWith("file://", Qt::CaseInsensitive))
-        cleanPath = cleanPath.mid(7);
+    if(path.startsWith("file://", Qt::CaseInsensitive))
+        return loadPath(path.mid(7));
+    
+    const QString& cleanPath = path;
 
     stopSlideshow();
     state.delayModel = false;

@@ -224,9 +224,8 @@ void DirectoryModel::onImageReady(const std::shared_ptr<Image> &img, const QStri
         return;
     }
 
-    // 直接调用 remove 即可，它会自动处理“不存在”的情况
-    cache.remove(path);
-    
+    // ✅ 直接insert即可，内部自动处理存在的情况（原地更新 + 移到MRU头）
+    // 消除一次冗余的锁获取和原子引用计数操作
     cache.insert(img);
     emit imageReady(img, path);
 }

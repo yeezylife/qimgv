@@ -50,6 +50,8 @@ bool Cache::insert(const std::shared_ptr<Image> &img) {
 
     auto it = items.find(path);
     if (it != items.end()) {
+        // ✅ 原子原地更新，严格保持原有返回语义
+        it.value()->item->setContents(img);
         moveToFront(it.value());
         return false;
     }

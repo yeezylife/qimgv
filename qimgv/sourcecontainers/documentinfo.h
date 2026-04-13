@@ -27,8 +27,8 @@ public:
 
     ~DocumentInfo() = default;
 
-    DocumentInfo(const DocumentInfo &) = default;
-    DocumentInfo& operator=(const DocumentInfo &) = default;
+    DocumentInfo(const DocumentInfo &) = delete;
+    DocumentInfo& operator=(const DocumentInfo &) = delete;
     DocumentInfo(DocumentInfo &&) noexcept = default;
     DocumentInfo& operator=(DocumentInfo &&) noexcept = default;
 

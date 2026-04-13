@@ -13,17 +13,16 @@ inline bool getFileInfo(const QString& path, QFileInfo& out) noexcept {
 // ✅ 避免不必要 open（Qt6 已支持直接 setFileTime 静态调用）
 inline void restoreFileTimestamps(const QString& path,
                                   const QDateTime& modTime,
-                                  const QDateTime& readTime) noexcept {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    QFile::setFileTime(path, modTime, QFileDevice::FileModificationTime);
-    QFile::setFileTime(path, readTime, QFileDevice::FileAccessTime);
-#else
+                                  const QDateTime& readTime) noexcept
+{
     QFile f(path);
-    if (f.open(QIODevice::ReadWrite)) {
-        f.setFileTime(modTime, QFileDevice::FileModificationTime);
-        f.setFileTime(readTime, QFileDevice::FileAccessTime);
-    }
-#endif
+
+    // 🚀 关键：只 open 一次
+    if (!f.open(QIODevice::ReadWrite))
+        return;
+
+    f.setFileTime(modTime, QFileDevice::FileModificationTime);
+    f.setFileTime(readTime, QFileDevice::FileAccessTime);
 }
 
 } // namespace

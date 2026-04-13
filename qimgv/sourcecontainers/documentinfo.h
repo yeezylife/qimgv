@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 #include <array>
+#include <memory>
 
 #include "utils/stuff.h"
 #include "settings.h"
@@ -60,6 +61,11 @@ private:
     mutable bool exifLoaded = false;
     mutable QHash<QString, QString> exifTags;
 
+    // ✅ 新增缓存
+    mutable QByteArray mHeaderCache;
+    mutable bool mHeaderLoaded = false;
+    mutable std::unique_ptr<QImageReader> mReader;
+
     static const QHash<QString, QString>& getKeyMapping();
 
     void detectFormat();
@@ -72,4 +78,8 @@ private:
 
     int transformationToExifOrientation(QImageIOHandler::Transformations transformation) const;
     QString formatMetadataValue(const QString &key, const QVariant &value) const;
+
+    // ✅ 新增工具函数
+    const QByteArray& headerData(qint64 size = 256) const;
+    QImageReader* getReader() const;
 };

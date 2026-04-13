@@ -1,44 +1,49 @@
 #include "documentinfo.h"
-#include <array>
 #include <QSet>
 
 using namespace Qt::StringLiterals;
+
+// ====================== 工具缓存 ======================
+
+const QByteArray& DocumentInfo::headerData(qint64) const {
+    if (!mHeaderLoaded) {
+        QFile f(fileInfo.filePath());
+        if (f.open(QFile::ReadOnly)) {
+            // ✅ 一次性读足够覆盖所有检测逻辑
+            mHeaderCache = f.read(128);
+        }
+        mHeaderLoaded = true;
+    }
+    return mHeaderCache;
+}
+
+QImageReader* DocumentInfo::getReader() const {
+    if (!mReader) {
+        mReader = std::make_unique<QImageReader>(fileInfo.absoluteFilePath());
+    }
+    return mReader.get();
+}
+
+// ====================== Key Mapping ======================
 
 const QHash<QString, QString>& DocumentInfo::getKeyMapping() {
     static const QHash<QString, QString> mapping = {
         {u"Make"_s, QObject::tr("Make")},
         {u"Model"_s, QObject::tr("Model")},
-
         {u"DateTime"_s, QObject::tr("Date/Time")},
-        {u"DateTimeOriginal"_s, QObject::tr("Date/Time")},
-        {u"DateTimeDigitized"_s, QObject::tr("Date/Time")},
-
         {u"ExposureTime"_s, QObject::tr("ExposureTime")},
         {u"FNumber"_s, QObject::tr("F Number")},
-        {u"ApertureValue"_s, QObject::tr("F Number")},
-
         {u"ISOSpeedRatings"_s, QObject::tr("ISO Speed ratings")},
-        {u"PhotographicSensitivity"_s, QObject::tr("ISO Speed ratings")},
-
         {u"Flash"_s, QObject::tr("Flash")},
         {u"FocalLength"_s, QObject::tr("Focal Length")},
-
         {u"UserComment"_s, QObject::tr("UserComment")},
-        {u"ImageDescription"_s, QObject::tr("UserComment")},
-
-        {u"Software"_s, u"Software"_s},
-        {u"Artist"_s, u"Artist"_s},
-        {u"Copyright"_s, u"Copyright"_s},
-
-        {u"Description"_s, QObject::tr("UserComment")},
-        {u"Comment"_s, QObject::tr("UserComment")},
-        {u"Author"_s, u"Artist"_s},
     };
     return mapping;
 }
 
-DocumentInfo::DocumentInfo(const QString &path)
-{
+// ====================== ctor ======================
+
+DocumentInfo::DocumentInfo(const QString &path) {
     fileInfo.setFile(path);
 
     if(!fileInfo.isFile()) {
@@ -49,6 +54,8 @@ DocumentInfo::DocumentInfo(const QString &path)
     detectFormat();
 }
 
+// ====================== getters ======================
+
 QString DocumentInfo::directoryPath() const { return fileInfo.absolutePath(); }
 QString DocumentInfo::filePath() const { return fileInfo.absoluteFilePath(); }
 QString DocumentInfo::fileName() const { return fileInfo.fileName(); }
@@ -58,9 +65,11 @@ DocumentType DocumentInfo::type() const { return mDocumentType; }
 QMimeType DocumentInfo::mimeType() const { return mMimeType; }
 QString DocumentInfo::format() const { return mFormat; }
 QDateTime DocumentInfo::lastModified() const { return fileInfo.lastModified(); }
+int DocumentInfo::exifOrientation() const { return mOrientation; }
 
 void DocumentInfo::refresh() { fileInfo.refresh(); }
-int DocumentInfo::exifOrientation() const { return mOrientation; }
+
+// ====================== detect ======================
 
 void DocumentInfo::detectFormat() {
 
@@ -69,10 +78,10 @@ void DocumentInfo::detectFormat() {
 
     static QMimeDatabase mimeDb;
 
-    mMimeType = mimeDb.mimeTypeForFile(fileInfo.filePath(), QMimeDatabase::MatchContent);
+    mMimeType = mimeDb.mimeTypeForFile(fileInfo, QMimeDatabase::MatchDefault);
 
-    QByteArray mimeName = mMimeType.name().toLatin1();
-    QByteArray suffix = fileInfo.suffix().toLower().toLatin1();
+    const QByteArray mimeName = mMimeType.name().toLatin1();
+    const QByteArray suffix = fileInfo.suffix().toLower().toLatin1();
 
     if(mimeName == "image/jpeg") {
 
@@ -132,6 +141,7 @@ void DocumentInfo::detectFormat() {
             mFormat = "jpg";
 
         if(settings->videoPlayback()) {
+
             static const QSet<QByteArray> videoSuffixes = [](){
                 QSet<QByteArray> set;
                 const auto formats = settings->videoFormats().values();
@@ -140,73 +150,52 @@ void DocumentInfo::detectFormat() {
                     set.insert(fmt);
                 return set;
             }();
+
             if(videoSuffixes.contains(suffix))
                 mDocumentType = VIDEO;
-        }
-        else
+            else
+                mDocumentType = STATIC;
+
+        } else {
             mDocumentType = STATIC;
+        }
     }
 
     loadExifOrientation();
 }
 
+// ====================== detect impl ======================
+
 bool DocumentInfo::detectAPNG() {
-
-    QFile f(fileInfo.filePath());
-    if(!f.open(QFile::ReadOnly))
-        return false;
-
-    QByteArray buf = f.read(120);
-    return buf.contains("acTL");
+    return headerData(120).contains("acTL");
 }
 
 bool DocumentInfo::detectAnimatedWebP() {
+    const QByteArray& buf = headerData(32);
 
-    QFile f(fileInfo.filePath());
-    if(!f.open(QFile::ReadOnly))
+    if (buf.size() < 21)
         return false;
 
-    QDataStream in(&f);
-
-    in.skipRawData(12);
-
-    std::array<char, 4> header{};
-    if(in.readRawData(header.data(), 4) != 4)
+    if (std::memcmp(buf.constData() + 12, "VP8X", 4) != 0)
         return false;
 
-    if(std::memcmp(header.data(), "VP8X", 4) != 0)
-        return false;
-
-    in.skipRawData(4);
-
-    char flags;
-    if(in.readRawData(&flags,1) != 1)
-        return false;
-
-    return flags & 0x02;
+    return buf[20] & 0x02;
 }
 
 bool DocumentInfo::detectAnimatedJxl() {
-    QImageReader r(fileInfo.absoluteFilePath(), "jxl");
-    return r.supportsAnimation();
+    return getReader()->supportsAnimation();
 }
 
 bool DocumentInfo::detectAnimatedAvif() {
+    const QByteArray& buf = headerData(16);
 
-    QFile f(fileInfo.filePath());
-    if(!f.open(QFile::ReadOnly))
+    if (buf.size() < 12)
         return false;
 
-    QDataStream in(&f);
-
-    in.skipRawData(4);
-
-    std::array<char, 8> buf{};
-    if(in.readRawData(buf.data(), 8) != 8)
-        return false;
-
-    return std::memcmp(buf.data(), "ftypavis", 8) == 0;
+    return std::memcmp(buf.constData() + 4, "ftypavis", 8) == 0;
 }
+
+// ====================== exif ======================
 
 int DocumentInfo::transformationToExifOrientation(QImageIOHandler::Transformations t) const {
 
@@ -228,12 +217,14 @@ void DocumentInfo::loadExifOrientation() {
     if(mDocumentType == VIDEO || mDocumentType == NONE)
         return;
 
-    QImageReader reader(fileInfo.absoluteFilePath());
+    auto reader = getReader();
 
-    if(reader.canRead()) {
-        mOrientation = transformationToExifOrientation(reader.transformation());
+    if(reader->canRead()) {
+        mOrientation = transformationToExifOrientation(reader->transformation());
     }
 }
+
+// ====================== metadata ======================
 
 QString DocumentInfo::formatMetadataValue(const QString &key,const QVariant &value) const {
 
@@ -279,17 +270,17 @@ void DocumentInfo::loadExifTags() const {
     exifLoaded = true;
     exifTags.clear();
 
-    QImageReader reader(fileInfo.absoluteFilePath());
+    auto reader = getReader();
 
-    if(!reader.canRead())
+    if(!reader->canRead())
         return;
 
     const auto &mapping = getKeyMapping();
-    QStringList textKeys = reader.textKeys();
+    const QStringList textKeys = reader->textKeys();
 
     for(const QString &key : textKeys) {
 
-        QString value = reader.text(key);
+        const QString value = reader->text(key);
         if(value.isEmpty())
             continue;
 
@@ -302,14 +293,12 @@ void DocumentInfo::loadExifTags() const {
                 formattedValue = formattedValue.mid(spaceIndex + 1);
         }
 
-        if (auto it = exifTags.find(displayKey); it == exifTags.end()) {
-            exifTags.insert(displayKey, formattedValue);
-        }
+        exifTags.try_emplace(displayKey, std::move(formattedValue));
     }
 
     if(exifTags.isEmpty()) {
 
-        QSize size = reader.size();
+        QSize size = reader->size();
 
         if(size.isValid()) {
             exifTags.insert(
@@ -320,8 +309,7 @@ void DocumentInfo::loadExifTags() const {
     }
 }
 
-const QHash<QString, QString>& DocumentInfo::getExifTags() const
-{
+const QHash<QString, QString>& DocumentInfo::getExifTags() const {
     if(!exifLoaded)
         loadExifTags();
 

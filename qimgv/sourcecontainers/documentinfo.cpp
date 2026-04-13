@@ -3,25 +3,17 @@
 
 using namespace Qt::StringLiterals;
 
-// ====================== 工具缓存 ======================
+// ====================== header cache ======================
 
 const QByteArray& DocumentInfo::headerData(qint64) const {
     if (!mHeaderLoaded) {
         QFile f(fileInfo.filePath());
         if (f.open(QFile::ReadOnly)) {
-            // ✅ 一次性读足够覆盖所有检测逻辑
             mHeaderCache = f.read(128);
         }
         mHeaderLoaded = true;
     }
     return mHeaderCache;
-}
-
-QImageReader* DocumentInfo::getReader() const {
-    if (!mReader) {
-        mReader = std::make_unique<QImageReader>(fileInfo.absoluteFilePath());
-    }
-    return mReader.get();
 }
 
 // ====================== Key Mapping ======================
@@ -111,7 +103,9 @@ void DocumentInfo::detectFormat() {
     } else if(mimeName == "image/jxl") {
 
         mFormat = "jxl";
-        mDocumentType = detectAnimatedJxl() ? ANIMATED : STATIC;
+
+        QImageReader reader(fileInfo.absoluteFilePath(), "jxl");
+        mDocumentType = reader.supportsAnimation() ? ANIMATED : STATIC;
 
         if(mDocumentType == ANIMATED && !settings->jxlAnimation()) {
             mDocumentType = NONE;
@@ -167,11 +161,11 @@ void DocumentInfo::detectFormat() {
 // ====================== detect impl ======================
 
 bool DocumentInfo::detectAPNG() {
-    return headerData(120).contains("acTL");
+    return headerData().contains("acTL");
 }
 
 bool DocumentInfo::detectAnimatedWebP() {
-    const QByteArray& buf = headerData(32);
+    const QByteArray& buf = headerData();
 
     if (buf.size() < 21)
         return false;
@@ -183,11 +177,11 @@ bool DocumentInfo::detectAnimatedWebP() {
 }
 
 bool DocumentInfo::detectAnimatedJxl() {
-    return getReader()->supportsAnimation();
+    return false; // 已内联处理
 }
 
 bool DocumentInfo::detectAnimatedAvif() {
-    const QByteArray& buf = headerData(16);
+    const QByteArray& buf = headerData();
 
     if (buf.size() < 12)
         return false;
@@ -217,10 +211,10 @@ void DocumentInfo::loadExifOrientation() {
     if(mDocumentType == VIDEO || mDocumentType == NONE)
         return;
 
-    auto reader = getReader();
+    QImageReader reader(fileInfo.absoluteFilePath());
 
-    if(reader->canRead()) {
-        mOrientation = transformationToExifOrientation(reader->transformation());
+    if(reader.canRead()) {
+        mOrientation = transformationToExifOrientation(reader.transformation());
     }
 }
 
@@ -270,17 +264,17 @@ void DocumentInfo::loadExifTags() const {
     exifLoaded = true;
     exifTags.clear();
 
-    auto reader = getReader();
+    QImageReader reader(fileInfo.absoluteFilePath());
 
-    if(!reader->canRead())
+    if(!reader.canRead())
         return;
 
     const auto &mapping = getKeyMapping();
-    const QStringList textKeys = reader->textKeys();
+    const QStringList textKeys = reader.textKeys();
 
     for(const QString &key : textKeys) {
 
-        const QString value = reader->text(key);
+        const QString value = reader.text(key);
         if(value.isEmpty())
             continue;
 
@@ -298,7 +292,7 @@ void DocumentInfo::loadExifTags() const {
 
     if(exifTags.isEmpty()) {
 
-        QSize size = reader->size();
+        QSize size = reader.size();
 
         if(size.isValid()) {
             exifTags.insert(

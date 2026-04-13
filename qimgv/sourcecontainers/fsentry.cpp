@@ -2,29 +2,50 @@
 
 FSEntry::FSEntry() noexcept = default;
 
-FSEntry::FSEntry(const QString &filePath) {
-    try {
-        std::filesystem::directory_entry stdEntry(
-            std::filesystem::path(filePath.toStdWString())
-        );
+static std::filesystem::path toFsPath(const QString& path) {
+#ifdef _WIN32
+    return std::filesystem::path(
+        reinterpret_cast<const wchar_t*>(path.utf16())
+    );
+#else
+    return std::filesystem::path(path.toStdString());
+#endif
+}
 
-        const auto &entryPath = stdEntry.path();
+QString FSEntry::extractFileName(const QString& path) noexcept {
+    qsizetype pos = path.lastIndexOf('/');
+#ifdef _WIN32
+    pos = std::max(pos, path.lastIndexOf('\\'));
+#endif
 
-        this->path = filePath;
-        this->name = QString::fromStdWString(entryPath.filename().wstring());
-        this->isDirectory = stdEntry.is_directory();
+    if (pos < 0)
+        return path;
 
-        if (!this->isDirectory) {
-            this->size = stdEntry.file_size();
-            this->modifyTime = stdEntry.last_write_time();
-        }
-    } catch (const std::filesystem::filesystem_error &err) {
-        // 静默失败，保持默认状态
-        this->path = filePath;
-        this->name = QString();
-        this->isDirectory = false;
-        this->size = 0;
-        (void)err; // 避免未使用参数警告
+    return path.mid(pos + 1);
+}
+
+FSEntry::FSEntry(const QString &filePath)
+{
+    std::error_code ec;
+
+    auto p = toFsPath(filePath);
+    std::filesystem::directory_entry entry(p, ec);
+
+    if (ec)
+        return;
+
+    path = filePath;
+    name = extractFileName(filePath);
+
+    isDirectory = entry.is_directory(ec);
+    if (ec)
+        return;
+
+    if (!isDirectory) {
+        size = entry.file_size(ec);
+        if (ec) return;
+
+        modifyTime = entry.last_write_time(ec);
     }
 }
 
@@ -50,32 +71,32 @@ FSEntry::FSEntry(FilePath _path, FileName _name, bool _isDirectory) noexcept
       isDirectory(_isDirectory)
 {}
 
-std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
+std::optional<FSEntry> FSEntry::fromPath(const QString &filePath)
+{
     std::error_code ec;
-    std::filesystem::path p(filePath.toStdWString());
 
-    // 使用 directory_entry 一次性获取状态（避免多次系统调用）
+    auto p = toFsPath(filePath);
+
     std::filesystem::directory_entry entry(p, ec);
-    if (ec) {
+    if (ec)
         return std::nullopt;
-    }
 
-    // 检查是否存在（directory_entry 构造失败已设置 ec，此处可省略，但为安全保留）
-    if (!entry.exists(ec) || ec) {
+    if (!entry.exists(ec) || ec)
         return std::nullopt;
-    }
 
     FSEntry result;
+
     result.path = filePath;
-    result.name = QString::fromStdWString(p.filename().wstring());
+    result.name = extractFileName(filePath);
+
     result.isDirectory = entry.is_directory(ec);
-    if (ec) {
+    if (ec)
         return std::nullopt;
-    }
 
     if (!result.isDirectory) {
         result.size = entry.file_size(ec);
         if (ec) return std::nullopt;
+
         result.modifyTime = entry.last_write_time(ec);
         if (ec) return std::nullopt;
     }
@@ -84,5 +105,5 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
 }
 
 bool FSEntry::operator==(const QString &anotherPath) const noexcept {
-    return this->path == anotherPath;
+    return path == anotherPath;
 }

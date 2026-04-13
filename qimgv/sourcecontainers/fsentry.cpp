@@ -81,9 +81,6 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath)
     if (ec)
         return std::nullopt;
 
-    if (!entry.exists(ec) || ec)
-        return std::nullopt;
-
     FSEntry result;
 
     result.path = filePath;

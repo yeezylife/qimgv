@@ -1,27 +1,29 @@
 #include "fileoperations.h"
-#include <QDir>
 #include <QFile>
 #include <QCryptographicHash>
 
 namespace {
 
-inline bool isFileValid(const QString& path, bool checkWritable = false) noexcept {
-    QFileInfo file(path);
-    if (!file.exists())
-        return false;
-    if (checkWritable && !file.isWritable())
-        return false;
-    return true;
+// ✅ 合并 stat，避免重复 QFileInfo 构造
+inline bool getFileInfo(const QString& path, QFileInfo& out) noexcept {
+    out.setFile(path);
+    return out.exists();
 }
 
+// ✅ 避免不必要 open（Qt6 已支持直接 setFileTime 静态调用）
 inline void restoreFileTimestamps(const QString& path,
                                   const QDateTime& modTime,
                                   const QDateTime& readTime) noexcept {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QFile::setFileTime(path, modTime, QFileDevice::FileModificationTime);
+    QFile::setFileTime(path, readTime, QFileDevice::FileAccessTime);
+#else
     QFile f(path);
     if (f.open(QIODevice::ReadWrite)) {
         f.setFileTime(modTime, QFileDevice::FileModificationTime);
         f.setFileTime(readTime, QFileDevice::FileAccessTime);
     }
+#endif
 }
 
 } // namespace
@@ -32,15 +34,14 @@ QString FileOperations::generateHash(const QString &str) {
 }
 
 void FileOperations::removeFile(const QString &filePath, FileOpResult &result) {
-    QFileInfo file(filePath);
-
-    if (!file.exists()) {
+    QFileInfo fi;
+    if (!getFileInfo(filePath, fi)) {
         result = SOURCE_DOES_NOT_EXIST;
         return;
     }
 
 #ifdef Q_OS_WIN32
-    if (!file.isWritable()) {
+    if (!fi.isWritable()) {
         result = SOURCE_NOT_WRITABLE;
         return;
     }
@@ -89,30 +90,25 @@ void FileOperations::copyFileTo(const QString &srcPath,
                                bool force,
                                FileOpResult &result)
 {
-    QFileInfo src(srcPath);
-    const QString srcDir = src.absolutePath();
+    QFileInfo src;
+    if (!getFileInfo(srcPath, src)) {
+        result = SOURCE_DOES_NOT_EXIST;
+        return;
+    }
 
+    const QString srcDir = src.absolutePath();
     if (destDirPath == srcDir) {
         result = NOTHING_TO_DO;
         return;
     }
 
-    if (!isFileValid(srcPath)) {
-        result = SOURCE_DOES_NOT_EXIST;
-        return;
-    }
-
-    // 🔧 修复开始
     QFileInfo dirInfo(destDirPath);
     if (!dirInfo.exists() || !dirInfo.isDir() || !dirInfo.isWritable()) {
         result = DESTINATION_NOT_WRITABLE;
         return;
     }
 
-    QDir targetDir(destDirPath);
-    // 🔧 修复结束
-
-    const QString destPath = targetDir.filePath(src.fileName());
+    const QString destPath = QDir(destDirPath).filePath(src.fileName());
     QFileInfo dest(destPath);
 
     if (dest.exists()) {
@@ -153,39 +149,34 @@ void FileOperations::moveFileTo(const QString &srcPath,
                                bool force,
                                FileOpResult &result)
 {
-    QFileInfo src(srcPath);
-    const QString srcDir = src.absolutePath();
+    QFileInfo src;
+    if (!getFileInfo(srcPath, src) || !src.isWritable()) {
+        result = SOURCE_NOT_WRITABLE;
+        return;
+    }
 
+    const QString srcDir = src.absolutePath();
     if (destDirPath == srcDir) {
         result = NOTHING_TO_DO;
         return;
     }
 
-    if (!isFileValid(srcPath, true)) {
-        result = SOURCE_NOT_WRITABLE;
-        return;
-    }
-
-    // 🔧 修复开始
     QFileInfo dirInfo(destDirPath);
     if (!dirInfo.exists() || !dirInfo.isDir() || !dirInfo.isWritable()) {
         result = DESTINATION_NOT_WRITABLE;
         return;
     }
 
-    QDir targetDir(destDirPath);
-    // 🔧 修复结束
+    const QString destPath = QDir(destDirPath).filePath(src.fileName());
 
-    const QString destPath = targetDir.filePath(src.fileName());
-    QFileInfo dest(destPath);
-
-    // ========= 1️⃣ rename 快路径（最优） =========
+    // 🚀 1️⃣ rename 快路径（避免 copy）
     if (QFile::rename(srcPath, destPath)) {
         result = SUCCESS;
         return;
     }
 
-    // ========= 2️⃣ 处理目标冲突 =========
+    QFileInfo dest(destPath);
+
     if (dest.exists()) {
 #ifdef Q_OS_WIN32
         if (!dest.isWritable()) {
@@ -208,7 +199,6 @@ void FileOperations::moveFileTo(const QString &srcPath,
         }
     }
 
-    // ========= 3️⃣ fallback: copy + remove =========
     const auto modTime = src.lastModified();
     const auto readTime = src.lastRead();
 
@@ -218,7 +208,6 @@ void FileOperations::moveFileTo(const QString &srcPath,
             result = SUCCESS;
             return;
         }
-
         QFile::remove(destPath);
     }
 
@@ -230,9 +219,8 @@ void FileOperations::rename(const QString &srcPath,
                             bool force,
                             FileOpResult &result)
 {
-    QFileInfo src(srcPath);
-
-    if (!isFileValid(srcPath, true)) {
+    QFileInfo src;
+    if (!getFileInfo(srcPath, src) || !src.isWritable()) {
         result = SOURCE_NOT_WRITABLE;
         return;
     }
@@ -271,7 +259,8 @@ void FileOperations::rename(const QString &srcPath,
 }
 
 void FileOperations::moveToTrash(const QString &filePath, FileOpResult &result) {
-    if (!isFileValid(filePath, true)) {
+    QFileInfo fi;
+    if (!getFileInfo(filePath, fi) || !fi.isWritable()) {
         result = SOURCE_NOT_WRITABLE;
         return;
     }
@@ -280,15 +269,11 @@ void FileOperations::moveToTrash(const QString &filePath, FileOpResult &result) 
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-
 bool FileOperations::moveToTrashImpl(const QString &filePath) {
     return QFile::moveToTrash(filePath);
 }
-
 #else
-
 #ifdef Q_OS_WIN32
-
 bool FileOperations::moveToTrashImpl(const QString &file) {
     QFileInfo fi(file);
     if (!fi.exists())
@@ -304,6 +289,5 @@ bool FileOperations::moveToTrashImpl(const QString &file) {
 
     return SHFileOperationW(&op) == 0;
 }
-
 #endif
 #endif

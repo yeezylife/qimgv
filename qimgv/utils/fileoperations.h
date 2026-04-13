@@ -1,15 +1,13 @@
 #pragma once
 
-#include <QCryptographicHash>
 #include <QString>
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
-#include <QStandardPaths>
 #include <QtGlobal>
 
 #ifdef Q_OS_WIN32
-#include "windows.h"
+#include <windows.h>
 #endif
 
 enum FileOpResult {

@@ -536,7 +536,7 @@ QMimeData *Core::getMimeDataForImage(const std::shared_ptr<Image>& img, MimeData
     }
     // clipboard only!
     if(img->type() != VIDEO && target == TARGET_CLIPBOARD)
-        mimeData->setImageData(*img->getImage().get());
+        mimeData->setImageData(*img->getImage());
     mimeData->setUrls({QUrl::fromLocalFile(path)});
     return mimeData;
 }
@@ -938,7 +938,7 @@ void Core::discardEdits() {
 
     std::shared_ptr<Image> img = model->getImage(selectedPath());
     if(img && img->type() == STATIC) {
-        auto imgStatic = dynamic_cast<ImageStatic *>(img.get());
+        auto imgStatic = static_cast<ImageStatic *>(img.get());
         imgStatic->discardEditedImage();
         model->updateImage(selectedPath(), img);
     }

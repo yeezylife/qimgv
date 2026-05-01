@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <QBoxLayout>
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
@@ -11,8 +10,8 @@
 
 class DocumentWidget : public FloatingWidgetContainer {
 public:
-    DocumentWidget(std::shared_ptr<ViewerWidget> viewWidget, std::shared_ptr<InfoBarProxy> infoBar, QWidget* parent = nullptr);
-    std::shared_ptr<ViewerWidget> viewWidget();
+    DocumentWidget(ViewerWidget *viewWidget, InfoBarProxy *infoBar, QWidget* parent = nullptr);
+    ViewerWidget *viewWidget();
     void setFocus();
     void hideFloatingPanel();
     void hideFloatingPanel(bool animated);
@@ -36,9 +35,9 @@ protected:
 
 private:
     QBoxLayout *layout, *layoutRoot;
-    std::shared_ptr<ViewerWidget> mViewWidget;
-    std::shared_ptr<InfoBarProxy> mInfoBar;
-    std::shared_ptr<MainPanel> mainPanel;
+    ViewerWidget *mViewWidget = nullptr;
+    InfoBarProxy *mInfoBar = nullptr;
+    MainPanel *mainPanel = nullptr;
     bool avoidPanelFlag = false;
     bool mPanelEnabled = false;
     bool mPanelFullscreenOnly = false;

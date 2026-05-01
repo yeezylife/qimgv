@@ -17,7 +17,6 @@
 #include <QPixmap>
 #include <QMovie>
 #include <QPointer>
-#include <memory>
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
 #include "gui/overlays/controlsoverlay.h"
@@ -81,15 +80,15 @@ public:
     DialogResult fileReplaceDialog(const QString &source, const QString &target, FileReplaceMode mode, bool multiple);
 
 private:
-    std::shared_ptr<ViewerWidget> viewerWidget;
+    ViewerWidget *viewerWidget = nullptr;
     QHBoxLayout layout;
     QTimer windowGeometryChangeTimer;
     int currentDisplay = 0;
     bool showInfoBarFullscreen = false;
     bool showInfoBarWindowed = false;
     bool maximized = false;
-    std::shared_ptr<DocumentWidget> docWidget;
-    std::shared_ptr<CentralWidget> centralWidget;
+    DocumentWidget *docWidget = nullptr;
+    CentralWidget *centralWidget = nullptr;
     ActiveSidePanel activeSidePanel = SIDEPANEL_NONE;
     SidePanel *sidePanel = nullptr;
     CopyOverlay *copyOverlay = nullptr;
@@ -102,7 +101,7 @@ private:
     ImageInfoOverlayProxy *imageInfoOverlay = nullptr;
     ControlsOverlay *controlsOverlay = nullptr;
     FullscreenInfoOverlayProxy *infoBarFullscreen = nullptr;
-    std::shared_ptr<InfoBarProxy> infoBarWindowed;
+    InfoBarProxy *infoBarWindowed = nullptr;
     CurrentInfo info{};
     QHash<QString, QString> m_exifInfo;  // 优化：使用 QHash 代替 QMap
     bool fullUiInitialized = false;

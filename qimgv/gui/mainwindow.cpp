@@ -50,45 +50,45 @@ MW::MW(QWidget *parent)
 *  ViewerWidget exists for input handling reasons (correct overlay hover handling)
 */
 void MW::setupUi() {
-    viewerWidget.reset(new ViewerWidget(this));
-    infoBarWindowed.reset(new InfoBarProxy(this));
-    docWidget.reset(new DocumentWidget(viewerWidget, infoBarWindowed));
+    viewerWidget = new ViewerWidget(this);
+    infoBarWindowed = new InfoBarProxy(this);
+    docWidget = new DocumentWidget(viewerWidget, infoBarWindowed);
     
-    centralWidget.reset(new CentralWidget(docWidget, this));
-    layout.addWidget(centralWidget.get());
+    centralWidget = new CentralWidget(docWidget, this);
+    layout.addWidget(centralWidget);
     
-    controlsOverlay = new ControlsOverlay(docWidget.get());
-    infoBarFullscreen = new FullscreenInfoOverlayProxy(viewerWidget.get());
+    controlsOverlay = new ControlsOverlay(docWidget);
+    infoBarFullscreen = new FullscreenInfoOverlayProxy(viewerWidget);
     sidePanel = new SidePanel(this);
     layout.addWidget(sidePanel);
     
-    imageInfoOverlay = new ImageInfoOverlayProxy(viewerWidget.get());
-    floatingMessage = new FloatingMessageProxy(viewerWidget.get());
+    imageInfoOverlay = new ImageInfoOverlayProxy(viewerWidget);
+    floatingMessage = new FloatingMessageProxy(viewerWidget);
     
-    connect(viewerWidget.get(), &ViewerWidget::scalingRequested, this, &MW::scalingRequested);
-    connect(viewerWidget.get(), &ViewerWidget::draggedOut, this, qOverload<>(&MW::draggedOut));
-    connect(viewerWidget.get(), &ViewerWidget::playbackFinished, this, &MW::playbackFinished);
-    connect(viewerWidget.get(), &ViewerWidget::showScriptSettings, this, &MW::showScriptSettings);
+    connect(viewerWidget, &ViewerWidget::scalingRequested, this, &MW::scalingRequested);
+    connect(viewerWidget, &ViewerWidget::draggedOut, this, qOverload<>(&MW::draggedOut));
+    connect(viewerWidget, &ViewerWidget::playbackFinished, this, &MW::playbackFinished);
+    connect(viewerWidget, &ViewerWidget::showScriptSettings, this, &MW::showScriptSettings);
     
-    connect(this, &MW::zoomIn,        viewerWidget.get(), &ViewerWidget::zoomIn);
-    connect(this, &MW::zoomOut,       viewerWidget.get(), &ViewerWidget::zoomOut);
-    connect(this, &MW::zoomInCursor,  viewerWidget.get(), &ViewerWidget::zoomInCursor);
-    connect(this, &MW::zoomOutCursor, viewerWidget.get(), &ViewerWidget::zoomOutCursor);
-    connect(this, &MW::scrollUp,    viewerWidget.get(), &ViewerWidget::scrollUp);
-    connect(this, &MW::scrollDown,  viewerWidget.get(), &ViewerWidget::scrollDown);
-    connect(this, &MW::scrollLeft,  viewerWidget.get(), &ViewerWidget::scrollLeft);
-    connect(this, &MW::scrollRight, viewerWidget.get(), &ViewerWidget::scrollRight);
-    connect(this, &MW::pauseVideo,     viewerWidget.get(), &ViewerWidget::pauseResumePlayback);
-    connect(this, &MW::stopPlayback,   viewerWidget.get(), &ViewerWidget::stopPlayback);
-    connect(this, &MW::seekVideoForward, viewerWidget.get(), &ViewerWidget::seekForward);
-    connect(this, &MW::seekVideoBackward,  viewerWidget.get(), &ViewerWidget::seekBackward);
-    connect(this, &MW::frameStep,      viewerWidget.get(), &ViewerWidget::frameStep);
-    connect(this, &MW::frameStepBack,  viewerWidget.get(), &ViewerWidget::frameStepBack);
-    connect(this, &MW::toggleMute,  viewerWidget.get(), &ViewerWidget::toggleMute);
-    connect(this, &MW::volumeUp,  viewerWidget.get(), &ViewerWidget::volumeUp);
-    connect(this, &MW::volumeDown, viewerWidget.get(), &ViewerWidget::volumeDown);
-    connect(this, &MW::toggleTransparencyGrid, viewerWidget.get(), &ViewerWidget::toggleTransparencyGrid);
-    connect(this, &MW::setLoopPlayback,  viewerWidget.get(), &ViewerWidget::setLoopPlayback);
+    connect(this, &MW::zoomIn,        viewerWidget, &ViewerWidget::zoomIn);
+    connect(this, &MW::zoomOut,       viewerWidget, &ViewerWidget::zoomOut);
+    connect(this, &MW::zoomInCursor,  viewerWidget, &ViewerWidget::zoomInCursor);
+    connect(this, &MW::zoomOutCursor, viewerWidget, &ViewerWidget::zoomOutCursor);
+    connect(this, &MW::scrollUp,    viewerWidget, &ViewerWidget::scrollUp);
+    connect(this, &MW::scrollDown,  viewerWidget, &ViewerWidget::scrollDown);
+    connect(this, &MW::scrollLeft,  viewerWidget, &ViewerWidget::scrollLeft);
+    connect(this, &MW::scrollRight, viewerWidget, &ViewerWidget::scrollRight);
+    connect(this, &MW::pauseVideo,     viewerWidget, &ViewerWidget::pauseResumePlayback);
+    connect(this, &MW::stopPlayback,   viewerWidget, &ViewerWidget::stopPlayback);
+    connect(this, &MW::seekVideoForward, viewerWidget, &ViewerWidget::seekForward);
+    connect(this, &MW::seekVideoBackward,  viewerWidget, &ViewerWidget::seekBackward);
+    connect(this, &MW::frameStep,      viewerWidget, &ViewerWidget::frameStep);
+    connect(this, &MW::frameStepBack,  viewerWidget, &ViewerWidget::frameStepBack);
+    connect(this, &MW::toggleMute,  viewerWidget, &ViewerWidget::toggleMute);
+    connect(this, &MW::volumeUp,  viewerWidget, &ViewerWidget::volumeUp);
+    connect(this, &MW::volumeDown, viewerWidget, &ViewerWidget::volumeDown);
+    connect(this, &MW::toggleTransparencyGrid, viewerWidget, &ViewerWidget::toggleTransparencyGrid);
+    connect(this, &MW::setLoopPlayback,  viewerWidget, &ViewerWidget::setLoopPlayback);
 }
 
 void MW::setupFullUi() {
@@ -103,7 +103,7 @@ void MW::setupFullUi() {
 void MW::setupCropPanel() {
     if(cropPanel) [[likely]]
         return;
-    cropOverlay = new CropOverlay(viewerWidget.get());
+    cropOverlay = new CropOverlay(viewerWidget);
     cropPanel = new CropPanel(cropOverlay, this);
     connect(cropPanel, &CropPanel::cancel, this, &MW::hideCropPanel);
     connect(cropPanel, &CropPanel::crop,   this, &MW::hideCropPanel);
@@ -113,13 +113,13 @@ void MW::setupCropPanel() {
 }
 
 void MW::setupCopyOverlay() {
-    copyOverlay = new CopyOverlay(viewerWidget.get());
+    copyOverlay = new CopyOverlay(viewerWidget);
     connect(copyOverlay, &CopyOverlay::copyRequested, this, &MW::copyRequested);
     connect(copyOverlay, &CopyOverlay::moveRequested, this, &MW::moveRequested);
 }
 
 void MW::setupSaveOverlay() {
-    saveOverlay = new SaveConfirmOverlay(viewerWidget.get());
+    saveOverlay = new SaveConfirmOverlay(viewerWidget);
     connect(saveOverlay, &SaveConfirmOverlay::saveClicked,    this, &MW::saveRequested);
     connect(saveOverlay, &SaveConfirmOverlay::saveAsClicked,  this, &MW::saveAsClicked);
     connect(saveOverlay, &SaveConfirmOverlay::discardClicked, this, &MW::discardEditsRequested);

@@ -1,7 +1,7 @@
 #include "documentwidget.h"
 #include <utility>
 
-DocumentWidget::DocumentWidget(std::shared_ptr<ViewerWidget> viewWidget, std::shared_ptr<InfoBarProxy> infoBar, QWidget *parent)
+DocumentWidget::DocumentWidget(ViewerWidget *viewWidget, InfoBarProxy *infoBar, QWidget *parent)
     : FloatingWidgetContainer(parent)
 {
     layoutRoot = new QVBoxLayout();
@@ -14,25 +14,25 @@ DocumentWidget::DocumentWidget(std::shared_ptr<ViewerWidget> viewWidget, std::sh
     setLayout(layoutRoot);
     setAttribute(Qt::WA_TranslucentBackground, true);
     setMouseTracking(true);
-    mViewWidget = std::move(viewWidget);
+    mViewWidget = viewWidget;
     mViewWidget->setParent(this);
-    layout->addWidget(mViewWidget.get());
-    mViewWidget.get()->show();
-    mInfoBar = std::move(infoBar);
+    layout->addWidget(mViewWidget);
+    mViewWidget->show();
+    mInfoBar = infoBar;
     mInfoBar->setParent(this);
-    layoutRoot->addWidget(mInfoBar.get());
-    setFocusProxy(mViewWidget.get());
+    layoutRoot->addWidget(mInfoBar);
+    setFocusProxy(mViewWidget);
 
     setInteractionEnabled(true);
 
-    mainPanel.reset(new MainPanel(this));
-    connect(mainPanel.get(), &MainPanel::pinned, this, &DocumentWidget::setPanelPinned);
+    mainPanel = new MainPanel(this);
+    connect(mainPanel, &MainPanel::pinned, this, &DocumentWidget::setPanelPinned);
 
     connect(settings, &Settings::settingsChanged, this, &DocumentWidget::readSettings);
     readSettings();
 }
 
-std::shared_ptr<ViewerWidget> DocumentWidget::viewWidget() {
+ViewerWidget *DocumentWidget::viewWidget() {
     return mViewWidget;
 }
 
@@ -56,10 +56,10 @@ void DocumentWidget::setPanelPinned(bool mode) {
         return;
     if(!mode) { // unpin
         if(mPanelPinned)
-            layout->removeWidget(mainPanel.get());
+            layout->removeWidget(mainPanel);
         mainPanel->setLayoutManaged(false);
     } else {    // pin
-        layout->insertWidget(1, mainPanel.get());
+        layout->insertWidget(1, mainPanel);
         switch(settings->panelPosition()) {
             case PANEL_TOP:
                 layout->setDirection(QBoxLayout::BottomToTop); break;

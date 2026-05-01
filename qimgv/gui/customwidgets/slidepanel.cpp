@@ -7,9 +7,10 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
       mWidget(nullptr),
       mPosition(PANEL_TOP)
 {
-    mLayout.setSpacing(0);
-    mLayout.setContentsMargins(0, 0, 0, 0);
-    this->setLayout(&mLayout);
+    mLayout = new QHBoxLayout();
+    mLayout->setSpacing(0);
+    mLayout->setContentsMargins(0, 0, 0, 0);
+    this->setLayout(mLayout);
     fadeEffect = new QGraphicsOpacityEffect(this);
     this->setGraphicsEffect(fadeEffect);
     startPosition = geometry().topLeft();
@@ -20,7 +21,7 @@ SlidePanel::SlidePanel(FloatingWidgetContainer *parent)
     timeline.setEndFrame(ANIMATION_DURATION);
     this->setAttribute(Qt::WA_NoMousePropagation, true);
     this->setFocusPolicy(Qt::NoFocus);
-    mLayout.setDirection(QBoxLayout::LeftToRight);
+    mLayout->setDirection(QBoxLayout::LeftToRight);
     QWidget::hide();
 }
 

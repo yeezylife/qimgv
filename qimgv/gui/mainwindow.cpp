@@ -12,15 +12,16 @@ MW::MW(QWidget *parent)
     setAttribute(Qt::WA_OpaquePaintEvent);
     setAttribute(Qt::WA_NoSystemBackground);
 
-    layout.setContentsMargins(0,0,0,0);
-    layout.setSpacing(0);
+    layout = new QHBoxLayout();
+    layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
     setMinimumSize(10,10);
     
     // do not steal focus when clicked
     // this is just a container. accept key events only
     // via passthrough from child widgets
     setFocusPolicy(Qt::NoFocus);
-    this->setLayout(&layout);
+    this->setLayout(layout);
     setWindowTitle(QCoreApplication::applicationName() + QStringLiteral(" ") +
                    QCoreApplication::applicationVersion());
     this->setMouseTracking(true);
@@ -55,12 +56,12 @@ void MW::setupUi() {
     docWidget = new DocumentWidget(viewerWidget, infoBarWindowed);
     
     centralWidget = new CentralWidget(docWidget, this);
-    layout.addWidget(centralWidget);
+    layout->addWidget(centralWidget);
     
     controlsOverlay = new ControlsOverlay(docWidget);
     infoBarFullscreen = new FullscreenInfoOverlayProxy(viewerWidget);
     sidePanel = new SidePanel(this);
-    layout.addWidget(sidePanel);
+    layout->addWidget(sidePanel);
     
     imageInfoOverlay = new ImageInfoOverlayProxy(viewerWidget);
     floatingMessage = new FloatingMessageProxy(viewerWidget);

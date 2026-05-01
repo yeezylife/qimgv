@@ -18,7 +18,7 @@ protected:
     void paintEvent(QPaintEvent *event);
 
 private:
-    QHBoxLayout layout;
+    QHBoxLayout *layout;
     QLabel nameLabel, valueLabel;
 };
 

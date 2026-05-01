@@ -4,8 +4,9 @@ InfoBarProxy::InfoBarProxy(QWidget *parent) : QWidget(parent), infoBar(nullptr) 
     setAccessibleName("InfoBarProxy");
     setMinimumHeight(23);
     setMaximumHeight(23);
-    layout.setContentsMargins(0, 0, 0, 0);
-    setLayout(&layout);
+    layout = new QVBoxLayout();
+    layout->setContentsMargins(0, 0, 0, 0);
+    setLayout(layout);
 }
 
 InfoBarProxy::~InfoBarProxy() {
@@ -26,8 +27,8 @@ void InfoBarProxy::init() {
         return;
     infoBar = new InfoBar(this);
     setFocusProxy(infoBar);
-    layout.addWidget(infoBar);
-    setLayout(&layout);
+    layout->addWidget(infoBar);
+    setLayout(layout);
     if(!stateBuf.fileName.isEmpty())
         infoBar->setInfo(stateBuf.position, stateBuf.fileName, stateBuf.info);
 }

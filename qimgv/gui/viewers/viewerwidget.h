@@ -37,7 +37,7 @@ public:
     ScalingFilter scalingFilter();
 
 private:
-    QVBoxLayout layout;
+    QVBoxLayout *layout;
     QPointer<ImageViewerV2> imageViewer;
     QPointer<VideoPlayerInitProxy> videoPlayer;
     QPointer<ContextMenu> contextMenu;

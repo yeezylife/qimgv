@@ -49,7 +49,7 @@ private:
     QLibrary playerLib;
     std::shared_ptr<VideoPlayer> player;
     bool initPlayer();
-    QVBoxLayout layout;
+    QVBoxLayout *layout;
     QLabel *errorLabel = nullptr;
     QObject *eventFilterObj = nullptr;
 

@@ -20,8 +20,9 @@ VideoPlayerInitProxy::VideoPlayerInitProxy(QWidget *parent)
 {
     setAccessibleName("VideoPlayerInitProxy");
     setMouseTracking(true);
-    layout.setContentsMargins(0,0,0,0);
-    setLayout(&layout);
+    layout = new QVBoxLayout();
+    layout->setContentsMargins(0,0,0,0);
+    setLayout(layout);
     connect(settings, &Settings::settingsChanged, this, &VideoPlayerInitProxy::onSettingsChanged);
     libFile = PLUGIN_FILE_NAME;
     
@@ -116,7 +117,7 @@ inline bool VideoPlayerInitProxy::initPlayer() {
 
     // 设置父子关系和布局
     player->setParent(this);
-    layout.addWidget(player.get());
+    layout->addWidget(player.get());
     player->hide();
     setFocusProxy(player.get());
     
@@ -237,7 +238,7 @@ void VideoPlayerInitProxy::show() {
                                 .arg(searchPaths.join("\n"));
         
         errorLabel->setText(errString);
-        layout.addWidget(errorLabel);
+        layout->addWidget(errorLabel);
     }
     VideoPlayer::show();
 }

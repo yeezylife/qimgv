@@ -19,7 +19,7 @@ void pinned(bool mode);
 private slots:
 void onPinClicked();
 private:
-QVBoxLayout buttonsLayout;
+QVBoxLayout *buttonsLayout;
 QWidget buttonsWidget;
     ActionButton *openButton, *settingsButton, *exitButton, *pinButton;
 private:

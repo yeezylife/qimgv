@@ -17,14 +17,15 @@ pinButton->setAccessibleName("ButtonSmall");
 pinButton->setTriggerMode(TriggerMode::PressTrigger);
 pinButton->setCheckable(true);
 connect(pinButton, &ActionButton::toggled, this, &MainPanel::onPinClicked);
-buttonsLayout.setDirection(QBoxLayout::BottomToTop);
-buttonsLayout.setSpacing(0);
-buttonsLayout.addWidget(settingsButton);
-buttonsLayout.addWidget(openButton);
-buttonsLayout.addStretch(0);
-buttonsLayout.addWidget(pinButton);
-buttonsLayout.addWidget(exitButton);
-buttonsWidget.setLayout(&buttonsLayout);
+buttonsLayout = new QVBoxLayout();
+buttonsLayout->setDirection(QBoxLayout::BottomToTop);
+buttonsLayout->setSpacing(0);
+buttonsLayout->addWidget(settingsButton);
+buttonsLayout->addWidget(openButton);
+buttonsLayout->addStretch(0);
+buttonsLayout->addWidget(pinButton);
+buttonsLayout->addWidget(exitButton);
+buttonsWidget.setLayout(buttonsLayout);
 layout()->addWidget(&buttonsWidget);
 // 注意：不在构造函数中调用 readSettings()，避免虚函数调用问题
 // readSettings();
@@ -44,24 +45,24 @@ void MainPanel::setPosition(PanelPosition p) {
 SlidePanel::setPosition(p);
 switch(p) {
 case PANEL_TOP:
-buttonsLayout.setDirection(QBoxLayout::BottomToTop);
+buttonsLayout->setDirection(QBoxLayout::BottomToTop);
 layout()->setContentsMargins(0,0,0,1);
-buttonsLayout.setContentsMargins(4,0,0,0);
+buttonsLayout->setContentsMargins(4,0,0,0);
 break;
 case PANEL_BOTTOM:
-buttonsLayout.setDirection(QBoxLayout::BottomToTop);
+buttonsLayout->setDirection(QBoxLayout::BottomToTop);
 layout()->setContentsMargins(0,3,0,0);
-buttonsLayout.setContentsMargins(4,0,0,0);
+buttonsLayout->setContentsMargins(4,0,0,0);
 break;
 case PANEL_LEFT:
-buttonsLayout.setDirection(QBoxLayout::LeftToRight);
+buttonsLayout->setDirection(QBoxLayout::LeftToRight);
 layout()->setContentsMargins(0,0,1,0);
-buttonsLayout.setContentsMargins(0,0,0,4);
+buttonsLayout->setContentsMargins(0,0,0,4);
 break;
 case PANEL_RIGHT:
-buttonsLayout.setDirection(QBoxLayout::LeftToRight);
+buttonsLayout->setDirection(QBoxLayout::LeftToRight);
 layout()->setContentsMargins(1,0,0,0);
-buttonsLayout.setContentsMargins(0,0,0,4);
+buttonsLayout->setContentsMargins(0,0,0,4);
 break;
 }
 recalculateGeometry();

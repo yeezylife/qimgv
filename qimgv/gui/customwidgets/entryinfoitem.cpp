@@ -2,11 +2,12 @@
 #include <utility>
 
 EntryInfoItem::EntryInfoItem(QWidget *parent) : QWidget(parent) {
-    layout.setContentsMargins(9,0,9,0);
-    layout.setSpacing(0);
-    layout.addWidget(&nameLabel);
-    layout.addWidget(&valueLabel);
-    setLayout(&layout);
+    layout = new QHBoxLayout();
+    layout->setContentsMargins(9,0,9,0);
+    layout->setSpacing(0);
+    layout->addWidget(&nameLabel);
+    layout->addWidget(&valueLabel);
+    setLayout(layout);
 
     nameLabel.setFixedSize(120,30);
     valueLabel.setFixedSize(142,30);

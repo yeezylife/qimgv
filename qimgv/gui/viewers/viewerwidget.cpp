@@ -24,12 +24,13 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     if(qgetenv("XDG_SESSION_TYPE") == "wayland")
         mWaylandCursorWorkaround = true;
 #endif
-    layout.setContentsMargins(0, 0, 0, 0);
-    layout.setSpacing(0);
-    this->setLayout(&layout);
+    layout = new QVBoxLayout();
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    this->setLayout(layout);
 
     imageViewer = new ImageViewerV2(this);
-    layout.addWidget(imageViewer);
+    layout->addWidget(imageViewer);
     imageViewer->hide();
 
     connect(imageViewer, &ImageViewerV2::scalingRequested, this, &ViewerWidget::scalingRequested);

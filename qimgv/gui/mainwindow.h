@@ -81,7 +81,7 @@ public:
 
 private:
     ViewerWidget *viewerWidget = nullptr;
-    QHBoxLayout layout;
+    QHBoxLayout *layout;
     QTimer windowGeometryChangeTimer;
     int currentDisplay = 0;
     bool showInfoBarFullscreen = false;

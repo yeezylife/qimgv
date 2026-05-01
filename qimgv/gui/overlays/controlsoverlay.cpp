@@ -10,13 +10,14 @@ ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     closeButton = new ActionButton("exit", ":/res/icons/common/buttons/panel/close16.png", 30);
     closeButton->setAccessibleName("ButtonSmall");
 
-    layout.setContentsMargins(0,0,0,0);
+    layout = new QHBoxLayout();
+    layout->setContentsMargins(0,0,0,0);
     this->setContentsMargins(0,0,0,0);
-    layout.setSpacing(0);
-    layout.addWidget(minimizeButton);
-    layout.addWidget(windowModeButton);
-    layout.addWidget(closeButton);
-    setLayout(&layout);
+    layout->setSpacing(0);
+    layout->addWidget(minimizeButton);
+    layout->addWidget(windowModeButton);
+    layout->addWidget(closeButton);
+    setLayout(layout);
     
     // 构造函数中直接设置大小和几何，避免调用虚函数
     mCachedContentsSize = QSize(0, 0);

@@ -38,7 +38,7 @@ private slots:
     void animationUpdate(int frame);
 
 protected:
-    QHBoxLayout mLayout;
+    QHBoxLayout *mLayout;
     QGraphicsOpacityEffect *fadeEffect;
     int panelSize, slideAmount;
     std::shared_ptr<QWidget> mWidget;

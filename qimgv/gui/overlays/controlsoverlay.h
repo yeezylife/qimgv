@@ -17,7 +17,7 @@ public slots:
     void show();
 
 private:
-    QHBoxLayout layout;
+    QHBoxLayout *layout;
     ActionButton *minimizeButton, *windowModeButton, *closeButton;
     QGraphicsOpacityEffect *fadeEffect;
     QPropertyAnimation *fadeAnimation;

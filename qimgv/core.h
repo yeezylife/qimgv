@@ -76,15 +76,11 @@ private:
     void reset();
     bool setDirectory(const QString& path);
 
-    QDrag *mDrag;
     QMimeData *getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target);
     QTranslator *translator = nullptr;
 
     Randomizer randomizer;
     void syncRandomizer();
-    
-    // 优化3：QDrag复用
-    std::unique_ptr<QDrag> dragCache;
     
 
     void attachModel(std::unique_ptr<DirectoryModel> _model);

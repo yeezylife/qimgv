@@ -10,8 +10,7 @@ Core::Core()
         : loopSlideshow(false),
             shuffle(false),
             slideshow(false),
-            folderEndAction(FOLDER_END_NO_ACTION),
-            mDrag(nullptr)
+            folderEndAction(FOLDER_END_NO_ACTION)
 {
     loadTranslation();
     initGui();
@@ -514,30 +513,71 @@ void Core::onDropIn(const QMimeData *mimeData, QObject* source) {
 void Core::onDraggedOut() {
     if(state.currentFilePath.isEmpty() || !model->containsFile(state.currentFilePath))
         return;
-    QMimeData *mimeData = getMimeDataForImage(model->getImage(state.currentFilePath), TARGET_DROP);
-    if(!dragCache)
-        dragCache = std::make_unique<QDrag>(this);
-    mDrag = dragCache.get();
-    mDrag->setMimeData(mimeData);
-    mDrag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
+    auto img = model->getImage(state.currentFilePath);
+    if(!img)
+        return;
+
+    QMimeData* mimeData = nullptr;
+    // 优先使用URL拖拽：未编辑且原文件存在
+    if(!img->isEdited() && QFileInfo::exists(state.currentFilePath)) {
+        mimeData = new QMimeData();
+        mimeData->setUrls({QUrl::fromLocalFile(state.currentFilePath)});
+    } else {
+        // 编辑过或文件不存在时走原逻辑
+        mimeData = getMimeDataForImage(img, TARGET_DROP);
+        if(!mimeData)
+            return;
+    }
+
+    QDrag* drag = new QDrag(this);
+    drag->setMimeData(mimeData);
+    drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
 }
 
-QMimeData *Core::getMimeDataForImage(const std::shared_ptr<Image>& img, MimeDataTarget target) {
-    QMimeData *mimeData = new QMimeData();
-    if(!img)
+QMimeData* Core::getMimeDataForImage(const std::shared_ptr<Image>& img,
+                                     MimeDataTarget target)
+{
+    QMimeData* mimeData = new QMimeData();
+    if (!img)
         return mimeData;
+
     QString path = img->filePath();
-    if(img->type() == STATIC) {
-        if(img->isEdited()) {
-            path = settings->tmpDir() + "image.png";
-            int pngQuality = (target == TARGET_DROP) ? 80 : 30;
-            img->getImage()->save(path, nullptr, pngQuality);
+
+    if (img->type() == STATIC) {
+        if (img->isEdited()) {
+
+            QString tmpDir = settings->tmpDir();
+            QDir().mkpath(tmpDir);
+
+            // ✅ 用固定缓存路径（但避免重复写）
+            QString tmpPath = tmpDir + "qimgv_edited.png";
+
+            const QImage* image = img->getImage().get();
+            if (!image || image->isNull())
+                return mimeData;
+
+            QFileInfo tmpInfo(tmpPath);
+
+            // 🔥 关键优化：避免每次都写文件
+            if (!tmpInfo.exists() ||
+                tmpInfo.size() == 0 ||
+                tmpInfo.lastModified() < QFileInfo(path).lastModified())
+            {
+                int quality = (target == TARGET_DROP) ? 80 : 30;
+                image->save(tmpPath, nullptr, quality);
+            }
+
+            path = tmpPath;
         }
     }
-    // clipboard only!
-    if(img->type() != VIDEO && target == TARGET_CLIPBOARD)
+
+    // clipboard only
+    if (img->type() != VIDEO && target == TARGET_CLIPBOARD) {
         mimeData->setImageData(*img->getImage());
-    mimeData->setUrls({QUrl::fromLocalFile(path)});
+    }
+
+    mimeData->setUrls({ QUrl::fromLocalFile(path) });
+
     return mimeData;
 }
 

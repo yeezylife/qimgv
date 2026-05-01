@@ -248,7 +248,7 @@ jobs:
           name: qimgv-binary
 
       - name: Upload to GitHub Release (自动版)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ needs.build.outputs.build_file_name }}
           tag_name: auto-qt6-${{ github.run_number }}-${{ github.run_id }}

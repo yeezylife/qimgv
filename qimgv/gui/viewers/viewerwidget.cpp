@@ -43,7 +43,7 @@ ViewerWidget::ViewerWidget(QWidget *parent)
 
 
     videoPlayer = new VideoPlayerInitProxy(this);
-    layout.addWidget(videoPlayer);
+    layout->addWidget(videoPlayer);
     videoPlayer->hide();
     videoControls = new VideoControlsProxyWrapper(this);
 

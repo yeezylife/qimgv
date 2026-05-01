@@ -21,9 +21,9 @@ ControlsOverlay::ControlsOverlay(FloatingWidgetContainer *parent) :
     
     // 构造函数中直接设置大小和几何，避免调用虚函数
     mCachedContentsSize = QSize(0, 0);
-    for(int i=0; i<layout.count(); i++) {
-        mCachedContentsSize.setWidth(mCachedContentsSize.width() + layout.itemAt(i)->widget()->width());
-        mCachedContentsSize.setHeight(layout.itemAt(i)->widget()->height());
+    for(int i=0; i<layout->count(); i++) {
+        mCachedContentsSize.setWidth(mCachedContentsSize.width() + layout->itemAt(i)->widget()->width());
+        mCachedContentsSize.setHeight(layout->itemAt(i)->widget()->height());
     }
     this->setFixedSize(mCachedContentsSize);
     recalculateGeometryInternal();

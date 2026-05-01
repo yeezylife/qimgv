@@ -511,26 +511,29 @@ void Core::onDropIn(const QMimeData *mimeData, QObject* source) {
 
 // drag'n'drop - drag image out of the program
 void Core::onDraggedOut() {
-    if(state.currentFilePath.isEmpty() || !model->containsFile(state.currentFilePath))
-        return;
-    auto img = model->getImage(state.currentFilePath);
-    if(!img)
+    if (state.currentFilePath.isEmpty() || !model->containsFile(state.currentFilePath))
         return;
 
-    QMimeData* mimeData = nullptr;
-    // 优先使用URL拖拽：未编辑且原文件存在
-    if(!img->isEdited() && QFileInfo::exists(state.currentFilePath)) {
+    auto img = model->getImage(state.currentFilePath);
+    if (!img)
+        return;
+
+    QMimeData *mimeData = nullptr;
+
+    // 优先使用原始文件 URL：未编辑且原文件确实存在
+    if (!img->isEdited() && QFileInfo::exists(state.currentFilePath)) {
         mimeData = new QMimeData();
         mimeData->setUrls({QUrl::fromLocalFile(state.currentFilePath)});
     } else {
-        // 编辑过或文件不存在时走原逻辑
+        // 编辑过或原文件丢失时，走完整处理（会生成临时 PNG）
         mimeData = getMimeDataForImage(img, TARGET_DROP);
-        if(!mimeData)
+        if (!mimeData)
             return;
     }
 
-    QDrag* drag = new QDrag(this);
+    QDrag *drag = new QDrag(this);
     drag->setMimeData(mimeData);
+    // Qt 文档明确：exec() 后 Qt 会自动销毁 QDrag，不可手动 delete
     drag->exec(Qt::CopyAction | Qt::MoveAction | Qt::LinkAction, Qt::CopyAction);
 }
 
@@ -545,26 +548,39 @@ QMimeData* Core::getMimeDataForImage(const std::shared_ptr<Image>& img,
 
     if (img->type() == STATIC) {
         if (img->isEdited()) {
-
-            QString tmpDir = settings->tmpDir();
+            // 确保临时目录存在
+            const QString tmpDir = settings->tmpDir();
             QDir().mkpath(tmpDir);
 
-            // ✅ 用固定缓存路径（但避免重复写）
-            QString tmpPath = tmpDir + "qimgv_edited.png";
+            // 为每个原始图片使用独立的临时文件名，防止多图编辑时互相覆盖
+            const QString baseName = QStringLiteral("qimgv_edited_%1.png")
+                                     .arg(qHash(img->filePath()), 0, 16);
+            const QString tmpPath = QDir(tmpDir).filePath(baseName);
 
             const QImage* image = img->getImage().get();
             if (!image || image->isNull())
                 return mimeData;
 
-            QFileInfo tmpInfo(tmpPath);
+            // 通过 cacheKey 判断图像内容是否改变
+            using CacheMap = QHash<QString, qint64>;  // 原图路径 -> 上次保存时的cacheKey
+            static CacheMap cacheKeys;
+            const qint64 currentKey = image->cacheKey();
 
-            // 🔥 关键优化：避免每次都写文件
-            if (!tmpInfo.exists() ||
-                tmpInfo.size() == 0 ||
-                tmpInfo.lastModified() < QFileInfo(path).lastModified())
-            {
+            bool needSave = false;
+            auto it = cacheKeys.find(img->filePath());
+            if (it == cacheKeys.end() || it.value() != currentKey) {
+                needSave = true;
+            } else {
+                // cacheKey 匹配，再检查文件是否完好（防止外部误删）
+                QFileInfo fi(tmpPath);
+                if (!fi.exists() || fi.size() == 0)
+                    needSave = true;
+            }
+
+            if (needSave) {
                 int quality = (target == TARGET_DROP) ? 80 : 30;
                 image->save(tmpPath, nullptr, quality);
+                cacheKeys[img->filePath()] = currentKey;
             }
 
             path = tmpPath;
@@ -572,12 +588,10 @@ QMimeData* Core::getMimeDataForImage(const std::shared_ptr<Image>& img,
     }
 
     // clipboard only
-    if (img->type() != VIDEO && target == TARGET_CLIPBOARD) {
+    if (img->type() != VIDEO && target == TARGET_CLIPBOARD)
         mimeData->setImageData(*img->getImage());
-    }
 
     mimeData->setUrls({ QUrl::fromLocalFile(path) });
-
     return mimeData;
 }
 

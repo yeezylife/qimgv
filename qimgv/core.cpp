@@ -25,12 +25,6 @@ Core::Core()
     lastClipboardSaveFormat = qsettings.value("clipboard/saveFormat", "jxl").toString().toLower();
     if(lastClipboardSaveFormat.isEmpty())
         lastClipboardSaveFormat = "jxl";
-
-    QVersionNumber lastVersion = settings->lastVersion();
-    if(settings->firstRun())
-        onFirstRun();
-    else if(appVersion > lastVersion)
-        onUpdate();
 }
 
 void Core::readSettings() {
@@ -56,6 +50,15 @@ void Core::showGui() {
     }
 
     QTimer::singleShot(0, mw.get(), &MW::setupFullUi);
+
+    // 延迟执行版本检查：将 onFirstRun/onUpdate 移到窗口显示之后
+    QTimer::singleShot(0, this, [this]() {
+        QVersionNumber lastVersion = settings->lastVersion();
+        if(settings->firstRun())
+            onFirstRun();
+        else if(appVersion > lastVersion)
+            onUpdate();
+    });
 }
 
 void Core::initGui() {

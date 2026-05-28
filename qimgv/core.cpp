@@ -441,8 +441,12 @@ void Core::openFromClipboard() {
         auto image = cb->image();
         if(image.isNull())
             return;
+        QSettings qsettings;
+        QString lastPasteDir = qsettings.value("clipboard/lastPasteSaveDir", "").toString();
         QString destPath;
-        if(!model->isEmpty())
+        if (!lastPasteDir.isEmpty() && QDir(lastPasteDir).exists())
+            destPath = lastPasteDir + "/";
+        else if(!model->isEmpty())
             destPath = model->directoryPath() + "/";
         else
             destPath = QDir::homePath() + "/";
@@ -456,6 +460,7 @@ void Core::openFromClipboard() {
             lastClipboardSaveFormat = destFi.suffix().toLower();
             QSettings().setValue("clipboard/saveFormat", lastClipboardSaveFormat);
         }
+        qsettings.setValue("clipboard/lastPasteSaveDir", QFileInfo(destPath).absolutePath());
 
 
         QString tmpPath = destPath + "_" + QString(QCryptographicHash::hash(destPath.toUtf8(), QCryptographicHash::Md5).toHex());

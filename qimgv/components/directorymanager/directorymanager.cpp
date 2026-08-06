@@ -518,9 +518,10 @@ void DirectoryManager::updateFileEntry(const QString &filePath) {
         return;
     FSEntry newEntry(filePath);
     int index = indexOfFile(filePath);
-    if(fileEntryVec.at(index).modifyTime != newEntry.modifyTime)
+    if(fileEntryVec.at(index).modifyTime != newEntry.modifyTime) {
         fileEntryVec.at(index) = newEntry;
-    emit fileModified(filePath);
+        emit fileModified(filePath);
+    }
 }
 
 void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName) {

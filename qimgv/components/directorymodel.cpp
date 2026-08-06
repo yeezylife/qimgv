@@ -274,13 +274,11 @@ void DirectoryModel::onFileAdded(const QString &filePath) {
 }
 
 void DirectoryModel::onFileModified(const QString &filePath) {
-    QDateTime modTime = lastModified(filePath);
-    if(!modTime.isValid())
-        return;
-
+    // updateFileEntry 仅在 modifyTime 变化时 emit（emit 前已完成 stat），
+    // 这里内联 reload 逻辑以避免 reload 内部再次调用 updateFileEntry 造成重复 stat
     if (auto img = cache.get(filePath)) {
-        if(modTime != img->lastModified())
-            reload(filePath);
+        cache.remove(filePath);
+        load(filePath, false);
     }
 
     emit fileModified(filePath);

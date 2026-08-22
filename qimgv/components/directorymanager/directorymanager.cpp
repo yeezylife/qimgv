@@ -114,7 +114,7 @@ void DirectoryManager::readSettings() {
     const auto &formats = settings->supportedFormats();
     for (const auto &fmt : formats) {
         QString suffix = QString::fromLatin1(fmt).toLower();
-        const int len = suffix.size();
+        const int len = static_cast<int>(suffix.size());
         if (len >= 1 && len <= kMaxBuiltinSuffixLen)
             mSuffixBuckets[len - 1].push_back(std::move(suffix));
         else if (len > kMaxBuiltinSuffixLen)
@@ -294,7 +294,7 @@ bool DirectoryManager::isSupportedSuffix(const QStringView &suffix) const {
     // ⭐ 按长度分桶匹配：不同长度的字符串必然不相等，只需与同长度桶内
     // 已统一小写的后缀做大小写不敏感比较；QStringView 全程无分配。
     // 目录扫描热路径：替代原先对全部后缀的线性扫描
-    const int len = suffix.size();
+    const int len = static_cast<int>(suffix.size());
     if (len <= 0)
         return false;
 

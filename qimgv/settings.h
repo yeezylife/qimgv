@@ -321,6 +321,10 @@ private:
     mutable bool mPanelPreviewsSizeCacheValid;
     mutable int mCachedImageSaveQuality;
     mutable bool mImageSaveQualityCacheValid;
+
+    // 缓存布尔设置值（翻页热路径 usePreloader）
+    mutable bool mCachedUsePreloader;
+    mutable bool mUsePreloaderCacheValid;
     
     // 缓存字符串列表
     mutable QStringList mCachedSavedPaths;

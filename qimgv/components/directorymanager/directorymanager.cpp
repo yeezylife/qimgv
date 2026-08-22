@@ -107,11 +107,20 @@ void DirectoryManager::stopFileWatcher() {
 }
 
 void DirectoryManager::readSettings() {
-    mSupportedSuffixes.clear();
+    for (auto &bucket : mSuffixBuckets)
+        bucket.clear();
+    mSuffixLongBucket.clear();
+
     const auto &formats = settings->supportedFormats();
-    mSupportedSuffixes.reserve(static_cast<int>(formats.size()));
-    for(const auto &fmt : formats)
-        mSupportedSuffixes.insert(QString::fromLatin1(fmt).toLower());
+    for (const auto &fmt : formats) {
+        QString suffix = QString::fromLatin1(fmt).toLower();
+        const int len = suffix.size();
+        if (len >= 1 && len <= kMaxBuiltinSuffixLen)
+            mSuffixBuckets[len - 1].push_back(std::move(suffix));
+        else if (len > kMaxBuiltinSuffixLen)
+            mSuffixLongBucket.push_back(std::move(suffix));
+        // len == 0 不可能出现（格式名非空），跳过即可
+    }
 }
 
 // ==================== 索引映射维护方法 ====================
@@ -282,10 +291,18 @@ const FSEntry &DirectoryManager::fileEntryAt(int index) const {
 }
 
 bool DirectoryManager::isSupportedSuffix(const QStringView &suffix) const {
-    // ⭐ 无分配逐项比较：QSet<QString> 无 QStringView 透明哈希查找，
-    // 长度先判快速排除，再与已统一小写的集合元素做大小写不敏感比较
-    for (const QString &s : mSupportedSuffixes) {
-        if (suffix.size() == s.size() && suffix.compare(s, Qt::CaseInsensitive) == 0)
+    // ⭐ 按长度分桶匹配：不同长度的字符串必然不相等，只需与同长度桶内
+    // 已统一小写的后缀做大小写不敏感比较；QStringView 全程无分配。
+    // 目录扫描热路径：替代原先对全部后缀的线性扫描
+    const int len = suffix.size();
+    if (len <= 0)
+        return false;
+
+    const std::vector<QString> &bucket =
+        (len <= kMaxBuiltinSuffixLen) ? mSuffixBuckets[len - 1] : mSuffixLongBucket;
+
+    for (const QString &s : bucket) {
+        if (suffix.compare(s, Qt::CaseInsensitive) == 0)
             return true;
     }
     return false;

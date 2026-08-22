@@ -35,6 +35,7 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mImageFitModeCacheValid = false;
     mPanelPreviewsSizeCacheValid = false;
     mImageSaveQualityCacheValid = false;
+    mUsePreloaderCacheValid = false;
     mSavedPathsCacheValid = false;
     mBookmarksCacheValid = false;
     mShortcutsCacheValid = false;
@@ -542,11 +543,19 @@ void Settings::setPanelPreviewsSize(int size) {
 }
 //------------------------------------------------------------------------------
 bool Settings::usePreloader() {
-    return settingsConf->value("usePreloader", true).toBool();
+    // ⭐ 翻页/加载热路径：QSettings::value 含互斥锁与有序键查找，缓存后仅一次布尔判断
+    if (mUsePreloaderCacheValid) {
+        return mCachedUsePreloader;
+    }
+
+    mCachedUsePreloader = settingsConf->value("usePreloader", true).toBool();
+    mUsePreloaderCacheValid = true;
+    return mCachedUsePreloader;
 }
 
 void Settings::setUsePreloader(bool mode) {
     settingsConf->setValue("usePreloader", mode);
+    mUsePreloaderCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::keepFitMode() {

@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QVector>
 #include <QPair>
+#include <array>
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
@@ -138,7 +139,7 @@ private:
     void updateDirIndexAfterInsert(const QString &path, int index);
     void updateDirIndexAfterRemove(const QString &path, int index);
 
-    // 无分配后缀匹配：与已统一小写的集合元素做长度+大小写不敏感比较
+    // 无分配后缀匹配：与已统一小写的分桶元素做长度+大小写不敏感比较
     bool isSupportedSuffix(const QStringView &suffix) const;
 
     // watcher 事件批量处理：去重 + 合并，避免每个事件单独 O(n) 索引重写
@@ -150,7 +151,12 @@ private:
     void processPendingModifications(const QSet<QString> &modifies);
 
 private:
-    QSet<QString> mSupportedSuffixes;
+    // ⭐ 后缀按长度分桶：目录扫描时每个文件只与同长度的少量后缀做
+    // 大小写不敏感比较（不同长度必然不等），替代对全量集合的线性扫描。
+    // readSettings() 一次性构建，运行期只在设置变化时重建
+    static constexpr int kMaxBuiltinSuffixLen = 16;
+    std::array<std::vector<QString>, kMaxBuiltinSuffixLen> mSuffixBuckets; // 下标 = 长度-1
+    std::vector<QString> mSuffixLongBucket;                                // 超长后缀兜底
     QCollator collator;
     std::vector<FSEntry> fileEntryVec, dirEntryVec;
     const FSEntry defaultEntry;

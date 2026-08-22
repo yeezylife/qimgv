@@ -1,6 +1,8 @@
 #include "shortcutbuilder.h"
 
 #include <QStringList>
+#include <utility>
+#include <vector>
 
 //------------------------------------------------------------------------------
 QString ShortcutBuilder::fromEvent(QInputEvent *event) {
@@ -99,24 +101,37 @@ QString ShortcutBuilder::modifierKeys(QInputEvent *event) {
     if (!event)
         return {};
 
-    const auto &modsMap = inputMap->modifiers();
-    const auto flags = event->modifiers();
-
-    // 先收集再排序: QHash 迭代顺序受随机哈希种子影响, 跨进程不稳定,
-    // 会导致生成的快捷键串与默认值(如 "Ctrl+Shift+S")错位而匹配失败
-    QStringList names;
-    names.reserve(modsMap.size());
-    for (auto it = modsMap.cbegin(); it != modsMap.cend(); ++it) {
-        if (flags.testFlag(it.value()))
+    // ⭐ 热路径（每次按键/滚轮/鼠标事件）：修饰键表进程内固定不变，
+    // 预构建一次"按名称排序"的 (名称, 修饰符) 表，事件路径只做标志位测试与拼接，
+    // 替代原先每次的 QHash 遍历 + QStringList 构造 + 排序 + join（多次堆分配）
+    static const std::vector<std::pair<QString, Qt::KeyboardModifier>> sortedMods = []() {
+        const auto &modsMap = inputMap->modifiers();
+        // 先按原逻辑排序：QHash 迭代顺序受随机哈希种子影响，跨进程不稳定，
+        // 排序保证生成的快捷键串与默认值(如 "Ctrl+Shift+S")错位时仍能匹配
+        QStringList names;
+        names.reserve(modsMap.size());
+        for (auto it = modsMap.cbegin(); it != modsMap.cend(); ++it)
             names += it.key();
-    }
+        names.sort();
 
-    if (names.isEmpty())
+        std::vector<std::pair<QString, Qt::KeyboardModifier>> table;
+        table.reserve(names.size());
+        for (const QString &name : names)
+            table.emplace_back(name, modsMap.value(name));
+        return table;
+    }();
+
+    const auto flags = event->modifiers();
+    if (flags == Qt::NoModifier)
         return {};
 
-    names.sort();
-    QString result = names.join(QLatin1Char('+'));
-    result += QLatin1Char('+');
+    QString result;
+    for (const auto &mod : sortedMods) {
+        if (flags.testFlag(mod.second)) {
+            result += mod.first;
+            result += QLatin1Char('+');
+        }
+    }
     return result;
 }
 

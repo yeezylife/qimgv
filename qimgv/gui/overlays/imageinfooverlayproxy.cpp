@@ -32,7 +32,7 @@ void ImageInfoOverlayProxy::init() {
     overlay->setExifInfo(stateBuf.info);
 }
 
-bool ImageInfoOverlayProxy::isHidden() {
+bool ImageInfoOverlayProxy::isHidden() const {
     return overlay ? overlay->isHidden() : true;
 }
 

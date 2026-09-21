@@ -321,10 +321,14 @@ private:
     mutable bool mPanelPreviewsSizeCacheValid;
     mutable int mCachedImageSaveQuality;
     mutable bool mImageSaveQualityCacheValid;
+    mutable int mCachedMemoryAllocationLimit;
+    mutable bool mMemoryAllocationLimitCacheValid;
 
     // 缓存布尔设置值（翻页热路径 usePreloader）
     mutable bool mCachedUsePreloader;
     mutable bool mUsePreloaderCacheValid;
+    mutable bool mCachedUnlockMinZoom;
+    mutable bool mUnlockMinZoomCacheValid;
     
     // 缓存字符串列表
     mutable QStringList mCachedSavedPaths;

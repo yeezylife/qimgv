@@ -84,6 +84,7 @@ public:
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     void setCurrentInfo(int fileIndex, int fileCount, const QString& filePath, const QString& fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(const QHash<QString, QString> &info);
+    bool isImageInfoOverlayVisible();
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     bool showConfirmation(const QString& title, const QString& msg);

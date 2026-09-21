@@ -173,7 +173,7 @@ void Core::initActions() {
     connect(actionManager, &ActionManager::sortByName, this, &Core::sortByName);
     connect(actionManager, &ActionManager::sortByTime, this, &Core::sortByTime);
     connect(actionManager, &ActionManager::sortBySize, this, &Core::sortBySize);
-    connect(actionManager, &ActionManager::toggleImageInfo, mw.get(), &MW::toggleImageInfoOverlay);
+    connect(actionManager, &ActionManager::toggleImageInfo, this, &Core::onToggleImageInfo);
     connect(actionManager, &ActionManager::toggleShuffle, this, &Core::toggleShuffle);
     connect(actionManager, &ActionManager::toggleScalingFilter, mw.get(), &MW::toggleScalingFilter);
     connect(actionManager, &ActionManager::showInDirectory, this, &Core::showInDirectory);
@@ -1443,7 +1443,17 @@ void Core::guiSetImage(const std::shared_ptr<Image>& img) {
     }
     state.isEdited = img->isEdited();
     img->isEdited() ? mw->showSaveOverlay() : mw->hideSaveOverlay();
-    mw->setExifInfo(img->getExifTags());
+    // ⭐ EXIF 仅供信息叠加层使用，默认隐藏：仅在可见时读取，
+    // 避免每张图都重复打开文件解析文本元数据
+    if (mw->isImageInfoOverlayVisible())
+        mw->setExifInfo(img->getExifTags());
+}
+
+void Core::onToggleImageInfo() {
+    // 叠加层打开前才读取当前图 EXIF（隐藏期间切换图片不产生任何文件 I/O）
+    if (!mw->isImageInfoOverlayVisible() && state.currentImg)
+        mw->setExifInfo(state.currentImg->getExifTags());
+    mw->toggleImageInfoOverlay();
 }
 
 void Core::updateInfoString() {

@@ -293,6 +293,10 @@ void MW::toggleImageInfoOverlay() {
         imageInfoOverlay->hide();
 }
 
+bool MW::isImageInfoOverlayVisible() {
+    return imageInfoOverlay && !imageInfoOverlay->isHidden();
+}
+
 void MW::toggleRenameOverlay(const QString& currentName) {
     if(!renameOverlay)
         setupRenameOverlay();

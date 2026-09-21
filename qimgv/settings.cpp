@@ -35,7 +35,9 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mImageFitModeCacheValid = false;
     mPanelPreviewsSizeCacheValid = false;
     mImageSaveQualityCacheValid = false;
+    mMemoryAllocationLimitCacheValid = false;
     mUsePreloaderCacheValid = false;
+    mUnlockMinZoomCacheValid = false;
     mSavedPathsCacheValid = false;
     mBookmarksCacheValid = false;
     mShortcutsCacheValid = false;
@@ -1231,16 +1233,24 @@ void Settings::setAutoResizeLimit(int percent) {
 }
 //------------------------------------------------------------------------------
 int Settings::memoryAllocationLimit() {
+    // ⭐ 图片解码热路径（每次加载前读取）：缓存后避免 QSettings 互斥锁与键查找
+    if (mMemoryAllocationLimitCacheValid) {
+        return mCachedMemoryAllocationLimit;
+    }
+
     int limit = settingsConf->value("memoryAllocationLimit", 1024).toInt();
     if(limit < 512)
         limit = 512;
     else if(limit > 8192)
         limit = 8192;
+    mCachedMemoryAllocationLimit = limit;
+    mMemoryAllocationLimitCacheValid = true;
     return limit;
 }
 
 void Settings::setMemoryAllocationLimit(int limitMB) {
     settingsConf->setValue("memoryAllocationLimit", limitMB);
+    mMemoryAllocationLimitCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::panelCenterSelection() {
@@ -1280,11 +1290,19 @@ void Settings::setZoomLevels(const QString &levels) {
 }
 //------------------------------------------------------------------------------
 bool Settings::unlockMinZoom() {
-    return settingsConf->value("unlockMinZoom", true).toBool();
+    // ⭐ 窗口 resize 热路径：缓存后避免每次 QSettings 互斥锁与键查找
+    if (mUnlockMinZoomCacheValid) {
+        return mCachedUnlockMinZoom;
+    }
+
+    mCachedUnlockMinZoom = settingsConf->value("unlockMinZoom", true).toBool();
+    mUnlockMinZoomCacheValid = true;
+    return mCachedUnlockMinZoom;
 }
 
 void Settings::setUnlockMinZoom(bool mode) {
     settingsConf->setValue("unlockMinZoom", mode);
+    mUnlockMinZoomCacheValid = false;
 }
 //------------------------------------------------------------------------------
 bool Settings::sortFolders() {

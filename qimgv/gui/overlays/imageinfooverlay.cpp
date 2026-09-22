@@ -71,7 +71,7 @@ void ImageInfoOverlay::setExifInfo(const QHash<QString, QString>& info) {
         entryStub.show();
     }
 
-    if(!isHidden() && entryCount != info.count()) {
+    if(isVisible() && entryCount != info.count()) {
         // ensure layout size is recalculated before reposition
         if (ui->entryLayout) {
             ui->entryLayout->invalidate();

@@ -15,7 +15,6 @@ public:
     void hide();
 
     void setExifInfo(const QHash<QString, QString>& _info);
-    bool isHidden() const;
     bool isVisible() const;
 private:
     FloatingWidgetContainer *container;

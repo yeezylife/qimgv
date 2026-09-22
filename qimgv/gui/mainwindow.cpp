@@ -287,10 +287,12 @@ void MW::toggleFullscreenInfoBar() {
 }
 
 void MW::toggleImageInfoOverlay() {
-    if(imageInfoOverlay->isHidden())
-        imageInfoOverlay->show();
-    else
+    // 与 isImageInfoOverlayVisible() 共用同一谓词 isVisible()（需所有祖先可见），
+    // 避免切换判断与可见性检查分叉
+    if(imageInfoOverlay->isVisible())
         imageInfoOverlay->hide();
+    else
+        imageInfoOverlay->show();
 }
 
 bool MW::isImageInfoOverlayVisible() const {
@@ -300,12 +302,12 @@ bool MW::isImageInfoOverlayVisible() const {
 void MW::toggleRenameOverlay(const QString& currentName) {
     if(!renameOverlay)
         setupRenameOverlay();
-    if(renameOverlay->isHidden()) {
+    if(renameOverlay->isVisible()) {
+        renameOverlay->hide();
+    } else {
         renameOverlay->setBackdropEnabled(false);
         renameOverlay->setName(currentName);
         renameOverlay->show();
-    } else {
-        renameOverlay->hide();
     }
 }
 
@@ -751,7 +753,7 @@ void MW::triggerCopyOverlay() {
     if(!copyOverlay)
         setupCopyOverlay();
     if(copyOverlay->operationMode() == OVERLAY_COPY) {
-        copyOverlay->isHidden() ? copyOverlay->show() : copyOverlay->hide();
+        copyOverlay->isVisible() ? copyOverlay->hide() : copyOverlay->show();
     } else {
         copyOverlay->setDialogMode(OVERLAY_COPY);
         copyOverlay->show();
@@ -764,7 +766,7 @@ void MW::triggerMoveOverlay() {
     if(!copyOverlay)
         setupCopyOverlay();
     if(copyOverlay->operationMode() == OVERLAY_MOVE) {
-        copyOverlay->isHidden() ? copyOverlay->show() : copyOverlay->hide();
+        copyOverlay->isVisible() ? copyOverlay->hide() : copyOverlay->show();
     } else {
         copyOverlay->setDialogMode(OVERLAY_MOVE);
         copyOverlay->show();

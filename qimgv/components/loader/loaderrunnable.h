@@ -18,7 +18,9 @@ class Image;
 // 两方只有一方能赢，从根上消除"已取消却仍解码"的边界浪费。
 class LoaderRunnable : public QRunnable {
 public:
-    explicit LoaderRunnable(Loader *loader, const QString &path);
+    // 构造于 GUI 线程：解码限额与格式开关在此快照，run() 所在 worker 线程只读
+    explicit LoaderRunnable(Loader *loader, const QString &path,
+                            int allocationLimitMB, bool jxlAnimation, bool videoPlayback);
     void run() override;
 
     // 单字原子状态：NotStarted → Running（run 赢得 CAS）或 Cancelled（clearTasks 赢得 CAS）。
@@ -39,6 +41,10 @@ private:
 
     Loader *loader;
     QString path;
+    // 主线程快照、worker 只读：int 在前 bool 紧随，填充最少
+    int allocationLimitMB;
+    bool jxlAnimation;
+    bool videoPlayback;
 
 public:
     std::shared_ptr<LoaderRunnable> self; // 由 doLoadAsync 赋值，run() 末尾释放

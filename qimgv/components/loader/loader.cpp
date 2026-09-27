@@ -1,5 +1,6 @@
 #include "loader.h"
 #include "utils/imagefactory.h"
+#include "settings.h"
 #include <QMutableHashIterator>
 
 Loader::Loader() {
@@ -68,7 +69,9 @@ void Loader::doLoadAsync(QThreadPool *targetPool, const QString &path) {
         return; // 已在加载中（含运行中的 preload，其结果会进缓存）
     }
     
-    auto runnable = std::make_shared<LoaderRunnable>(this, path);
+    // GUI 线程快照设置，随任务带入 worker，避免解码线程访问 Settings
+    auto runnable = std::make_shared<LoaderRunnable>(this, path,
+        settings->memoryAllocationLimit(), settings->jxlAnimation(), settings->videoPlayback());
     runnable->setAutoDelete(false); // 生命周期由 shared_ptr 管理，QThreadPool 不得自动 delete
     runnable->self = runnable; // 排队/运行期间维系对象存活
     tasks.insert(path, runnable);

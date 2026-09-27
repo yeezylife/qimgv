@@ -1,6 +1,5 @@
 #include "scalerrunnable.h"
 #include "utils/imagelib.h"
-#include "settings.h"
 #include <utility>
 
 ScalerRunnable::ScalerRunnable(const ScalerRequest& request, std::atomic<quint64>* generation)
@@ -43,7 +42,7 @@ void ScalerRunnable::run()
     bool useNearest = (effectiveFilter == QI_FILTER_NEAREST) ||
                       ((targetSize.width()  > sourceImage.width() ||
                         targetSize.height() > sourceImage.height()) &&
-                       !settings->smoothUpscaling());
+                       !m_request.smoothUpscaling());
 
     ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
 

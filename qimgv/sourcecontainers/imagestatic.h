@@ -16,7 +16,10 @@ class ImageStatic : public Image {
 
 public:
     explicit ImageStatic(QString path);
+    // 仅 GUI 线程同步路径调用：解码限额内部读取设置
     explicit ImageStatic(std::unique_ptr<DocumentInfo> info);
+    // 任意线程可调用：解码限额已由调用方在 GUI 线程快照
+    ImageStatic(std::unique_ptr<DocumentInfo> info, int allocationLimitMB);
     ~ImageStatic() override = default;
     
     using Image::save;
@@ -43,7 +46,8 @@ public slots:
 
 private:
     void load() override;
-    void loadGeneric();
+    void loadWith(int allocationLimitMB);
+    void loadGeneric(int allocationLimitMB);
     void loadICO();
     const QImage &currentImage() const noexcept;
     static QString generateHash(QStringView str) noexcept;

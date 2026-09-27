@@ -22,7 +22,10 @@ enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };
 
 class DocumentInfo {
 public:
+    // 仅 GUI 线程调用：内部读取设置
     explicit DocumentInfo(const QString &path);
+    // 任意线程可调用：jxl/video 开关已由调用方在 GUI 线程快照
+    DocumentInfo(const QString &path, bool jxlAnimation, bool videoPlayback);
 
     ~DocumentInfo() = default;
 
@@ -64,7 +67,7 @@ private:
 
     static const QHash<QString, QString>& getKeyMapping();
 
-    void detectFormat();
+    void detectFormat(bool jxlAnimation, bool videoPlayback);
 
     bool detectAPNG();
     bool detectAnimatedWebP();

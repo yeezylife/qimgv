@@ -8,7 +8,10 @@
 class ImageAnimated final : public Image {
 public:
     explicit ImageAnimated(QString _path);
+    // 仅 GUI 线程同步路径调用：解码限额内部读取设置
     explicit ImageAnimated(std::unique_ptr<DocumentInfo> _info);
+    // 任意线程可调用：解码限额已由调用方在 GUI 线程快照
+    ImageAnimated(std::unique_ptr<DocumentInfo> _info, int allocationLimitMB);
     ~ImageAnimated() override = default;
 
     using Image::save;
@@ -33,7 +36,8 @@ public slots:
 
 private:
     void load() override;
-    void loadMovie();
+    void loadWith(int allocationLimitMB);
+    void loadMovie(int allocationLimitMB);
     std::shared_ptr<const QImage> decodeFrame(int index);
 
     QSize mSize;

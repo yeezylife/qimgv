@@ -19,15 +19,26 @@ ImageStatic::ImageStatic(std::unique_ptr<DocumentInfo> info)
 }
 
 void ImageStatic::load() {
+    // 仅 GUI 线程同步路径调用，此处读设置安全；异步解码走 loadWith(快照)
+    loadWith(settings->memoryAllocationLimit());
+}
+
+ImageStatic::ImageStatic(std::unique_ptr<DocumentInfo> info, int allocationLimitMB)
+    : Image(std::move(info))
+{
+    loadWith(allocationLimitMB);
+}
+
+void ImageStatic::loadWith(int allocationLimitMB) {
     if(isLoaded()) {
         return;
     }
-    
+
     const auto mimeType = mDocInfo->mimeType().name();
     if(mimeType == "image/vnd.microsoft.icon") {
         loadICO();
     } else {
-        loadGeneric();
+        loadGeneric(allocationLimitMB);
     }
 }
 
@@ -44,10 +55,10 @@ static int transformationToExifOrientation(QImageIOHandler::Transformations t) {
     return 1;
 }
 
-void ImageStatic::loadGeneric() {
+void ImageStatic::loadGeneric(int allocationLimitMB) {
     QImageReader reader(mPath);
 
-    reader.setAllocationLimit(settings->memoryAllocationLimit());
+    reader.setAllocationLimit(allocationLimitMB);
 
     // 禁用 Qt 自动方向处理，统一由我们自己控制
     reader.setAutoTransform(false);

@@ -50,7 +50,19 @@ DocumentInfo::DocumentInfo(const QString &path) {
         return;
     }
 
-    detectFormat();
+    // 仅 GUI 线程同步路径调用，此处读设置安全
+    detectFormat(settings->jxlAnimation(), settings->videoPlayback());
+}
+
+DocumentInfo::DocumentInfo(const QString &path, bool jxlAnimation, bool videoPlayback) {
+    fileInfo.setFile(path);
+
+    if(!fileInfo.isFile()) {
+        qDebug() << "FileInfo: cannot open:" << path;
+        return;
+    }
+
+    detectFormat(jxlAnimation, videoPlayback);
 }
 
 // ====================== getters ======================
@@ -69,7 +81,7 @@ void DocumentInfo::refresh() { fileInfo.refresh(); }
 
 // ====================== detect ======================
 
-void DocumentInfo::detectFormat() {
+void DocumentInfo::detectFormat(bool jxlAnimation, bool videoPlayback) {
 
     if(mDocumentType != NONE)
         return;
@@ -165,7 +177,7 @@ void DocumentInfo::detectFormat() {
         QImageReader reader(fileInfo.absoluteFilePath(), "jxl");
         mDocumentType = reader.supportsAnimation() ? ANIMATED : STATIC;
 
-        if(mDocumentType == ANIMATED && !settings->jxlAnimation()) {
+        if(mDocumentType == ANIMATED && !jxlAnimation) {
             mDocumentType = NONE;
             qDebug() << "animated jxl disabled";
         }
@@ -180,7 +192,7 @@ void DocumentInfo::detectFormat() {
         mFormat = "bmp";
         mDocumentType = STATIC;
 
-    } else if(settings->videoPlayback() && settings->videoFormats().contains(mimeName)) {
+    } else if(videoPlayback && settings->videoFormats().contains(mimeName)) {
 
         mDocumentType = VIDEO;
         mFormat = settings->videoFormats().value(mimeName);
@@ -192,8 +204,9 @@ void DocumentInfo::detectFormat() {
         if(QStringView(mFormat).compare(u"jfif", Qt::CaseInsensitive) == 0)
             mFormat = "jpg";
 
-        if(settings->videoPlayback()) {
+        if(videoPlayback) {
 
+            // videoFormats 构造后不再修改，此处并发只读安全
             static const QSet<QByteArray> videoSuffixes = [](){
                 QSet<QByteArray> set;
                 const auto formats = settings->videoFormats().values();

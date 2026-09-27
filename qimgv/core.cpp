@@ -1113,7 +1113,8 @@ void Core::scalingRequest(QSize size, ScalingFilter filter) {
     if(mw->isVisible() && state.hasActiveImage) {
         std::shared_ptr<Image> forScale = model->getImage(state.currentFilePath);
         if(forScale) {
-            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath, filter));
+            // GUI 线程快照设置，worker 只读请求对象，不再访问 Settings
+            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath, filter, settings->smoothUpscaling()));
         }
     }
 }

@@ -4,13 +4,15 @@
 #include <QMetaObject>
 #include <utility>
 
-LoaderRunnable::LoaderRunnable(Loader *loader, const QString &path)
-    : loader(loader), path(path) {}
+LoaderRunnable::LoaderRunnable(Loader *loader, const QString &path,
+                                 int allocationLimitMB, bool jxlAnimation, bool videoPlayback)
+    : loader(loader), path(path),
+      allocationLimitMB(allocationLimitMB), jxlAnimation(jxlAnimation), videoPlayback(videoPlayback) {}
 
 void LoaderRunnable::run() {
     if (tryStart()) {
-        // 赢得启动权：正常解码并投递结果
-        auto image = ImageFactory::createImage(path);
+        // 赢得启动权：正常解码并投递结果（设置来自构造时的 GUI 线程快照）
+        auto image = ImageFactory::createImage(path, allocationLimitMB, jxlAnimation, videoPlayback);
         // 结果经排队连接送回主线程；keepAlive 捕获在事件处理期间维系任务对象存活（无需 deleteLater）
         QMetaObject::invokeMethod(loader,
             [host = loader, p = std::move(path), image = std::move(image), keepAlive = self]() {

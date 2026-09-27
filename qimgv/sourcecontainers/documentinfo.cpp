@@ -180,11 +180,6 @@ void DocumentInfo::detectFormat(bool jxlAnimation, bool videoPlayback) {
         mFormat = "bmp";
         mDocumentType = STATIC;
 
-    } else if(videoPlayback && videoFormatTable().contains(mimeName)) {
-
-        mDocumentType = VIDEO;
-        mFormat = videoFormatTable().value(mimeName);
-
     } else {
 
         mFormat = suffix;
@@ -194,11 +189,17 @@ void DocumentInfo::detectFormat(bool jxlAnimation, bool videoPlayback) {
 
         if(videoPlayback) {
 
-            // 视频后缀表为进程级常量（videoformats.h），并发只读安全
-            if(videoFormatSuffixes().contains(suffix))
+            // 视频表/后缀表均为进程级常量（videoformats.h），并发只读安全；
+            // 单次 constFind 兼顾命中判定与取值，避免 contains+value 两次查找
+            const auto &table = videoFormatTable();
+            if(const auto it = table.constFind(mimeName); it != table.constEnd()) {
                 mDocumentType = VIDEO;
-            else
+                mFormat = it.value();
+            } else if(videoFormatSuffixes().contains(suffix)) {
+                mDocumentType = VIDEO;
+            } else {
                 mDocumentType = STATIC;
+            }
 
         } else {
             mDocumentType = STATIC;

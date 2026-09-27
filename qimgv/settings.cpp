@@ -506,11 +506,6 @@ int Settings::volume() {
     return stateConf->value("volume", 100).toInt();
 }
 //------------------------------------------------------------------------------
-// 视频表见 videoformats.h：进程级常量，此处返回全局引用
-const QMultiMap<QByteArray, QByteArray> &Settings::videoFormats() const {
-    return videoFormatTable();
-}
-//------------------------------------------------------------------------------
 int Settings::panelPreviewsSize() {
     if (mPanelPreviewsSizeCacheValid) {
         return mCachedPanelPreviewsSize;

@@ -11,7 +11,7 @@
 #include <QPalette>
 #include <QDir>
 #include <QKeySequence>
-#include <QMap>
+#include <QHash>
 #include <QFont>
 #include <QFontMetrics>
 #include <QVersionNumber>
@@ -221,8 +221,6 @@ public:
     void setConfirmDelete(bool mode);
     bool confirmTrash();
     void setConfirmTrash(bool mode);
-
-    const QMultiMap<QByteArray, QByteArray> &videoFormats() const;
 
     bool printLandscape();
     void setPrintLandscape(bool mode);

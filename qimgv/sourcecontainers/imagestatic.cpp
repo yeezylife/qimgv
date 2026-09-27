@@ -1,4 +1,5 @@
 #include "imagestatic.h"
+#include "settings.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>

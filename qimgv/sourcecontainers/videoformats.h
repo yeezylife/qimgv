@@ -4,9 +4,9 @@
 #include <QSet>
 #include <QByteArray>
 
-// 视频格式映射表：硬编码常量，构造后永不修改
-// Settings::videoFormats() 与 DocumentInfo 引用同一份表，不存在双来源
+// 视频格式映射表：硬编码常量，构造后永不修改，全树唯一来源
 // 任意线程并发只读安全，worker 线程可直接使用，无需经 Settings 中转
+// 注意：video/mp4 对应双后缀（mp4/m4v），constFind/value() 取后插入者 m4v 为 canonical，与旧表顺序一致
 inline const QMultiMap<QByteArray, QByteArray> &videoFormatTable() {
     static const QMultiMap<QByteArray, QByteArray> table{
         {"video/webm", "webm"},

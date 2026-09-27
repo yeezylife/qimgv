@@ -4,25 +4,6 @@
 #include <atomic>
 #include <utility>
 
-ImageAnimated::ImageAnimated(QString _path)
-    : Image(std::move(_path))
-{
-    mSize = QSize(0, 0);
-    ImageAnimated::load();
-}
-
-ImageAnimated::ImageAnimated(std::unique_ptr<DocumentInfo> _info)
-    : Image(std::move(_info))
-{
-    mSize = QSize(0, 0);
-    ImageAnimated::load();
-}
-
-void ImageAnimated::load() {
-    // 仅 GUI 线程同步路径调用，此处读设置安全；异步解码走 loadWith(快照)
-    loadWith(settings->memoryAllocationLimit());
-}
-
 ImageAnimated::ImageAnimated(std::unique_ptr<DocumentInfo> _info, int allocationLimitMB)
     : Image(std::move(_info))
 {

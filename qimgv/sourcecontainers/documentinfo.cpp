@@ -1,5 +1,5 @@
 #include "documentinfo.h"
-#include <QSet>
+#include "videoformats.h"
 #include <QtEndian>
 
 using namespace Qt::StringLiterals;
@@ -41,18 +41,6 @@ const QHash<QString, QString>& DocumentInfo::getKeyMapping() {
 }
 
 // ====================== ctor ======================
-
-DocumentInfo::DocumentInfo(const QString &path) {
-    fileInfo.setFile(path);
-
-    if(!fileInfo.isFile()) {
-        qDebug() << "FileInfo: cannot open:" << path;
-        return;
-    }
-
-    // 仅 GUI 线程同步路径调用，此处读设置安全
-    detectFormat(settings->jxlAnimation(), settings->videoPlayback());
-}
 
 DocumentInfo::DocumentInfo(const QString &path, bool jxlAnimation, bool videoPlayback) {
     fileInfo.setFile(path);
@@ -192,10 +180,10 @@ void DocumentInfo::detectFormat(bool jxlAnimation, bool videoPlayback) {
         mFormat = "bmp";
         mDocumentType = STATIC;
 
-    } else if(videoPlayback && settings->videoFormats().contains(mimeName)) {
+    } else if(videoPlayback && videoFormatTable().contains(mimeName)) {
 
         mDocumentType = VIDEO;
-        mFormat = settings->videoFormats().value(mimeName);
+        mFormat = videoFormatTable().value(mimeName);
 
     } else {
 
@@ -206,17 +194,8 @@ void DocumentInfo::detectFormat(bool jxlAnimation, bool videoPlayback) {
 
         if(videoPlayback) {
 
-            // videoFormats 构造后不再修改，此处并发只读安全
-            static const QSet<QByteArray> videoSuffixes = [](){
-                QSet<QByteArray> set;
-                const auto formats = settings->videoFormats().values();
-                set.reserve(formats.size());
-                for(const auto &fmt : formats)
-                    set.insert(fmt);
-                return set;
-            }();
-
-            if(videoSuffixes.contains(suffix))
+            // 视频后缀表为进程级常量（videoformats.h），并发只读安全
+            if(videoFormatSuffixes().contains(suffix))
                 mDocumentType = VIDEO;
             else
                 mDocumentType = STATIC;

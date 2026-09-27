@@ -19,8 +19,8 @@ class Image;
 class LoaderRunnable : public QRunnable {
 public:
     // 构造于 GUI 线程：解码限额与格式开关在此快照，run() 所在 worker 线程只读
-    explicit LoaderRunnable(Loader *loader, const QString &path,
-                            int allocationLimitMB, bool jxlAnimation, bool videoPlayback);
+    LoaderRunnable(Loader *loader, const QString &path,
+                   int allocationLimitMB, bool jxlAnimation, bool videoPlayback);
     void run() override;
 
     // 单字原子状态：NotStarted → Running（run 赢得 CAS）或 Cancelled（clearTasks 赢得 CAS）。

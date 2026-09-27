@@ -13,8 +13,6 @@ class Image : public QObject {
     Q_OBJECT
 
 public:
-    // 使用 explicit 防止隐式转换，使用传值+移动优化 QString 传递
-    explicit Image(QString path);
     explicit Image(std::unique_ptr<DocumentInfo> info);
     
     // 【修改1】析构函数简化：使用 default，不再需要纯虚声明和类外定义
@@ -62,9 +60,6 @@ public:
     virtual bool save(QString destPath) = 0;
 
 protected:
-    virtual void load() = 0;
-    void loadImage() { load(); }  // 非虚函数包装器
-
     // 成员变量
     std::unique_ptr<DocumentInfo> mDocInfo;
     QString mPath;

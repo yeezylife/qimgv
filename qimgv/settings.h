@@ -281,7 +281,6 @@ private:
     std::unique_ptr<QDir> mTmpDir;
     std::unique_ptr<QDir> mConfDir;
     ColorScheme mColorScheme;
-    QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
     
     // 缓存支持的格式，避免重复计算
     mutable QList<QByteArray> mCachedSupportedFormats;
@@ -364,7 +363,6 @@ private:
     void createColorVariants();
 
     void setupCache();
-    void fillVideoFormats();
     void loadImageReaderFormatsFromDisk() const;
     void saveImageReaderFormatsToDisk() const;
 

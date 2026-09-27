@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "sourcecontainers/videoformats.h"
 #include <QHash>
 #include <QFile>
 #include <QTextStream>
@@ -19,7 +20,6 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     stateConf = std::make_unique<QSettings>(mConfDir->absolutePath() + "/savedState.ini", QSettings::IniFormat);
     themeConf = std::make_unique<QSettings>(mConfDir->absolutePath() + "/theme.ini", QSettings::IniFormat);
 #endif
-    fillVideoFormats();
     mFormatsCacheValid = false;
     mMimeTypesCacheValid = false;
     mFormatsFilterCacheValid = false;
@@ -278,19 +278,6 @@ void Settings::setColorTid(int tid) {
     mColorScheme.tid = tid;
 }
 //------------------------------------------------------------------------------
-void Settings::fillVideoFormats() {
-    mVideoFormatsMap.insert("video/webm",       "webm");
-    mVideoFormatsMap.insert("video/mp4",        "mp4");
-    mVideoFormatsMap.insert("video/mp4",        "m4v");
-    mVideoFormatsMap.insert("video/mpeg",       "mpg");
-    mVideoFormatsMap.insert("video/mpeg",       "mpeg");
-    mVideoFormatsMap.insert("video/x-matroska", "mkv");
-    mVideoFormatsMap.insert("video/x-ms-wmv",   "wmv");
-    mVideoFormatsMap.insert("video/x-msvideo",  "avi");
-    mVideoFormatsMap.insert("video/quicktime",  "mov");
-    mVideoFormatsMap.insert("video/x-flv",      "flv");
-}
-//------------------------------------------------------------------------------
 QString Settings::mpvBinary() {
     QString mpvPath = settingsConf->value("mpvBinary", "").toString();
     if(!QFile::exists(mpvPath)) {
@@ -356,7 +343,7 @@ const QList<QByteArray> &Settings::supportedFormats() {
         mCachedSupportedFormats = mCachedImageReaderFormats;
         mCachedSupportedFormats << "jfif";
         if(videoPlayback())
-            mCachedSupportedFormats << mVideoFormatsMap.values();
+            mCachedSupportedFormats << videoFormatTable().values();
         mCachedSupportedFormats.removeAll("pdf");
         mFormatsCacheValid = true;
     }
@@ -397,7 +384,7 @@ const QStringList &Settings::supportedMimeTypes() {
         mCachedSupportedMimeTypes.clear();
         QList<QByteArray> mimeTypes = QImageReader::supportedMimeTypes();
         if(videoPlayback())
-            mimeTypes << mVideoFormatsMap.keys();
+            mimeTypes << videoFormatTable().keys();
         for(int i = 0; i < mimeTypes.count(); i++) {
             mCachedSupportedMimeTypes << QString(mimeTypes.at(i));
         }
@@ -519,8 +506,9 @@ int Settings::volume() {
     return stateConf->value("volume", 100).toInt();
 }
 //------------------------------------------------------------------------------
+// 视频表见 videoformats.h：进程级常量，此处返回全局引用
 const QMultiMap<QByteArray, QByteArray> &Settings::videoFormats() const {
-    return mVideoFormatsMap;
+    return videoFormatTable();
 }
 //------------------------------------------------------------------------------
 int Settings::panelPreviewsSize() {

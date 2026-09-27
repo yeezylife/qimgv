@@ -1,9 +1,5 @@
 #include "video.h"
 
-Video::Video(QString _path) : Image(std::move(_path)) {
-    loadInternal();
-}
-
 Video::Video(std::unique_ptr<DocumentInfo> _info) : Image(std::move(_info)) {
     loadInternal();
 }
@@ -17,10 +13,6 @@ void Video::loadInternal() {
     srcWidth = 0;
     srcHeight = 0;
     mLoaded = true;
-}
-
-void Video::load() {
-    loadInternal();
 }
 
 bool Video::save(QString /*destPath*/) {

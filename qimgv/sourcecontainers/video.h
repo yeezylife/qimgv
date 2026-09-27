@@ -8,7 +8,6 @@
 
 class Video : public Image {
 public:
-    Video(QString _path);
     Video(std::unique_ptr<DocumentInfo> _info);
 
     void getPixmap(QPixmap& outPixmap) const override;
@@ -24,7 +23,6 @@ public slots:
 
 private:
     void loadInternal();
-    void load() override;
 
     uint srcWidth = 0;
     uint srcHeight = 0;

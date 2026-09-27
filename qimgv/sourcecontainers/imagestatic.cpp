@@ -6,23 +6,6 @@
 #include <QImageReader>
 #include <QImageWriter>
 
-ImageStatic::ImageStatic(QString path)
-    : Image(std::move(path))
-{
-    loadImage();
-}
-
-ImageStatic::ImageStatic(std::unique_ptr<DocumentInfo> info)
-    : Image(std::move(info))
-{
-    loadImage();
-}
-
-void ImageStatic::load() {
-    // 仅 GUI 线程同步路径调用，此处读设置安全；异步解码走 loadWith(快照)
-    loadWith(settings->memoryAllocationLimit());
-}
-
 ImageStatic::ImageStatic(std::unique_ptr<DocumentInfo> info, int allocationLimitMB)
     : Image(std::move(info))
 {

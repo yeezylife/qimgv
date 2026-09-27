@@ -52,7 +52,9 @@ bool Loader::isLoading(const QString &path) {
 }
 
 std::shared_ptr<Image> Loader::load(const QString &path) {
-    return ImageFactory::createImage(path);
+    // 同步路径运行于 GUI 线程，此处快照设置；解码侧不再访问 Settings
+    return ImageFactory::createImage(path, settings->memoryAllocationLimit(),
+                                      settings->jxlAnimation(), settings->videoPlayback());
 }
 
 void Loader::loadAsyncPriority(const QString &path) {

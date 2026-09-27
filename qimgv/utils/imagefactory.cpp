@@ -1,12 +1,5 @@
 #include "imagefactory.h"
 #include <memory>
-#include "settings.h"
-
-std::shared_ptr<Image> ImageFactory::createImage(const QString& path) {
-    // 仅 GUI 线程同步路径调用，此处读设置安全
-    return createImage(path, settings->memoryAllocationLimit(),
-                       settings->jxlAnimation(), settings->videoPlayback());
-}
 
 std::shared_ptr<Image> ImageFactory::createImage(const QString& path, int allocationLimitMB,
                                                  bool jxlAnimation, bool videoPlayback) {

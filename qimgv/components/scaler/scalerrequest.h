@@ -79,6 +79,9 @@ private:
     quint64 m_generation = 0;
 };
 
+// 任务级结构（非每像素热路径）：上界断言防回归，非精确尺寸（ABI 相关）
+static_assert(sizeof(ScalerRequest) <= 64, "ScalerRequest 体积膨胀：检查新增成员是否必要");
+
 // Qt 元类型（仍然安全）
 Q_DECLARE_METATYPE(ScalerRequest)
 

@@ -16,15 +16,12 @@
 #include <array>
 
 #include "utils/stuff.h"
-#include "settings.h"
 
 enum DocumentType { NONE, STATIC, ANIMATED, VIDEO };
 
 class DocumentInfo {
 public:
-    // 仅 GUI 线程调用：内部读取设置
-    explicit DocumentInfo(const QString &path);
-    // 任意线程可调用：jxl/video 开关已由调用方在 GUI 线程快照
+    // 任意线程可调用：jxl/video 开关已由调用方在 GUI 线程快照，视频表为进程级常量
     DocumentInfo(const QString &path, bool jxlAnimation, bool videoPlayback);
 
     ~DocumentInfo() = default;

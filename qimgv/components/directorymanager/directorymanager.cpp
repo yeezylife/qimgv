@@ -24,11 +24,11 @@ DirectoryManager::~DirectoryManager() {
     // watcher 无 parent，需手动停止并释放，避免临时对象泄漏线程
     stopFileWatcher();
     delete watcher;
-    watcher = nullptr;
 }
 
+namespace {
 // setDirectory/setDirectoryRecursive/setDirectoryDirsOnly 共用前导检查：单次 status 判存在与类型，QFileInfo 判可读
-static bool isReadableDir(const QString &dirPath) {
+bool isReadableDir(const QString &dirPath) {
     if(dirPath.isEmpty())
         return false;
     std::error_code ec;
@@ -39,6 +39,7 @@ static bool isReadableDir(const QString &dirPath) {
     QFileInfo dirInfo(dirPath);
     return dirInfo.isReadable();
 }
+} // namespace
 
 template<typename T, typename U, typename Pred>
 typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, U &&item, Pred &&pred) {

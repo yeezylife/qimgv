@@ -28,7 +28,7 @@ std::filesystem::file_time_type toFileTime(const QDateTime &dt) {
 
 // 唯一 stat 实现：QFileInfo 首次访问触发一次 stat 并缓存全部元数据，
 // 取代 directory_entry 构造 + file_size + last_write_time 的 3 次 stat
-// name 为空表示无名重载，exists() 成功后才解析文件名，避免失败路径无效计算
+// name == nullptr 表示无名重载，exists() 成功后才解析文件名，避免失败路径无效计算
 std::optional<FSEntry> fromPathImpl(const QString &filePath, const QString *name) {
     QFileInfo fi(filePath);
     if (!fi.exists())

@@ -39,12 +39,12 @@ bool isReadableDir(const QString &dirPath) {
     QFileInfo dirInfo(dirPath);
     return dirInfo.isReadable();
 }
-} // namespace
 
 template<typename T, typename U, typename Pred>
 typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, U &&item, Pred &&pred) {
     return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, std::forward<Pred>(pred)), std::forward<U>(item));
 }
+} // namespace
 
 bool DirectoryManager::path_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
     return collator.compare(e1.path, e2.path) < 0;

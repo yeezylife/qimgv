@@ -45,11 +45,12 @@ void ZoomIndicatorOverlay::updateCache()
 
 void ZoomIndicatorOverlay::setScale(qreal scale)
 {
-    const QString newText = QString::number(qRound(scale * 100.0)) + '%';
-    // 同值重复触发（resize silent 路径）直接返回，避免度量/布局/重绘
-    if (newText == m_text && m_cachedFont == font())
+    // 先比整数百分比，同值直接返回，避免 QString::number+拼接的分配与度量/布局/重绘
+    const int pct = qRound(scale * 100.0);
+    if (pct == m_lastScalePct && m_cachedFont == font())
         return;
-    m_text = newText;
+    m_lastScalePct = pct;
+    m_text = QString::number(pct) + '%';
 
     updateCache();      // 一次性计算所有尺寸
     recalculateGeometry();

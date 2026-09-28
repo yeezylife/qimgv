@@ -1,6 +1,7 @@
 #include "directorymanager.h"
 #include <QHash>
 #include <iterator>
+#include <utility>
 
 namespace fs = std::filesystem;
 
@@ -19,9 +20,29 @@ DirectoryManager::DirectoryManager() {
     // mEmptyString 默认构造即为空字符串，无需额外初始化
 }
 
+DirectoryManager::~DirectoryManager() {
+    // watcher 无 parent，需手动停止并释放，避免临时对象泄漏线程
+    stopFileWatcher();
+    delete watcher;
+    watcher = nullptr;
+}
+
+// setDirectory/setDirectoryRecursive/setDirectoryDirsOnly 共用前导检查：单次 status 判存在与类型，QFileInfo 判可读
+static bool isReadableDir(const QString &dirPath) {
+    if(dirPath.isEmpty())
+        return false;
+    std::error_code ec;
+    std::filesystem::path pathObj(dirPath.toStdWString());
+    const auto st = std::filesystem::status(pathObj, ec);
+    if(ec || !std::filesystem::is_directory(st))
+        return false;
+    QFileInfo dirInfo(dirPath);
+    return dirInfo.isReadable();
+}
+
 template<typename T, typename U, typename Pred>
-typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, U &&item, Pred pred) {
-    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, pred), std::forward<U>(item));
+typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, U &&item, Pred &&pred) {
+    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, std::forward<Pred>(pred)), std::forward<U>(item));
 }
 
 bool DirectoryManager::path_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
@@ -180,18 +201,8 @@ void DirectoryManager::updateDirIndexAfterRemove(const QString &path, int index)
 // ==================== 核心功能方法 ====================
 
 bool DirectoryManager::setDirectory(const QString &dirPath) {
-    if(dirPath.isEmpty()) {
-        return false;
-    }
     // ⭐ 单次 status 同时完成存在性与类型判断，避免重复 stat
-    std::error_code ec;
-    std::filesystem::path pathObj(dirPath.toStdWString());
-    const auto st = std::filesystem::status(pathObj, ec);
-    if(ec || !std::filesystem::is_directory(st)) {
-        return false;
-    }
-    QFileInfo dirInfo(dirPath);
-    if(!dirInfo.isReadable()) {
+    if(!isReadableDir(dirPath)) {
         return false;
     }
     mListSource = SOURCE_DIRECTORY;
@@ -204,18 +215,8 @@ bool DirectoryManager::setDirectory(const QString &dirPath) {
 }
 
 bool DirectoryManager::setDirectoryRecursive(const QString &dirPath) {
-    if(dirPath.isEmpty()) {
-        return false;
-    }
     // ⭐ 单次 status 同时完成存在性与类型判断，避免重复 stat
-    std::error_code ec;
-    std::filesystem::path pathObj(dirPath.toStdWString());
-    const auto st = std::filesystem::status(pathObj, ec);
-    if(ec || !std::filesystem::is_directory(st)) {
-        return false;
-    }
-    QFileInfo dirInfo(dirPath);
-    if(!dirInfo.isReadable()) {
+    if(!isReadableDir(dirPath)) {
         return false;
     }
     stopFileWatcher();
@@ -227,19 +228,9 @@ bool DirectoryManager::setDirectoryRecursive(const QString &dirPath) {
     return true;
 }
 
-// 相邻目录切换用：只枚举子目录，文件分支零 stat/零排序；临时对象使用，不启动 watcher
+// 相邻目录切换用：只枚举子目录，文件元数据零 stat/零排序；临时对象使用，不启动 watcher
 bool DirectoryManager::setDirectoryDirsOnly(const QString &dirPath) {
-    if(dirPath.isEmpty()) {
-        return false;
-    }
-    std::error_code ec;
-    std::filesystem::path pathObj(dirPath.toStdWString());
-    const auto st = std::filesystem::status(pathObj, ec);
-    if(ec || !std::filesystem::is_directory(st)) {
-        return false;
-    }
-    QFileInfo dirInfo(dirPath);
-    if(!dirInfo.isReadable()) {
+    if(!isReadableDir(dirPath)) {
         return false;
     }
     mListSource = SOURCE_DIRECTORY;

@@ -26,6 +26,7 @@ private:
     QString m_text;
     QFontMetrics m_fm;
     QFont m_cachedFont;
+    int m_lastScalePct = -1; // setScale 无分配早退用：缩放百分比非负，-1 为哨兵
     int m_textWidth = 0;
     int m_ascent = 0;
     int m_descent = 0;

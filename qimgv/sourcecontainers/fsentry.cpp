@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <algorithm>
 #include <chrono>
+#include <utility>
 
 FSEntry::FSEntry() noexcept = default;
 
@@ -24,8 +25,8 @@ static std::filesystem::file_time_type toFileTime(const QDateTime &dt) {
     return file_clock::from_sys(system_clock::time_point(milliseconds(dt.toMSecsSinceEpoch())));
 }
 
-std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
-    // ⭐ QFileInfo 首次访问触发一次 stat 并缓存全部元数据，
+static std::optional<FSEntry> fromPathImpl(const QString &filePath, QString name) {
+    // 唯一 stat 实现：QFileInfo 首次访问触发一次 stat 并缓存全部元数据，
     // 取代 directory_entry 构造 + file_size + last_write_time 的 3 次 stat
     QFileInfo fi(filePath);
     if (!fi.exists())
@@ -33,7 +34,7 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
 
     FSEntry result;
     result.path = filePath;
-    result.name = extractFileName(filePath);
+    result.name = std::move(name);
     result.isDirectory = fi.isDir();
 
     if (!result.isDirectory) {
@@ -44,23 +45,14 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
     return result;
 }
 
+std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
+    // 无名重载仅此处做一次 extractFileName，右值直接移入实现，无额外拷贝
+    return fromPathImpl(filePath, extractFileName(filePath));
+}
+
 std::optional<FSEntry> FSEntry::fromPath(const QString &filePath, const QString &name) {
-    // 调用方已给出文件名，直接复用，避免 fromPath(filePath) 内又做一次 extractFileName
-    QFileInfo fi(filePath);
-    if (!fi.exists())
-        return std::nullopt;
-
-    FSEntry result;
-    result.path = filePath;
-    result.name = name;
-    result.isDirectory = fi.isDir();
-
-    if (!result.isDirectory) {
-        result.size = static_cast<std::uintmax_t>(fi.size());
-        result.modifyTime = toFileTime(fi.lastModified());
-    }
-
-    return result;
+    // 调用方已给出文件名时直接复用，避免二次解析路径
+    return fromPathImpl(filePath, name);
 }
 
 bool FSEntry::refresh(const QFileInfo &fi) noexcept {

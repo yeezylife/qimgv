@@ -41,6 +41,7 @@ public:
     using CompareFunction = bool (DirectoryManager::*)(const FSEntry &e1, const FSEntry &e2) const;
 
     DirectoryManager();
+    ~DirectoryManager() override;
 
     // ignored if the same dir is already opened
     bool setDirectory(const QString &dirPath);

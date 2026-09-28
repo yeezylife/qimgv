@@ -1262,7 +1262,8 @@ void Core::prevDirectory(bool selectLast) {
     QFileInfo parentDir(currentDir.absolutePath());
     if(parentDir.exists() && parentDir.isReadable()) {
         DirectoryManager dm;
-        dm.setDirectoryDirsOnly(parentDir.absoluteFilePath());
+        if(!dm.setDirectoryDirsOnly(parentDir.absoluteFilePath()))
+            return;
         QString prev = dm.prevOfDir(model->directoryPath());
         if(!prev.isEmpty()) {
             if(!setDirectory(prev))

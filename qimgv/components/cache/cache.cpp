@@ -1,5 +1,6 @@
 #include "cache.h"
 #include <algorithm>
+#include <utility>
 
 Cache::Cache(size_t maxSize, size_t maxBytes)
     : mMaxCacheSize(maxSize)
@@ -54,7 +55,9 @@ std::shared_ptr<Image> Cache::take(const QString &path) {
     auto it = items.find(path);
     if(it == items.end())
         return nullptr;
-    auto img = it.value()->item;
+    // move 而非拷贝：零引用计数操作；返回的临时对象在调用处、锁释放后析构，
+    // 避免 Image 在临界区内释放。调用者若只判空，移动本身无额外成本。
+    auto img = std::move(it.value()->item);
     mCurrentBytes -= it.value()->bytes;
     lruList.erase(it.value());
     items.erase(it);

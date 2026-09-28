@@ -4,6 +4,11 @@ Qt6 + C++23 image viewer. Single CMake project, no tests/linter/formatter config
 
 ## Build (canonical: MSYS2 CLANG64 on Windows)
 
+> NOTE (this machine): no local build toolchain is installed (no cmake/ninja/compiler/Qt6).
+> Do NOT attempt to configure or compile locally — `cmake -B build` / `cmake --build` will fail.
+> Verify changes by careful code review; compilation is covered by CI (`.github/workflows/`).
+> The commands below are reference-only (canonical/CI builds), not to be executed here.
+
 Deps (clang64): `qt6-base qt6-svg qt6-imageformats qt6-tools kimageformats libjxl libraw opencv lcms2 libavif libheif` + (`mpv kwindowsystem` for video/strict builds).
 
 ```bash
@@ -22,7 +27,7 @@ cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug \
 cmake --build build --config Debug
 ```
 
-Options: `-DVIDEO_SUPPORT` (defines `USE_MPV`), `-DOPENCV_SUPPORT` (defines `USE_OPENCV`, adds `qimgv/3rdparty/QtOpenCV`), `-DKDE_SUPPORT=OFF` (defines `USE_KDE_BLUR`). No `ctest`, no test suite — verify by compiling.
+Options: `-DVIDEO_SUPPORT` (defines `USE_MPV`), `-DOPENCV_SUPPORT` (defines `USE_OPENCV`, adds `qimgv/3rdparty/QtOpenCV`), `-DKDE_SUPPORT=OFF` (defines `USE_KDE_BLUR`). No `ctest`, no test suite — verify by compiling (CI only, not on this machine).
 
 ## Architecture
 

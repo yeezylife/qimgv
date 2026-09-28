@@ -651,7 +651,7 @@ bool DirectoryManager::renameDirEntryBatch(const QString &oldPath, const QString
     newEntry.path = newDirPath;
     newEntry.isDirectory = true;
     auto cmpFn = compareFunction();
-    auto it = insert_sorted(dirEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
+    auto it = insert_sorted(dirEntryVec, std::move(newEntry), [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
     const int newIndex = static_cast<int>(it - dirEntryVec.begin());
@@ -694,7 +694,7 @@ bool DirectoryManager::insertDirEntry(const QString &dirPath) {
 
     // 优化：使用 lambda 替代 std::bind
     auto cmpFn = compareFunction();
-    auto it = insert_sorted(dirEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
+    auto it = insert_sorted(dirEntryVec, std::move(newEntry), [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
 

@@ -11,9 +11,9 @@ class Image;
 
 // 普通 QRunnable，不继承 QObject：省去每任务 QObject 元对象与信号机制的分配开销。
 // 结果经 QMetaObject::invokeMethod(排队连接) 送回主线程。
-// 生命周期由 shared_ptr 管理：self 引用保证排队/运行期间对象存活，
+// 生命周期由 shared_ptr 管理：self 自持引用保证排队/运行期间对象存活，
 // run() 末尾 self.reset() 释放本线程引用；正常任务由结果事件 keepAlive 维系到事件处理完，
-// 被取消的任务由空事件 keepAlive 在主线程释放最后引用——均不在 run() 内自毁。
+// 被取消的任务由 Loader::mCancelledHolders 维系到下次 clearTasks/析构批量释放，不再投递空事件——均不在 run() 内自毁。
 // 启动/取消由 tryStart/tryCancel 单次 CAS 仲裁（与 QThreadPool 是否已取走任务无关）：
 // 两方只有一方能赢，从根上消除"已取消却仍解码"的边界浪费。
 class LoaderRunnable : public QRunnable {

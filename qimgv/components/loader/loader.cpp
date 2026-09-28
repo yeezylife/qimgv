@@ -40,7 +40,7 @@ void Loader::clearTasks() {
         LoaderRunnable *runnable = it.value().get();
 
         if (runnable->tryCancel()) {
-            // CAS 成功：任务尚未启动，已被取消 → 移出哈希，由归置区持有到 run() 执行完
+            // CAS 成功：任务尚未启动，已被取消 → 移出哈希，转由归置区持有到下次 clearTasks/析构批量释放
             mCancelledHolders.push_back(it.value());
             it.remove();
         }

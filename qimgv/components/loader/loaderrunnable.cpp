@@ -22,8 +22,8 @@ void LoaderRunnable::run() {
                 host->onLoadFinished(image, p, gen);
             }, Qt::QueuedConnection);
     } else {
-        // 已被 clearTasks 取消：归置区持有引用保证对象存活，此处直接释放本线程引用，
-        // 不再投递空 keepAlive 事件（快速滚动时每取消一任务一次主线程唤醒纯开销）
+        // 已被 clearTasks 取消：排队期间靠 self 自持存活，取消后转由归置区批量持有，
+        // 此处直接释放本线程引用，不再投递空 keepAlive 事件（快速滚动时每取消一任务一次主线程唤醒纯开销）
     }
     // 释放本线程持有的引用；正常任务由事件 keepAlive 维系到主线程处理完，
     // 取消任务由 Loader::mCancelledHolders 维系到下次 clearTasks 批量释放

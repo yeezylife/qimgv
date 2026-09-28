@@ -20,7 +20,8 @@ class LoaderRunnable : public QRunnable {
 public:
     // 构造于 GUI 线程：解码限额与格式开关在此快照，run() 所在 worker 线程只读
     LoaderRunnable(Loader *loader, const QString &path,
-                   int allocationLimitMB, bool jxlAnimation, bool videoPlayback);
+                   int allocationLimitMB, bool jxlAnimation, bool videoPlayback,
+                   quint64 generation);
     void run() override;
 
     // 单字原子状态：NotStarted → Running（run 赢得 CAS）或 Cancelled（clearTasks 赢得 CAS）。
@@ -45,6 +46,8 @@ private:
     int allocationLimitMB;
     bool jxlAnimation;
     bool videoPlayback;
+    // ⭐ 所属翻页代际，用于丢弃过期 preload 结果
+    quint64 generation = 0;
 
 public:
     std::shared_ptr<LoaderRunnable> self; // 由 doLoadAsync 赋值，run() 末尾释放

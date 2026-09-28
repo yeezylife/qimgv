@@ -221,155 +221,148 @@ QPointF CropOverlay::adjustPointForAspectRatio(const QPointF& anchor, const QPoi
 //------------------------------------------------------------------------------
 // 交互逻辑 (重点修改 resizeSelection)
 //------------------------------------------------------------------------------
-void CropOverlay::resizeSelection(const QPointF& delta) {
-    QRectF newRect = selectionRect;
-
+void CropOverlay::applyDelta(QRectF &rect, const QPointF &delta) const {
     // 1. 基础位移处理
-    switch (cursorAction) {
-        case CursorAction::DragTopLeft:     newRect.setTopLeft(newRect.topLeft() + delta); break;
-        case CursorAction::DragTopRight:    newRect.setTopRight(newRect.topRight() + delta); break;
-        case CursorAction::DragBottomLeft:  newRect.setBottomLeft(newRect.bottomLeft() + delta); break;
-        case CursorAction::DragBottomRight: newRect.setBottomRight(newRect.bottomRight() + delta); break;
-        case CursorAction::DragLeft:        newRect.setLeft(newRect.left() + delta.x()); break;
-        case CursorAction::DragRight:       newRect.setRight(newRect.right() + delta.x()); break;
-        case CursorAction::DragTop:         newRect.setTop(newRect.top() + delta.y()); break;
-        case CursorAction::DragBottom:      newRect.setBottom(newRect.bottom() + delta.y()); break;
+    switch(cursorAction) {
+        case CursorAction::DragTopLeft:     rect.setTopLeft(rect.topLeft() + delta); break;
+        case CursorAction::DragTopRight:    rect.setTopRight(rect.topRight() + delta); break;
+        case CursorAction::DragBottomLeft:  rect.setBottomLeft(rect.bottomLeft() + delta); break;
+        case CursorAction::DragBottomRight: rect.setBottomRight(rect.bottomRight() + delta); break;
+        case CursorAction::DragLeft:        rect.setLeft(rect.left() + delta.x()); break;
+        case CursorAction::DragRight:       rect.setRight(rect.right() + delta.x()); break;
+        case CursorAction::DragTop:         rect.setTop(rect.top() + delta.y()); break;
+        case CursorAction::DragBottom:      rect.setBottom(rect.bottom() + delta.y()); break;
         default: break;
     }
+}
 
+void CropOverlay::enforceAspectRatio(QRectF &rect, const QPointF &delta) const {
     // 2. 等比缩放限制
-    if (lockAspectRatio) {
-        QSizeF sz = newRect.size();
-
-        // 决定以宽度还是高度为基准
-        bool widthBased = true;
-        switch (cursorAction) {
-            case CursorAction::DragLeft:
-            case CursorAction::DragRight:
-                widthBased = true;
-                break;
-            case CursorAction::DragTop:
-            case CursorAction::DragBottom:
-                widthBased = false;
-                break;
-            default:
-                widthBased = (qAbs(delta.x()) >= qAbs(delta.y()));
-                break;
-        }
-
-        if (widthBased) {
-            sz.setHeight(sz.width() / cachedRatio);
-        } else {
-            sz.setWidth(sz.height() * cachedRatio);
-        }
-        newRect.setSize(sz);
-
-        // 保持固定点
-        if (cursorAction == CursorAction::DragTopLeft) {
-            newRect.moveBottomRight(resizeAnchor);
-        } else if (cursorAction == CursorAction::DragTopRight) {
-            newRect.moveBottomLeft(resizeAnchor);
-        } else if (cursorAction == CursorAction::DragBottomLeft) {
-            newRect.moveTopRight(resizeAnchor);
-        } else if (cursorAction == CursorAction::DragBottomRight) {
-            newRect.moveTopLeft(resizeAnchor);
-        } else if (cursorAction == CursorAction::DragLeft) {
-            newRect.moveRight(resizeAnchor.x());
-        } else if (cursorAction == CursorAction::DragRight) {
-            newRect.moveLeft(resizeAnchor.x());
-        } else if (cursorAction == CursorAction::DragTop) {
-            newRect.moveBottom(resizeAnchor.y());
-        } else if (cursorAction == CursorAction::DragBottom) {
-            newRect.moveTop(resizeAnchor.y());
-        }
+    QSizeF sz = rect.size();
+    bool widthBased = true;
+    switch(cursorAction) {
+        case CursorAction::DragLeft:
+        case CursorAction::DragRight:
+            widthBased = true;
+            break;
+        case CursorAction::DragTop:
+        case CursorAction::DragBottom:
+            widthBased = false;
+            break;
+        default:
+            widthBased = (qAbs(delta.x()) >= qAbs(delta.y()));
+            break;
     }
+    if(widthBased)
+        sz.setHeight(sz.width() / cachedRatio);
+    else
+        sz.setWidth(sz.height() * cachedRatio);
+    rect.setSize(sz);
+    // 保持固定点
+    if(cursorAction == CursorAction::DragTopLeft)
+        rect.moveBottomRight(resizeAnchor);
+    else if(cursorAction == CursorAction::DragTopRight)
+        rect.moveBottomLeft(resizeAnchor);
+    else if(cursorAction == CursorAction::DragBottomLeft)
+        rect.moveTopRight(resizeAnchor);
+    else if(cursorAction == CursorAction::DragBottomRight)
+        rect.moveTopLeft(resizeAnchor);
+    else if(cursorAction == CursorAction::DragLeft)
+        rect.moveRight(resizeAnchor.x());
+    else if(cursorAction == CursorAction::DragRight)
+        rect.moveLeft(resizeAnchor.x());
+    else if(cursorAction == CursorAction::DragTop)
+        rect.moveBottom(resizeAnchor.y());
+    else if(cursorAction == CursorAction::DragBottom)
+        rect.moveTop(resizeAnchor.y());
+}
+
+void CropOverlay::constrainWidthBased(QRectF &bounded, const QRectF &requested) const {
+    // 水平方向被限制，以宽度为基准调整高度
+    const qreal newWidth = bounded.width();
+    const bool topClipped = (requested.top() < imageRect.top());
+    const bool bottomClipped = (requested.bottom() > imageRect.bottom());
+    bounded.setHeight(newWidth / cachedRatio);
+    if(topClipped && !bottomClipped) {
+        bounded.setTop(imageRect.top());
+    } else if(bottomClipped && !topClipped) {
+        bounded.setBottom(imageRect.bottom());
+    } else if(topClipped && bottomClipped) {
+        const qreal newHeight = imageRect.height();
+        bounded.setSize(QSizeF(newHeight * cachedRatio, newHeight));
+        bounded.moveTop(imageRect.top());
+    } else {
+        const qreal centerY = std::clamp(bounded.center().y(), imageRect.top(), imageRect.bottom());
+        bounded.moveCenter(QPointF(bounded.center().x(), centerY));
+    }
+}
+
+void CropOverlay::constrainHeightBased(QRectF &bounded, const QRectF &requested) const {
+    // 垂直方向被限制，以高度为基准调整宽度
+    const qreal newHeight = bounded.height();
+    const bool leftClipped = (requested.left() < imageRect.left());
+    const bool rightClipped = (requested.right() > imageRect.right());
+    bounded.setWidth(newHeight * cachedRatio);
+    if(leftClipped && !rightClipped) {
+        bounded.setLeft(imageRect.left());
+    } else if(rightClipped && !leftClipped) {
+        bounded.setRight(imageRect.right());
+    } else if(leftClipped && rightClipped) {
+        const qreal newWidth = imageRect.width();
+        bounded.setSize(QSizeF(newWidth, newWidth / cachedRatio));
+        bounded.moveLeft(imageRect.left());
+    } else {
+        const qreal centerX = std::clamp(bounded.center().x(), imageRect.left(), imageRect.right());
+        bounded.moveCenter(QPointF(centerX, bounded.center().y()));
+    }
+}
+
+void CropOverlay::commitSelection(const QRectF &rect) {
+    // ⭐ 单一提交点：fuzzy 比较 + 重绘 + 信号，避免双份拷贝
+    if(!fuzzyCompareRect(selectionRect, rect)) {
+        selectionRect = rect;
+        updateSelectionDrawRect();
+        emit selectionChanged(selectionRect.toRect());
+    }
+}
+
+void CropOverlay::resizeSelection(const QPointF& delta) {
+    QRectF newRect = selectionRect;
+    applyDelta(newRect, delta);
+    if(lockAspectRatio)
+        enforceAspectRatio(newRect, delta);
 
     // 3. 边界约束（保持比例）
     QRectF clippedRect;
     // 优化7：仅在需要时调用 normalized()
-    if (newRect.width() < 0 || newRect.height() < 0) {
+    if(newRect.width() < 0 || newRect.height() < 0)
         clippedRect = newRect.normalized().intersected(imageRect);
-    } else {
+    else
         clippedRect = newRect.intersected(imageRect);
-    }
-    
-    if (lockAspectRatio && (clippedRect != newRect)) {
-        // 如果被裁剪，需要重新调整矩形，使其既符合比例又不超出边界
+
+    if(lockAspectRatio && (clippedRect != newRect)) {
         QRectF boundedRect = clippedRect;
-        
-        // 先确定被裁剪的边，然后调整矩形使其贴合边界且比例正确
-        bool leftClipped = (newRect.left() < imageRect.left());
-        bool rightClipped = (newRect.right() > imageRect.right());
-        bool topClipped = (newRect.top() < imageRect.top());
-        bool bottomClipped = (newRect.bottom() > imageRect.bottom());
-        
-        if (leftClipped || rightClipped) {
-            // 水平方向被限制，以宽度为基准调整高度
-            qreal newWidth = boundedRect.width();
-            qreal newHeight = newWidth / cachedRatio;
-            boundedRect.setHeight(newHeight);
-            
-            // 根据拖拽方向调整垂直位置，确保矩形不超出垂直边界
-            if (topClipped && !bottomClipped) {
-                boundedRect.setTop(imageRect.top());
-            } else if (bottomClipped && !topClipped) {
-                boundedRect.setBottom(imageRect.bottom());
-            } else if (topClipped && bottomClipped) {
-                // 矩形过高，同时超出上下边界，此时应该缩小高度
-                newHeight = imageRect.height();
-                newWidth = newHeight * cachedRatio;
-                boundedRect.setSize(QSizeF(newWidth, newHeight));
-                boundedRect.moveTop(imageRect.top());
-            } else {
-                // 垂直方向未超限，尝试保持中心点
-                qreal centerY = std::clamp(boundedRect.center().y(), imageRect.top(), imageRect.bottom());
-                boundedRect.moveCenter(QPointF(boundedRect.center().x(), centerY));
-            }
-        } else if (topClipped || bottomClipped) {
-            // 垂直方向被限制，以高度为基准调整宽度
-            qreal newHeight = boundedRect.height();
-            qreal newWidth = newHeight * cachedRatio;
-            boundedRect.setWidth(newWidth);
-            
-            if (leftClipped && !rightClipped) {
-                boundedRect.setLeft(imageRect.left());
-            } else if (rightClipped && !leftClipped) {
-                boundedRect.setRight(imageRect.right());
-            } else if (leftClipped && rightClipped) {
-                // 矩形过宽，同时超出左右边界
-                newWidth = imageRect.width();
-                newHeight = newWidth / cachedRatio;
-                boundedRect.setSize(QSizeF(newWidth, newHeight));
-                boundedRect.moveLeft(imageRect.left());
-            } else {
-                qreal centerX = std::clamp(boundedRect.center().x(), imageRect.left(), imageRect.right());
-                boundedRect.moveCenter(QPointF(centerX, boundedRect.center().y()));
-            }
+        const bool leftClipped = (newRect.left() < imageRect.left());
+        const bool rightClipped = (newRect.right() > imageRect.right());
+        const bool topClipped = (newRect.top() < imageRect.top());
+        const bool bottomClipped = (newRect.bottom() > imageRect.bottom());
+        if(leftClipped || rightClipped) {
+            constrainWidthBased(boundedRect, newRect);
+        } else if(topClipped || bottomClipped) {
+            constrainHeightBased(boundedRect, newRect);
         } else {
-            // 角拖拽时可能同时超限，这种情况复杂，简单处理：直接按比例缩放并居中
             QSizeF sz = boundedRect.size();
-            if (sz.width() / sz.height() > cachedRatio) {
+            if(sz.width() / sz.height() > cachedRatio)
                 sz.setHeight(sz.width() / cachedRatio);
-            } else {
+            else
                 sz.setWidth(sz.height() * cachedRatio);
-            }
             boundedRect.setSize(sz);
             boundedRect.moveCenter(clippedRect.center());
-            // 最后确保在边界内
             boundedRect = boundedRect.intersected(imageRect);
         }
-        
-        if (!fuzzyCompareRect(selectionRect, boundedRect)) {
-            selectionRect = boundedRect;
-            updateSelectionDrawRect();
-            emit selectionChanged(selectionRect.toRect());
-        }
+        commitSelection(boundedRect);
     } else {
-        if (!fuzzyCompareRect(selectionRect, clippedRect)) {
-            selectionRect = clippedRect;
-            updateSelectionDrawRect();
-            emit selectionChanged(selectionRect.toRect());
-        }
+        commitSelection(clippedRect);
     }
 }
 

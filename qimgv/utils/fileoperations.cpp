@@ -32,6 +32,32 @@ QString FileOperations::generateHash(const QString &str) {
                                             QCryptographicHash::Md5).toHex());
 }
 
+bool FileOperations::prepareDest(const QString &destPath, bool force, FileOpResult &result) {
+    // ⭐ 返回 true 表示目标可写、调用方可继续；false 表示已设置 result 并应提前返回
+    QFileInfo dest(destPath);
+    if(!dest.exists())
+        return true;
+#ifdef Q_OS_WIN32
+    if(!dest.isWritable()) {
+        result = DESTINATION_NOT_WRITABLE;
+        return false;
+    }
+#endif
+    if(dest.isDir()) {
+        result = DESTINATION_DIR_EXISTS;
+        return false;
+    }
+    if(!force) {
+        result = DESTINATION_FILE_EXISTS;
+        return false;
+    }
+    if(!QFile::remove(destPath)) {
+        result = OTHER_ERROR;
+        return false;
+    }
+    return true;
+}
+
 void FileOperations::removeFile(const QString &filePath, FileOpResult &result) {
     QFileInfo fi;
     if (!getFileInfo(filePath, fi)) {
@@ -108,29 +134,8 @@ void FileOperations::copyFileTo(const QString &srcPath,
     }
 
     const QString destPath = QDir(destDirPath).filePath(src.fileName());
-    QFileInfo dest(destPath);
-
-    if (dest.exists()) {
-#ifdef Q_OS_WIN32
-        if (!dest.isWritable()) {
-            result = DESTINATION_NOT_WRITABLE;
-            return;
-        }
-#endif
-        if (dest.isDir()) {
-            result = DESTINATION_DIR_EXISTS;
-            return;
-        }
-        if (!force) {
-            result = DESTINATION_FILE_EXISTS;
-            return;
-        }
-
-        if (!QFile::remove(destPath)) {
-            result = OTHER_ERROR;
-            return;
-        }
-    }
+    if(!prepareDest(destPath, force, result))
+        return;
 
     const auto modTime = src.lastModified();
     const auto readTime = src.lastRead();
@@ -174,29 +179,8 @@ void FileOperations::moveFileTo(const QString &srcPath,
         return;
     }
 
-    QFileInfo dest(destPath);
-
-    if (dest.exists()) {
-#ifdef Q_OS_WIN32
-        if (!dest.isWritable()) {
-            result = DESTINATION_NOT_WRITABLE;
-            return;
-        }
-#endif
-        if (dest.isDir()) {
-            result = DESTINATION_DIR_EXISTS;
-            return;
-        }
-        if (!force) {
-            result = DESTINATION_FILE_EXISTS;
-            return;
-        }
-
-        if (!QFile::remove(destPath)) {
-            result = OTHER_ERROR;
-            return;
-        }
-    }
+    if(!prepareDest(destPath, force, result))
+        return;
 
     const auto modTime = src.lastModified();
     const auto readTime = src.lastRead();
@@ -230,29 +214,8 @@ void FileOperations::rename(const QString &srcPath,
     }
 
     const QString destPath = QDir(src.absolutePath()).filePath(newName);
-    QFileInfo dest(destPath);
-
-    if (dest.exists()) {
-#ifdef Q_OS_WIN32
-        if (!dest.isWritable()) {
-            result = DESTINATION_NOT_WRITABLE;
-            return;
-        }
-#endif
-        if (dest.isDir()) {
-            result = DESTINATION_DIR_EXISTS;
-            return;
-        }
-        if (!force) {
-            result = DESTINATION_FILE_EXISTS;
-            return;
-        }
-
-        if (!QFile::remove(destPath)) {
-            result = OTHER_ERROR;
-            return;
-        }
-    }
+    if(!prepareDest(destPath, force, result))
+        return;
 
     result = QFile::rename(srcPath, destPath) ? SUCCESS : OTHER_ERROR;
 }
@@ -264,9 +227,5 @@ void FileOperations::moveToTrash(const QString &filePath, FileOpResult &result) 
         return;
     }
 
-    result = moveToTrashImpl(filePath) ? SUCCESS : OTHER_ERROR;
-}
-
-bool FileOperations::moveToTrashImpl(const QString &filePath) {
-    return QFile::moveToTrash(filePath);
+    result = QFile::moveToTrash(filePath) ? SUCCESS : OTHER_ERROR;
 }

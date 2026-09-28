@@ -62,6 +62,9 @@ void ImageStatic::loadGeneric(int allocationLimitMB) {
             mTextMetadata.insert(key, value);
         }
     }
+    // ⭐ 同步喂给 DocumentInfo，面板 getExifTags 直接复用，不再二次 QImageReader
+    if(mDocInfo)
+        mDocInfo->setCachedTextMetadata(mTextMetadata);
 
     QImage image = std::move(imageData);
 

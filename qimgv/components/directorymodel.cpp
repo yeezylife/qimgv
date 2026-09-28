@@ -274,13 +274,10 @@ void DirectoryModel::onFileAdded(const QString &filePath) {
 }
 
 void DirectoryModel::onFileModified(const QString &filePath) {
-    // updateFileEntry 仅在 modifyTime 变化时 emit（emit 前已完成 stat），
-    // 这里内联 reload 逻辑以避免 reload 内部再次调用 updateFileEntry 造成重复 stat；
-    // 探测用 contains 而非 get：随即就要 remove，避免 get 的原子引用计数与 LRU 访问队列开销
-    if (cache.contains(filePath)) {
-        cache.remove(filePath);
+    // ⭐ 单锁 take 替代 contains+remove+load 内 get 的三次加锁；
+    // 仅缓存命中时才同步重载，未命中无需动作（下次访问自然加载）
+    if(cache.take(filePath))
         load(filePath, false);
-    }
 
     emit fileModified(filePath);
 }

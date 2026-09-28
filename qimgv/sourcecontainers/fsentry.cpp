@@ -51,6 +51,20 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath, const QString 
     return entry;
 }
 
+bool FSEntry::refresh(const QFileInfo &fi) noexcept {
+    // ⭐ 复用外部 QFileInfo，仅比较 modifyTime，变化时更新 size/mtime
+    if(fi.isDir() != isDirectory)
+        return false;
+    if(isDirectory)
+        return false;
+    const auto newTime = toFileTime(fi.lastModified());
+    if(newTime == modifyTime)
+        return false;
+    modifyTime = newTime;
+    size = static_cast<std::uintmax_t>(fi.size());
+    return true;
+}
+
 FSEntry::FSEntry(const QString &filePath) {
     // 与 fromPath 共用同一套单次 stat 逻辑，避免两处实现漂移
     if (auto entry = fromPath(filePath))

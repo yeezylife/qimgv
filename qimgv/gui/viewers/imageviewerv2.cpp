@@ -462,38 +462,31 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animatio
 
 void ImageViewerV2::showImage(const QPixmap& newPixmap)
 {
-    reset();
-
-    if (newPixmap.isNull())
-        return;
-
-    pixmapItemScaled.hide();
-    pixmap = std::make_unique<QPixmap>(newPixmap);
-    pixmap->setDevicePixelRatio(dpr);
-    pixmapItem.setPixmap(*pixmap);
-
-    Qt::TransformationMode mode = (mScalingFilter == QI_FILTER_NEAREST)
-                                  ? Qt::FastTransformation : Qt::SmoothTransformation;
-    pixmapItem.setTransformationMode(mode);
-    pixmapItem.show();
-
-    updateMinScale();
-
-    applyInitialFit();
-
-    requestScaling();
-    update();
+    showImageImpl(QPixmap(newPixmap));
 }
 
 void ImageViewerV2::showImage(QPixmap&& newPixmap)
 {
-    reset();
+    showImageImpl(std::move(newPixmap));
+}
 
-    if (newPixmap.isNull())
+void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
+{
+    stopPosAnimation();
+    pixmapItemScaled.setPixmap(QPixmap());
+    pixmapScaled = QPixmap();
+    pixmapItem.setPixmap(QPixmap());
+    pixmapItem.setScale(1.0f);
+    pixmapItem.setOffset(CENTER_OFFSET, CENTER_OFFSET);
+    pixmap.reset();
+    stopAnimation();
+    movie = nullptr;
+
+    if(pixmapParam.isNull())
         return;
 
     pixmapItemScaled.hide();
-    pixmap = std::make_unique<QPixmap>(std::move(newPixmap));
+    pixmap = std::make_unique<QPixmap>(std::move(pixmapParam));
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
 
@@ -506,8 +499,8 @@ void ImageViewerV2::showImage(QPixmap&& newPixmap)
 
     applyInitialFit();
 
+    // ⭐ setPixmap 已触发 scene 更新，不再 viewport()->update() 二次刷新
     requestScaling();
-    update();
 }
 
 void ImageViewerV2::reset()

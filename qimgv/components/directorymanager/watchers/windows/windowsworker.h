@@ -75,6 +75,15 @@ signals:
 
 private:
     HANDLE openDirectoryHandle(const QString& path);
+    // ⭐ run() 拆分：每 helper 单一职责，run 仅保留主循环编排
+    bool ensureInitialHandle(QString &currentPath);
+    // 返回 false 表示应退出主循环
+    bool handleRestart(QString &currentPath, int &quietReads);
+    enum class WaitResult { Ok, Stop, Retry };
+    WaitResult waitOnce(DWORD &bytesReturned);
+    QVector<NotifyEvent> parseBatch(DWORD bytesReturned);
+    static void dedupModified(QVector<NotifyEvent> &batch);
+    void emitAndMaybeShrink(const QVector<NotifyEvent> &batch, DWORD bytesReturned, int &quietReads);
 
     ScopedHandle hDirectory;
     std::atomic<HANDLE> activeHandle{INVALID_HANDLE_VALUE};

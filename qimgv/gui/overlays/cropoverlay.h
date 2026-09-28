@@ -101,4 +101,11 @@ private:
     
     // 辅助函数
     bool fuzzyCompareRect(const QRectF& a, const QRectF& b) const;
+    // ⭐ resizeSelection 拆分：每 helper 单一职责，顶层只留一次提交
+    void applyDelta(QRectF &rect, const QPointF &delta) const;
+    void enforceAspectRatio(QRectF &rect, const QPointF &delta) const;
+    void constrainWidthBased(QRectF &bounded, const QRectF &requested) const;
+    void constrainHeightBased(QRectF &bounded, const QRectF &requested) const;
+    void commitSelection(const QRectF &rect);
+};
 };

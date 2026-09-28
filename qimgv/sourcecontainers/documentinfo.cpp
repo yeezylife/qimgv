@@ -297,6 +297,12 @@ QString DocumentInfo::formatMetadataValue(const QString &key,const QVariant &val
     return value.toString();
 }
 
+void DocumentInfo::setCachedTextMetadata(QHash<QString, QString> metadata) {
+    // ⭐ 解码期写入，GUI 线程首次 getExifTags 前已完成（Image 构造后才进缓存/面板）
+    mCachedRawText = std::move(metadata);
+    mHasCachedRaw = true;
+}
+
 void DocumentInfo::loadExifTags() const {
 
     if(exifLoaded)
@@ -305,12 +311,36 @@ void DocumentInfo::loadExifTags() const {
     exifLoaded = true;
     exifTags.clear();
 
+    const auto &mapping = getKeyMapping();
+
+    // ⭐ 优先复用解码期缓存，不再二次 QImageReader 打开+解析
+    if(mHasCachedRaw) {
+        for(auto it = mCachedRawText.constBegin(); it != mCachedRawText.constEnd(); ++it) {
+            const QString &key = it.key();
+            const QString &value = it.value();
+            if(value.isEmpty())
+                continue;
+            QString displayKey = mapping.value(key, key);
+            QString formattedValue = formatMetadataValue(key, value);
+            if(key == u"UserComment"_s && formattedValue.startsWith(u"charset="_s)) {
+                qsizetype spaceIndex = formattedValue.indexOf(u' ');
+                if(spaceIndex > 0)
+                    formattedValue = formattedValue.mid(spaceIndex + 1);
+            }
+            exifTags.try_emplace(displayKey, std::move(formattedValue));
+        }
+        if(!exifTags.isEmpty())
+            return;
+        // 缓存为空（如 PNG 无文本块）则回落按尺寸填充，避免再开文件
+        // 尺寸由调用方经 Image::size() 获取，此处不再 reader.size() 二次解析
+        return;
+    }
+
     QImageReader reader(fileInfo.absoluteFilePath());
 
     if(!reader.canRead())
         return;
 
-    const auto &mapping = getKeyMapping();
     const QStringList textKeys = reader.textKeys();
 
     for(const QString &key : textKeys) {

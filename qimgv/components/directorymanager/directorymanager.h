@@ -103,6 +103,8 @@ public:
     bool forceInsertFileEntry(const QString &filePath, const FSEntry &entry);
     void removeFileEntry(const QString &filePath);
     void updateFileEntry(const QString &filePath);
+    // ⭐ 复用已 stat 的 QFileInfo，避免 exists()+构造两次 stat
+    void updateFileEntry(const QString &filePath, const QFileInfo &fi);
     void renameFileEntry(const FilePath &oldFilePath, const FileName &newFileName);
     bool insertDirEntry(const QString &dirPath);
     void removeDirEntry(const QString &dirPath);
@@ -149,6 +151,16 @@ private:
     void processPendingRemovals(const QVector<QString> &removes);
     void processPendingAdditions(const QVector<QString> &adds);
     void processPendingModifications(const QSet<QString> &modifies);
+
+    // ⭐ 批量重命名内部实现：只做 vector 操作，不 rebuild、不 emit，
+    // 由调用方在批量末尾单次 rebuild + 集中 emit，消灭 O(k*n)
+    struct FileRenameEmit { QString from; int fromIndex; QString to; int toIndex; };
+    struct DirRenameEmit { QString from; int fromIndex; QString to; int toIndex; };
+    bool renameFileEntryBatch(const QString &oldPath, const QString &newName,
+                              FileRenameEmit &emitOut, QVector<QPair<QString,int>> &extraRemoves,
+                              QVector<QString> &extraAdds, QVector<QString> &extraRefresh);
+    bool renameDirEntryBatch(const QString &oldPath, const QString &newName,
+                             DirRenameEmit &emitOut);
 
 private:
     // ⭐ 后缀按长度分桶：目录扫描时每个文件只与同长度的少量后缀做

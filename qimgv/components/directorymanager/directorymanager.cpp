@@ -420,8 +420,27 @@ void DirectoryManager::sortFileEntryListsIncremental() {
     if (mLastCompareFunction == currentCompareFn && mFilesSorted && fileEntryVec.size() > 1) {
         return;
     }
-    // 使用 C++20 ranges::sort
-    if (fileEntryVec.size() > 1) {
+    // ⭐ 名称/路径排序：QCollator::compare 每次比较都走 locale，O(n log n) 次昂贵调用；
+    // 改为每条目一次 sortKey()（O(n) 次 locale），比较期仅做 QString 二进制比较
+    if (fileEntryVec.size() > 1 &&
+        (mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC)) {
+        const bool reverse = (mSortingMode == SORT_NAME_DESC);
+        std::vector<QString> keys(fileEntryVec.size());
+        for(size_t i = 0; i < fileEntryVec.size(); ++i)
+            keys[i] = collator.sortKey(fileEntryVec[i].name);
+        std::vector<size_t> order(fileEntryVec.size());
+        for(size_t i = 0; i < order.size(); ++i)
+            order[i] = i;
+        std::ranges::sort(order, [&](size_t a, size_t b) {
+            return reverse ? keys[a] > keys[b] : keys[a] < keys[b];
+        });
+        std::vector<FSEntry> sorted;
+        sorted.reserve(fileEntryVec.size());
+        for(size_t idx : order)
+            sorted.push_back(std::move(fileEntryVec[idx]));
+        fileEntryVec = std::move(sorted);
+    } else if (fileEntryVec.size() > 1) {
+        // 使用 C++20 ranges::sort（时间/大小为整数比较，无需 sortKey）
         std::ranges::sort(fileEntryVec, [this, currentCompareFn](const FSEntry& a, const FSEntry& b) {
             return (this->*currentCompareFn)(a, b);
         });
@@ -438,13 +457,44 @@ void DirectoryManager::sortDirEntryListsIncremental() {
     // 使用 C++20 ranges::sort
     if (dirEntryVec.size() > 1) {
         if (settings->sortFolders()) {
-            std::ranges::sort(dirEntryVec, [this, currentCompareFn](const FSEntry& a, const FSEntry& b) {
-                return (this->*currentCompareFn)(a, b);
-            });
+            // ⭐ 同文件列表：名称排序走 sortKey 预计算，避免 O(n log n) 次 locale 比较
+            if(mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC) {
+                const bool reverse = (mSortingMode == SORT_NAME_DESC);
+                std::vector<QString> keys(dirEntryVec.size());
+                for(size_t i = 0; i < dirEntryVec.size(); ++i)
+                    keys[i] = collator.sortKey(dirEntryVec[i].name);
+                std::vector<size_t> order(dirEntryVec.size());
+                for(size_t i = 0; i < order.size(); ++i)
+                    order[i] = i;
+                std::ranges::sort(order, [&](size_t a, size_t b) {
+                    return reverse ? keys[a] > keys[b] : keys[a] < keys[b];
+                });
+                std::vector<FSEntry> sorted;
+                sorted.reserve(dirEntryVec.size());
+                for(size_t idx : order)
+                    sorted.push_back(std::move(dirEntryVec[idx]));
+                dirEntryVec = std::move(sorted);
+            } else {
+                std::ranges::sort(dirEntryVec, [this, currentCompareFn](const FSEntry& a, const FSEntry& b) {
+                    return (this->*currentCompareFn)(a, b);
+                });
+            }
         } else {
-            std::ranges::sort(dirEntryVec, [this](const FSEntry& a, const FSEntry& b) {
-                return (this->* &DirectoryManager::path_entry_compare)(a, b);
+            // 路径兜底同样预计算 sortKey
+            std::vector<QString> keys(dirEntryVec.size());
+            for(size_t i = 0; i < dirEntryVec.size(); ++i)
+                keys[i] = collator.sortKey(dirEntryVec[i].path);
+            std::vector<size_t> order(dirEntryVec.size());
+            for(size_t i = 0; i < order.size(); ++i)
+                order[i] = i;
+            std::ranges::sort(order, [&](size_t a, size_t b) {
+                return keys[a] < keys[b];
             });
+            std::vector<FSEntry> sorted;
+            sorted.reserve(dirEntryVec.size());
+            for(size_t idx : order)
+                sorted.push_back(std::move(dirEntryVec[idx]));
+            dirEntryVec = std::move(sorted);
         }
     }
     mLastCompareFunction = currentCompareFn;
@@ -512,73 +562,121 @@ void DirectoryManager::removeFileEntry(const QString &filePath) {
 void DirectoryManager::updateFileEntry(const QString &filePath) {
     if(!containsFile(filePath))
         return;
-    FSEntry newEntry(filePath);
+    QFileInfo fi(filePath);
+    updateFileEntry(filePath, fi);
+}
+
+void DirectoryManager::updateFileEntry(const QString &filePath, const QFileInfo &fi) {
+    // ⭐ 调用方已持有 QFileInfo（exists/stat 已完成），此处复用，不再二次 stat
+    if(!containsFile(filePath) || !fi.exists())
+        return;
     int index = indexOfFile(filePath);
-    if(fileEntryVec.at(index).modifyTime != newEntry.modifyTime) {
-        fileEntryVec.at(index) = newEntry;
+    if(fileEntryVec.at(index).refresh(fi)) {
         emit fileModified(filePath);
     }
 }
 
-void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName) {
-    // 显式使用 .value
-    QFileInfo fi(oldFilePath.value);
-    QString newFilePath = fi.absolutePath() + "/" + newFileName.value;
-    if(!containsFile(oldFilePath.value)) {
+bool DirectoryManager::renameFileEntryBatch(const QString &oldPath, const QString &newName,
+                                             FileRenameEmit &emitOut, QVector<QPair<QString,int>> &extraRemoves,
+                                             QVector<QString> &extraAdds, QVector<QString> &extraRefresh) {
+    QFileInfo fi(oldPath);
+    const QString newFilePath = fi.absolutePath() + "/" + newName;
+    if(!containsFile(oldPath)) {
+        // fallback 交由上层统一处理（避免批量中穿插 insert/remove 打乱索引）
         if(containsFile(newFilePath))
-            updateFileEntry(newFilePath);
+            extraRefresh.append(newFilePath);
         else
-            insertFileEntry(newFilePath);
-        return;
+            extraAdds.append(newFilePath);
+        return false;
     }
-    // ⭐ QFileInfo 单次 stat 完成类型判断与元数据获取，替代 directory_entry + 重复 stat
-    auto newEntryOpt = FSEntry::fromPath(newFilePath, newFileName.value);
+    auto newEntryOpt = FSEntry::fromPath(newFilePath, newName);
     if(!newEntryOpt || newEntryOpt->isDirectory) {
-        removeFileEntry(oldFilePath.value);
-        return;
+        const int idx = indexOfFile(oldPath);
+        extraRemoves.append(QPair<QString,int>(oldPath, idx));
+        fileEntryVec.erase(fileEntryVec.begin() + idx);
+        return false;
     }
     const qsizetype dot = newFilePath.lastIndexOf(u'.');
     if(dot < 0 || dot == newFilePath.size() - 1
        || !isSupportedSuffix(QStringView(newFilePath).mid(dot + 1))) {
-        removeFileEntry(oldFilePath.value);
-        return;
+        const int idx = indexOfFile(oldPath);
+        extraRemoves.append(QPair<QString,int>(oldPath, idx));
+        fileEntryVec.erase(fileEntryVec.begin() + idx);
+        return false;
     }
-
-    int oldIndex = indexOfFile(oldFilePath.value);
-    int replaceIndex = containsFile(newFilePath) ? indexOfFile(newFilePath) : -1;
-
-    // 优化：记录 emit 所需的索引，在 vector 操作前保存
-    int emitOldIndex = oldIndex;
-    // replaceIndex 在 erase 后可能需要调整，但最终 newIndex 由 insert_sorted 决定
-
-    // 先删除 replace（如存在且位置在 oldIndex 之前，避免 oldIndex 变化）
+    int oldIndex = indexOfFile(oldPath);
+    const int emitOldIndex = oldIndex;
+    const int replaceIndex = containsFile(newFilePath) ? indexOfFile(newFilePath) : -1;
     if(replaceIndex != -1) {
         if(replaceIndex < oldIndex) {
             fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
-            oldIndex--;
+            --oldIndex;
         } else if(replaceIndex > oldIndex) {
             fileEntryVec.erase(fileEntryVec.begin() + replaceIndex);
         }
-        // replaceIndex == oldIndex 不可能发生（同一路径）
     }
-
-    // 删除旧位置
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
-
-    // 插入新条目（复用上面单次 stat 的元数据，无额外 stat）
-    FSEntry newEntry = std::move(*newEntryOpt);
-
     auto cmpFn = compareFunction();
-    auto it = insert_sorted(fileEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
+    auto it = insert_sorted(fileEntryVec, *newEntryOpt, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
+    const int newIndex = static_cast<int>(it - fileEntryVec.begin());
+    emitOut = {oldPath, emitOldIndex, newFilePath, newIndex};
+    return true;
+}
 
-    int newIndex = static_cast<int>(it - fileEntryVec.begin());
+bool DirectoryManager::renameDirEntryBatch(const QString &oldPath, const QString &newName,
+                                           DirRenameEmit &emitOut) {
+    if(!containsDir(oldPath))
+        return false;
+    QFileInfo fi(oldPath);
+    const QString newDirPath = fi.absolutePath() + "/" + newName;
+    int oldIndex = indexOfDir(oldPath);
+    const int emitOldIndex = oldIndex;
+    const int replaceIndex = containsDir(newDirPath) ? indexOfDir(newDirPath) : -1;
+    if(replaceIndex != -1) {
+        if(replaceIndex < oldIndex) {
+            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
+            --oldIndex;
+        } else if(replaceIndex > oldIndex) {
+            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
+        }
+    }
+    dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
+    FSEntry newEntry;
+    newEntry.name = newName;
+    newEntry.path = newDirPath;
+    newEntry.isDirectory = true;
+    auto cmpFn = compareFunction();
+    auto it = insert_sorted(dirEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
+        return (this->*cmpFn)(a, b);
+    });
+    const int newIndex = static_cast<int>(it - dirEntryVec.begin());
+    emitOut = {oldPath, emitOldIndex, newDirPath, newIndex};
+    return true;
+}
 
-    // 性能优化：单次 rebuild 替代多次增量更新（3×O(n) → 1×O(n)）
+void DirectoryManager::renameFileEntry(const FilePath& oldFilePath, const FileName& newFileName) {
+    // ⭐ 单条重命名走批量内核，保证与 processPendingRenames 同一语义，仅末尾一次 rebuild
+    FileRenameEmit emitInfo;
+    QVector<QPair<QString,int>> extraRemoves;
+    QVector<QString> extraAdds;
+    QVector<QString> extraRefresh;
+    const bool ok = renameFileEntryBatch(oldFilePath.value, newFileName.value,
+                                         emitInfo, extraRemoves, extraAdds, extraRefresh);
+    if(!ok) {
+        // fallback：旧条目不在列表中
+        rebuildFileIndexMap();
+        for(const auto &p : extraRefresh)
+            updateFileEntry(p);
+        for(const auto &p : extraAdds)
+            insertFileEntry(p);
+        for(const auto &r : extraRemoves)
+            emit fileRemoved(r.first, r.second);
+        return;
+    }
     rebuildFileIndexMap();
-
-    emit fileRenamed(oldFilePath.value, emitOldIndex, newFilePath, newIndex);
+    emit fileRenamed(emitInfo.from, emitInfo.fromIndex, emitInfo.to, emitInfo.toIndex);
 }
 
 bool DirectoryManager::insertDirEntry(const QString &dirPath) {
@@ -615,48 +713,11 @@ void DirectoryManager::removeDirEntry(const QString &dirPath) {
 }
 
 void DirectoryManager::renameDirEntry(const DirPath& oldDirPath, const DirName& newDirName) {
-    if (!containsDir(oldDirPath.value))
+    DirRenameEmit emitInfo;
+    if(!renameDirEntryBatch(oldDirPath.value, newDirName.value, emitInfo))
         return;
-
-    QFileInfo fi(oldDirPath.value);
-    QString newDirPath = fi.absolutePath() + "/" + newDirName.value;
-
-    int oldIndex = indexOfDir(oldDirPath.value);
-    int replaceIndex = containsDir(newDirPath) ? indexOfDir(newDirPath) : -1;
-
-    // 记录 emit 所需的索引
-    int emitOldIndex = oldIndex;
-
-    // 先删除 replace（如存在且位置在 oldIndex 之前）
-    if(replaceIndex != -1) {
-        if(replaceIndex < oldIndex) {
-            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
-            oldIndex--;
-        } else if(replaceIndex > oldIndex) {
-            dirEntryVec.erase(dirEntryVec.begin() + replaceIndex);
-        }
-    }
-
-    // 删除旧路径
-    dirEntryVec.erase(dirEntryVec.begin() + oldIndex);
-
-    // 构造新条目并插入
-    FSEntry newEntry;
-    newEntry.name = newDirName.value;
-    newEntry.path = newDirPath;
-    newEntry.isDirectory = true;
-
-    auto cmpFn = compareFunction();
-    auto it = insert_sorted(dirEntryVec, newEntry, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
-        return (this->*cmpFn)(a, b);
-    });
-
-    int newIndex = static_cast<int>(it - dirEntryVec.begin());
-
-    // 性能优化：单次 rebuild 替代多次增量更新
     rebuildDirIndexMap();
-
-    emit dirRenamed(oldDirPath.value, emitOldIndex, newDirPath, newIndex);
+    emit dirRenamed(emitInfo.from, emitInfo.fromIndex, emitInfo.to, emitInfo.toIndex);
 }
 
 QStringList DirectoryManager::fileList() const {
@@ -808,6 +869,7 @@ void DirectoryManager::processPendingRenames(const QVector<QPair<QString, QStrin
     if(renames.isEmpty() || !watcher)
         return;
 
+    // ⭐ 逐条即时 rebuild+emit，保证索引与视图增量一致（链式 rename 依赖新鲜索引）
     const QString base = watcher->watchPath();
     for(const auto &r : renames) {
         const QString &oldPath = r.first;
@@ -815,23 +877,44 @@ void DirectoryManager::processPendingRenames(const QVector<QPair<QString, QStrin
 
         // ⭐ 优先用已有索引判断（避免文件系统时序问题）
         if(containsDir(oldPath)) {
-            renameDirEntry(DirPath(oldPath), DirName(newName));
+            DirRenameEmit emitInfo;
+            if(renameDirEntryBatch(oldPath, newName, emitInfo)) {
+                rebuildDirIndexMap();
+                emit dirRenamed(emitInfo.from, emitInfo.fromIndex, emitInfo.to, emitInfo.toIndex);
+            }
             continue;
         }
         if(containsFile(oldPath)) {
-            renameFileEntry(FilePath(oldPath), FileName(newName));
+            FileRenameEmit emitInfo;
+            QVector<QPair<QString,int>> extraRemoves;
+            QVector<QString> extraAdds;
+            QVector<QString> extraRefresh;
+            if(renameFileEntryBatch(oldPath, newName, emitInfo,
+                                    extraRemoves, extraAdds, extraRefresh)) {
+                rebuildFileIndexMap();
+                emit fileRenamed(emitInfo.from, emitInfo.fromIndex, emitInfo.to, emitInfo.toIndex);
+            } else {
+                rebuildFileIndexMap();
+                for(const auto &er : extraRemoves)
+                    emit fileRemoved(er.first, er.second);
+                for(const auto &p : extraRefresh)
+                    updateFileEntry(p);
+                for(const auto &p : extraAdds)
+                    insertFileEntry(p);
+            }
             continue;
         }
 
-        // ⭐ fallback：旧条目不在列表中（本批内"新建后随即重命名"，add 已被消费；
-        // 或 watcher 丢事件 / 初始不同步）→ 直接把新路径插入列表；
-        // 目标已在列表中则改为刷新元数据（覆盖"temp 重命名覆盖已跟踪文件"的原子替换场景）
+        // ⭐ fallback 单次 QFileInfo 复用，避免 isDir+isFile 两次 stat
         const QString newPath = QDir(base).filePath(newName);
-        if(isDir(newPath))
+        const QFileInfo fi(newPath);
+        if(!fi.exists())
+            continue;
+        if(fi.isDir()) {
             insertDirEntry(newPath);
-        else if(isFile(newPath)) {
+        } else if(fi.isFile()) {
             if(containsFile(newPath))
-                updateFileEntry(newPath);
+                updateFileEntry(newPath, fi);
             else
                 insertFileEntry(newPath);
         }
@@ -886,20 +969,23 @@ void DirectoryManager::processPendingRemovals(const QVector<QString> &removes) {
         // ⭐ 原子替换（如 QSaveFile 提交：删除+重建）同样会触发 REMOVED 事件，
         // 但文件仍在磁盘上 → 实为"替换"而非删除：刷新元数据即可，不删除条目，
         // 避免 Core::onFileRemoved 误判为真删除而跳到下一张图片
-        QVector<QString> kept;
+        // ⭐ 单个 QFileInfo 复用：exists 判断与 updateFileEntry 共用一次 stat
+        struct KeptEntry { QString path; QFileInfo fi; };
+        QVector<KeptEntry> kept;
         QVector<QPair<QString, int>> toRemove;
         for(const auto &p : paths) {
             if(!containsFile(p))
                 continue;
-            if(QFileInfo::exists(p)) {
-                kept.append(p);
+            QFileInfo fi(p);
+            if(fi.exists()) {
+                kept.append({p, std::move(fi)});
                 continue;
             }
             toRemove.append(QPair<QString, int>(p, indexOfFile(p)));
         }
         if(!kept.isEmpty())
-            for(const auto &p : kept)
-                updateFileEntry(p);
+            for(const auto &k : kept)
+                updateFileEntry(k.path, k.fi);
         if(!toRemove.isEmpty()) {
             QSet<QString> removalSet;
             for(const auto &r : toRemove) removalSet.insert(r.first);

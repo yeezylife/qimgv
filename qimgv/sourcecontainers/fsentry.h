@@ -45,6 +45,8 @@ public:
     static std::optional<FSEntry> fromPath(const QString &filePath);
     // 复用目录枚举已得到的文件名，避免二次解析路径
     static std::optional<FSEntry> fromPath(const QString &filePath, const QString &name);
+    // 用已 stat 的 QFileInfo 原地刷新元数据，返回 modifyTime 是否变化
+    bool refresh(const QFileInfo &fi) noexcept;
 
     static QString extractFileName(const QString& path) noexcept;
 

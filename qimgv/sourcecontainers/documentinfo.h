@@ -45,6 +45,8 @@ public:
 
     void loadExifTags() const;
     const QHash<QString, QString>& getExifTags() const;
+    // ⭐ 解码期已读的文本元数据直接复用，避免面板显示时二次 QImageReader 打开
+    void setCachedTextMetadata(QHash<QString, QString> metadata);
 
     bool isValid() const { return mDocumentType != NONE; }
 
@@ -57,6 +59,10 @@ private:
 
     mutable bool exifLoaded = false;
     mutable QHash<QString, QString> exifTags;
+    // ⭐ 解码线程已缓存的原始文本元数据（ImageStatic::loadGeneric 写入），
+    // loadExifTags 优先使用，不再二次打开文件
+    mutable QHash<QString, QString> mCachedRawText;
+    mutable bool mHasCachedRaw = false;
 
     // ✅ 仅保留安全缓存（不会占文件句柄）
     mutable QByteArray mHeaderCache;

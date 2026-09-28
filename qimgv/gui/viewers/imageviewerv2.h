@@ -252,6 +252,8 @@ private:
     void updatePixmap(QPixmap&& newPixmap);
     void swapToOriginalPixmap();
     Qt::TransformationMode selectTransformationMode();
+    // ⭐ showImage 双重载公共内核：reset→装配→fit→请求缩放一次完成
+    void showImageImpl(QPixmap pixmap);
 
     void reset();
     QPointF sceneRoundPos(QPointF scenePoint) const;

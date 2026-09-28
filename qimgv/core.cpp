@@ -1239,7 +1239,7 @@ void Core::nextDirectory() {
     QFileInfo parentDir(currentDir.absolutePath());
     if(parentDir.exists() && parentDir.isReadable()) {
         DirectoryManager dm;
-        if(!dm.setDirectory(parentDir.absoluteFilePath()))
+        if(!dm.setDirectoryDirsOnly(parentDir.absoluteFilePath()))
             return;
         QString next = dm.nextOfDir(model->directoryPath());
         if(!next.isEmpty()) {
@@ -1262,7 +1262,7 @@ void Core::prevDirectory(bool selectLast) {
     QFileInfo parentDir(currentDir.absolutePath());
     if(parentDir.exists() && parentDir.isReadable()) {
         DirectoryManager dm;
-        dm.setDirectory(parentDir.absoluteFilePath());
+        dm.setDirectoryDirsOnly(parentDir.absoluteFilePath());
         QString prev = dm.prevOfDir(model->directoryPath());
         if(!prev.isEmpty()) {
             if(!setDirectory(prev))

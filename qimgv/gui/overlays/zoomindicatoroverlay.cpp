@@ -3,7 +3,8 @@
 
 ZoomIndicatorOverlay::ZoomIndicatorOverlay(FloatingWidgetContainer *parent)
     : OverlayWidget(parent),
-      m_fm(font())
+      m_fm(font()),
+      m_cachedFont(font())
 {
     visibilityTimer.setSingleShot(true);
     visibilityTimer.setInterval(hideDelay);
@@ -29,8 +30,12 @@ void ZoomIndicatorOverlay::updateCache()
 {
     if (m_text.isEmpty())
         return;
-    // 每次刷新度量，保证字体变化（HiDPI/样式表）后仍与当前 font() 一致
-    m_fm = QFontMetrics(font());
+    // 字体不变时复用度量，仅文本变化时重算宽度；字体变化（HiDPI/样式表）后重建
+    const QFont cur = font();
+    if (m_cachedFont != cur) {
+        m_fm = QFontMetrics(cur);
+        m_cachedFont = cur;
+    }
     m_textWidth = m_fm.horizontalAdvance(m_text);
     m_ascent = m_fm.ascent();
     m_descent = m_fm.descent();
@@ -40,7 +45,11 @@ void ZoomIndicatorOverlay::updateCache()
 
 void ZoomIndicatorOverlay::setScale(qreal scale)
 {
-    m_text = QString::number(qRound(scale * 100.0)) + '%';
+    const QString newText = QString::number(qRound(scale * 100.0)) + '%';
+    // 同值重复触发（resize silent 路径）直接返回，避免度量/布局/重绘
+    if (newText == m_text && m_cachedFont == font())
+        return;
+    m_text = newText;
 
     updateCache();      // 一次性计算所有尺寸
     recalculateGeometry();

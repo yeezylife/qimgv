@@ -19,9 +19,9 @@ DirectoryManager::DirectoryManager() {
     // mEmptyString 默认构造即为空字符串，无需额外初始化
 }
 
-template<typename T, typename Pred>
-typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, T item, Pred pred) {
-    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, pred), std::move(item));
+template<typename T, typename U, typename Pred>
+typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, U &&item, Pred pred) {
+    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, pred), std::forward<U>(item));
 }
 
 bool DirectoryManager::path_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
@@ -227,6 +227,36 @@ bool DirectoryManager::setDirectoryRecursive(const QString &dirPath) {
     return true;
 }
 
+// 相邻目录切换用：只枚举子目录，文件分支零 stat/零排序；临时对象使用，不启动 watcher
+bool DirectoryManager::setDirectoryDirsOnly(const QString &dirPath) {
+    if(dirPath.isEmpty()) {
+        return false;
+    }
+    std::error_code ec;
+    std::filesystem::path pathObj(dirPath.toStdWString());
+    const auto st = std::filesystem::status(pathObj, ec);
+    if(ec || !std::filesystem::is_directory(st)) {
+        return false;
+    }
+    QFileInfo dirInfo(dirPath);
+    if(!dirInfo.isReadable()) {
+        return false;
+    }
+    mListSource = SOURCE_DIRECTORY;
+    mDirectoryPath = dirPath;
+    fileEntryVec.clear();
+    dirEntryVec.clear();
+    mFileIndexMap.clear();
+    mDirIndexMap.clear();
+    mFilesSorted = true;
+    mDirsSorted = false;
+    clearPendingEvents();
+    addDirEntriesOnly(dirEntryVec, dirPath);
+    sortDirEntryListsIncremental();
+    rebuildDirIndexMap();
+    return true;
+}
+
 // 性能优化：O(n) → O(1)
 int DirectoryManager::indexOfFile(const QString &filePath) const {
     auto it = mFileIndexMap.find(filePath);
@@ -355,14 +385,15 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, c
 
     for (const auto& entry : it) {
         const auto &fsPath = entry.path();
-        QString name = QString::fromStdWString(fsPath.filename().wstring());
+        // 只做一次 fromStdWString，文件名由 path 复用 extractFileName 派生
         // generic_wstring(): Windows 上统一正斜杠分隔，与 Qt 全局路径约定（QFileInfo::absoluteFilePath()）一致
         QString path = QString::fromStdWString(fsPath.generic_wstring());
+        QString name = FSEntry::extractFileName(path);
 
         if (entry.is_directory(ec) && !ec) {
             FSEntry newEntry;
-            newEntry.name = name;
-            newEntry.path = path;
+            newEntry.name = std::move(name);
+            newEntry.path = std::move(path);
             newEntry.isDirectory = true;
             dirEntryVec.emplace_back(std::move(newEntry));
         } else if (!ec) {
@@ -391,9 +422,10 @@ void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &en
     if (ec) return;
 
     for (const auto& entry : it) {
-        QString name = QString::fromStdWString(entry.path().filename().wstring());
+        // 只做一次 fromStdWString，文件名由 path 复用 extractFileName 派生
         // generic_wstring(): 顺带修复递归扫描同款反斜杠路径回归
         QString path = QString::fromStdWString(entry.path().generic_wstring());
+        QString name = FSEntry::extractFileName(path);
 
         const qsizetype dot = name.lastIndexOf(u'.');
         const bool supported = (dot > 0 && dot < name.size() - 1)
@@ -404,6 +436,25 @@ void DirectoryManager::addEntriesFromDirectoryRecursive(std::vector<FSEntry> &en
             if (auto newEntry = FSEntry::fromPath(path, name))
                 entryVec.emplace_back(std::move(*newEntry));
         }
+    }
+}
+
+void DirectoryManager::addDirEntriesOnly(std::vector<FSEntry> &entryVec, const QString &directoryPath) {
+    std::filesystem::path pathObj(directoryPath.toStdWString());
+    std::error_code ec;
+    fs::directory_iterator it(pathObj, fs::directory_options::skip_permission_denied, ec);
+    if (ec) return;
+
+    for (const auto& entry : it) {
+        if (!entry.is_directory(ec) || ec)
+            continue;
+        // generic_wstring(): Windows 上统一正斜杠分隔，与 Qt 全局路径约定一致
+        QString path = QString::fromStdWString(entry.path().generic_wstring());
+        FSEntry newEntry;
+        newEntry.name = FSEntry::extractFileName(path);
+        newEntry.path = std::move(path);
+        newEntry.isDirectory = true;
+        entryVec.emplace_back(std::move(newEntry));
     }
 }
 

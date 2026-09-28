@@ -45,10 +45,22 @@ std::optional<FSEntry> FSEntry::fromPath(const QString &filePath) {
 }
 
 std::optional<FSEntry> FSEntry::fromPath(const QString &filePath, const QString &name) {
-    auto entry = fromPath(filePath);
-    if (entry)
-        entry->name = name;
-    return entry;
+    // 调用方已给出文件名，直接复用，避免 fromPath(filePath) 内又做一次 extractFileName
+    QFileInfo fi(filePath);
+    if (!fi.exists())
+        return std::nullopt;
+
+    FSEntry result;
+    result.path = filePath;
+    result.name = name;
+    result.isDirectory = fi.isDir();
+
+    if (!result.isDirectory) {
+        result.size = static_cast<std::uintmax_t>(fi.size());
+        result.modifyTime = toFileTime(fi.lastModified());
+    }
+
+    return result;
 }
 
 bool FSEntry::refresh(const QFileInfo &fi) noexcept {

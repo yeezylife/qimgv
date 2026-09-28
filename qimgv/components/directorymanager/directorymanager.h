@@ -45,6 +45,8 @@ public:
     // ignored if the same dir is already opened
     bool setDirectory(const QString &dirPath);
     bool setDirectoryRecursive(const QString &dirPath);
+    // 仅加载子目录名（相邻目录切换用）：跳过文件 stat/后缀/文件排序，不启动 watcher、不 emit loaded
+    bool setDirectoryDirsOnly(const QString &dirPath);
     
     // 内联优化：移至头文件
     inline QString directoryPath() const {
@@ -207,6 +209,7 @@ private:
     void stopFileWatcher();
     void addEntriesFromDirectory(std::vector<FSEntry> &entryVec, const QString &directoryPath);
     void addEntriesFromDirectoryRecursive(std::vector<FSEntry> &entryVec, const QString &directoryPath);
+    void addDirEntriesOnly(std::vector<FSEntry> &entryVec, const QString &directoryPath);
 
     // 内联优化：范围检查函数移至头文件
     inline bool checkFileRange(int index) const {

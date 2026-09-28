@@ -1,6 +1,8 @@
 #pragma once
 
 #include "gui/customwidgets/overlaywidget.h"
+#include <QFont>
+#include <QFontMetrics>
 #include <QTimer>
 
 class ZoomIndicatorOverlay : public OverlayWidget {
@@ -23,6 +25,7 @@ private:
 
     QString m_text;
     QFontMetrics m_fm;
+    QFont m_cachedFont;
     int m_textWidth = 0;
     int m_ascent = 0;
     int m_descent = 0;

@@ -117,7 +117,15 @@ void Cache::moveToFront(ListIt it) {
 }
 
 void Cache::evictLRUItems() {
-    while (!lruList.empty() &&
+    // ⭐ 超大单图允许独占一项，避免大于上限的图片永远 miss 而反复解码；
+    // mMaxCacheSize == 0 视为禁用，此时清空
+    if(mMaxCacheSize == 0) {
+        lruList.clear();
+        items.clear();
+        mCurrentBytes = 0;
+        return;
+    }
+    while (lruList.size() > 1 &&
            (items.size() > mMaxCacheSize || mCurrentBytes > mMaxBytes)) {
         auto lastIt = std::prev(lruList.end());
 

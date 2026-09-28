@@ -20,8 +20,8 @@ DirectoryManager::DirectoryManager() {
 }
 
 template<typename T, typename Pred>
-typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, T const& item, Pred pred) {
-    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, pred), item);
+typename std::vector<T>::iterator insert_sorted(std::vector<T> &vec, T item, Pred pred) {
+    return vec.insert(std::upper_bound(vec.begin(), vec.end(), item, pred), std::move(item));
 }
 
 bool DirectoryManager::path_entry_compare(const FSEntry &e1, const FSEntry &e2) const {
@@ -420,19 +420,20 @@ void DirectoryManager::sortFileEntryListsIncremental() {
     if (mLastCompareFunction == currentCompareFn && mFilesSorted && fileEntryVec.size() > 1) {
         return;
     }
-    // ⭐ 名称/路径排序：QCollator::compare 每次比较都走 locale，O(n log n) 次昂贵调用；
-    // 改为每条目一次 sortKey()（O(n) 次 locale），比较期仅做 QString 二进制比较
+    // ⭐ 名称排序：QCollator::compare 每次比较都走 locale，O(n log n) 次昂贵调用；
+    // 改为每条目一次 sortKey()（O(n) 次 locale），比较期仅做 sortKey 二进制比较
     if (fileEntryVec.size() > 1 &&
         (mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC)) {
         const bool reverse = (mSortingMode == SORT_NAME_DESC);
-        std::vector<QString> keys(fileEntryVec.size());
-        for(size_t i = 0; i < fileEntryVec.size(); ++i)
-            keys[i] = collator.sortKey(fileEntryVec[i].name);
+        std::vector<QCollatorSortKey> keys;
+        keys.reserve(fileEntryVec.size());
+        for(const auto &e : fileEntryVec)
+            keys.push_back(collator.sortKey(e.name));
         std::vector<size_t> order(fileEntryVec.size());
         for(size_t i = 0; i < order.size(); ++i)
             order[i] = i;
         std::ranges::sort(order, [&](size_t a, size_t b) {
-            return reverse ? keys[a] > keys[b] : keys[a] < keys[b];
+            return reverse ? keys[b] < keys[a] : keys[a] < keys[b];
         });
         std::vector<FSEntry> sorted;
         sorted.reserve(fileEntryVec.size());
@@ -460,14 +461,15 @@ void DirectoryManager::sortDirEntryListsIncremental() {
             // ⭐ 同文件列表：名称排序走 sortKey 预计算，避免 O(n log n) 次 locale 比较
             if(mSortingMode == SORT_NAME || mSortingMode == SORT_NAME_DESC) {
                 const bool reverse = (mSortingMode == SORT_NAME_DESC);
-                std::vector<QString> keys(dirEntryVec.size());
-                for(size_t i = 0; i < dirEntryVec.size(); ++i)
-                    keys[i] = collator.sortKey(dirEntryVec[i].name);
+                std::vector<QCollatorSortKey> keys;
+                keys.reserve(dirEntryVec.size());
+                for(const auto &e : dirEntryVec)
+                    keys.push_back(collator.sortKey(e.name));
                 std::vector<size_t> order(dirEntryVec.size());
                 for(size_t i = 0; i < order.size(); ++i)
                     order[i] = i;
                 std::ranges::sort(order, [&](size_t a, size_t b) {
-                    return reverse ? keys[a] > keys[b] : keys[a] < keys[b];
+                    return reverse ? keys[b] < keys[a] : keys[a] < keys[b];
                 });
                 std::vector<FSEntry> sorted;
                 sorted.reserve(dirEntryVec.size());
@@ -481,9 +483,10 @@ void DirectoryManager::sortDirEntryListsIncremental() {
             }
         } else {
             // 路径兜底同样预计算 sortKey
-            std::vector<QString> keys(dirEntryVec.size());
-            for(size_t i = 0; i < dirEntryVec.size(); ++i)
-                keys[i] = collator.sortKey(dirEntryVec[i].path);
+            std::vector<QCollatorSortKey> keys;
+            keys.reserve(dirEntryVec.size());
+            for(const auto &e : dirEntryVec)
+                keys.push_back(collator.sortKey(e.path));
             std::vector<size_t> order(dirEntryVec.size());
             for(size_t i = 0; i < order.size(); ++i)
                 order[i] = i;
@@ -617,7 +620,7 @@ bool DirectoryManager::renameFileEntryBatch(const QString &oldPath, const QStrin
     }
     fileEntryVec.erase(fileEntryVec.begin() + oldIndex);
     auto cmpFn = compareFunction();
-    auto it = insert_sorted(fileEntryVec, *newEntryOpt, [this, cmpFn](const FSEntry& a, const FSEntry& b) {
+    auto it = insert_sorted(fileEntryVec, std::move(*newEntryOpt), [this, cmpFn](const FSEntry& a, const FSEntry& b) {
         return (this->*cmpFn)(a, b);
     });
     const int newIndex = static_cast<int>(it - fileEntryVec.begin());

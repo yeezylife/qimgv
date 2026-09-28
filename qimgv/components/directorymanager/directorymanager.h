@@ -152,8 +152,9 @@ private:
     void processPendingAdditions(const QVector<QString> &adds);
     void processPendingModifications(const QSet<QString> &modifies);
 
-    // ⭐ 批量重命名内部实现：只做 vector 操作，不 rebuild、不 emit，
-    // 由调用方在批量末尾单次 rebuild + 集中 emit，消灭 O(k*n)
+    // ⭐ 批量重命名内部实现：只做 vector 操作，不 rebuild、不 emit，由调用方 rebuild+emit；
+    // 当前逐条即时 rebuild+emit，保证链式 rename 索引与视图增量一致，
+    // 真 O(k) 批量需模型/视图批量协议，暂以正确性优先（勿删逐条 rebuild）
     struct FileRenameEmit { QString from; int fromIndex; QString to; int toIndex; };
     struct DirRenameEmit { QString from; int fromIndex; QString to; int toIndex; };
     bool renameFileEntryBatch(const QString &oldPath, const QString &newName,

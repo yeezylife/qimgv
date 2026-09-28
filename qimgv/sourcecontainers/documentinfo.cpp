@@ -297,9 +297,10 @@ QString DocumentInfo::formatMetadataValue(const QString &key,const QVariant &val
     return value.toString();
 }
 
-void DocumentInfo::setCachedTextMetadata(QHash<QString, QString> metadata) {
+void DocumentInfo::setCachedTextMetadata(QHash<QString, QString> metadata, QSize imageSize) {
     // ⭐ 解码期写入，GUI 线程首次 getExifTags 前已完成（Image 构造后才进缓存/面板）
     mCachedRawText = std::move(metadata);
+    mCachedImageSize = imageSize;
     mHasCachedRaw = true;
 }
 
@@ -331,8 +332,13 @@ void DocumentInfo::loadExifTags() const {
         }
         if(!exifTags.isEmpty())
             return;
-        // 缓存为空（如 PNG 无文本块）则回落按尺寸填充，避免再开文件
-        // 尺寸由调用方经 Image::size() 获取，此处不再 reader.size() 二次解析
+        // 缓存为空（如 PNG 无文本块）用解码期尺寸填充，不再二次打开文件
+        if(mCachedImageSize.isValid()) {
+            exifTags.insert(
+                QObject::tr("Dimensions"),
+                QString("%1 x %2").arg(mCachedImageSize.width()).arg(mCachedImageSize.height())
+            );
+        }
         return;
     }
 

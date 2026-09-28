@@ -472,15 +472,8 @@ void ImageViewerV2::showImage(QPixmap&& newPixmap)
 
 void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
 {
-    stopPosAnimation();
-    pixmapItemScaled.setPixmap(QPixmap());
-    pixmapScaled = QPixmap();
-    pixmapItem.setPixmap(QPixmap());
-    pixmapItem.setScale(1.0f);
-    pixmapItem.setOffset(CENTER_OFFSET, CENTER_OFFSET);
-    pixmap.reset();
-    stopAnimation();
-    movie = nullptr;
+    // ⭐ 复用 reset() 清空旧图（含 viewport 位置重置与刷新），避免双份维护分叉
+    reset();
 
     if(pixmapParam.isNull())
         return;

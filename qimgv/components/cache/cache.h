@@ -11,7 +11,8 @@
 
 class Cache {
 public:
-    // maxSize 为个数上限（兼容旧语义）；字节上限默认 2048MB，避免高像素 OOM
+    // maxSize 为个数上限（兼容旧语义）；字节上限默认 2048MB，避免高像素 OOM；
+    // 超上限的单张大图允许独占一项（否则永远 miss）；maxSize == 0 视为禁用
     explicit Cache(size_t maxSize = 20, size_t maxBytes = 2048ULL * 1024ULL * 1024ULL);
 
     bool contains(const QString &path) const;

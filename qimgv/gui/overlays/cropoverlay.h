@@ -108,4 +108,3 @@ private:
     void constrainHeightBased(QRectF &bounded, const QRectF &requested) const;
     void commitSelection(const QRectF &rect);
 };
-};

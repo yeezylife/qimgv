@@ -62,9 +62,6 @@ void ImageStatic::loadGeneric(int allocationLimitMB) {
             mTextMetadata.insert(key, value);
         }
     }
-    // ⭐ 同步喂给 DocumentInfo，面板 getExifTags 直接复用，不再二次 QImageReader
-    if(mDocInfo)
-        mDocInfo->setCachedTextMetadata(mTextMetadata);
 
     QImage image = std::move(imageData);
 
@@ -89,6 +86,9 @@ void ImageStatic::loadGeneric(int allocationLimitMB) {
 
     this->image = std::make_shared<const QImage>(std::move(image));
     mLoaded = true;
+    // ⭐ 同步喂给 DocumentInfo（含最终显示尺寸），面板 getExifTags 直接复用，不再二次 QImageReader
+    if(mDocInfo)
+        mDocInfo->setCachedTextMetadata(mTextMetadata, this->image->size());
 }
 
 void ImageStatic::loadICO() {

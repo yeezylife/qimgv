@@ -981,7 +981,8 @@ void DirectoryManager::processPendingRemovals(const QVector<QString> &removes) {
                 continue;
             QFileInfo fi(p);
             if(fi.exists()) {
-                kept.append({p, std::move(fi)});
+                // QFileInfo 无移动构造，std::move 只会回退为拷贝，直接传即可
+                kept.append({p, fi});
                 continue;
             }
             toRemove.append(QPair<QString, int>(p, indexOfFile(p)));

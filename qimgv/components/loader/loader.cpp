@@ -15,8 +15,11 @@ Loader::Loader() {
 }
 
 Loader::~Loader() {
-    // 1. 取消排队中的任务（标记取消并移入归置区，run() 跳过解码且不再投递空事件）
-    clearTasks();
+    // 1. 只 CAS 标记取消排队中的任务，不移入归置区：析构函数不得抛异常，
+    //    而归置区 push_back 扩容可能抛 bad_alloc；tasks 哈希本身持有引用，
+    //    足以保证 run() 前对象存活（取消任务的 run() 仍会被执行，见取消分支）
+    for(auto it = tasks.cbegin(), end = tasks.cend(); it != end; ++it)
+        it.value()->tryCancel();
     // 2. 等待运行中任务完成（结果事件已投递，其捕获的 self 引用维系对象存活）
     pool->waitForDone();
     priorityPool->waitForDone();
@@ -28,6 +31,7 @@ Loader::~Loader() {
 }
 
 void Loader::clearTasks() {
+    // 注意：析构路径不用此函数（归置区 push_back 可能抛异常），见 ~Loader。
     // 单遍 O(n)：只取消"排队中"的任务，保留运行中的任务让其完成并进缓存，
     // 不再逐任务 tryTake（tryTake 每次扫描队列，任务多时为 O(n²)）。
     // ⭐ 取消的任务移入归置区统一持有，run() 取消分支无需投递空事件，

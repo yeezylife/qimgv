@@ -22,9 +22,6 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     , mouseInteraction(MOUSE_NONE)
     , transparencyGrid(false)
     , expandImage(false)
-    , smoothAnimatedImages(true)
-    , smoothUpscaling(true)
-    , forceFastScale(false)
     , keepFitMode(false)
     , loopPlayback(true)
     , mIsFullscreen(false)
@@ -45,7 +42,6 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     , mViewLock(LOCK_NONE)
     , imageFitMode(FIT_WINDOW)
     , imageFitModeDefault(FIT_WINDOW)
-    , mScalingFilter(QI_FILTER_BILINEAR)
     , zoomThreshold(ZOOM_THRESHOLD_FACTOR)
     , dragThreshold(10)
     , scaledImageFitsCache(true)
@@ -192,8 +188,6 @@ void ImageViewerV2::setScrollY(int y)
 void ImageViewerV2::initSettings()
 {
     transparencyGrid = settings->transparencyGrid();
-    smoothAnimatedImages = settings->smoothAnimatedImages();
-    smoothUpscaling = settings->smoothUpscaling();
     expandImage = settings->expandImage();
     expandLimit = static_cast<float>(settings->expandLimit());
 
@@ -219,22 +213,7 @@ void ImageViewerV2::initSettings()
 
     onFullscreenModeChanged(mIsFullscreen);
     updateMinScale();
-    setScalingFilterImpl(settings->scalingFilter());
     setFitModeImpl(imageFitModeDefault);
-}
-
-void ImageViewerV2::setScalingFilterImpl(ScalingFilter filter)
-{
-    if (mScalingFilter == filter)
-        return;
-
-    mScalingFilter = filter;
-    pixmapItem.setTransformationMode(selectTransformationMode());
-
-    if (mScalingFilter == QI_FILTER_NEAREST)
-        swapToOriginalPixmap();
-
-    requestScaling();
 }
 
 void ImageViewerV2::setFitModeImpl(ImageFitMode mode)
@@ -268,11 +247,6 @@ float ImageViewerV2::currentScaleInternal() const
 void ImageViewerV2::readSettings()
 {
     initSettings();
-}
-
-void ImageViewerV2::setScalingFilter(ScalingFilter filter)
-{
-    setScalingFilterImpl(filter);
 }
 
 void ImageViewerV2::setFitMode(ImageFitMode mode)
@@ -491,7 +465,7 @@ QPixmap ImageViewerV2::scaledFrameFor(int frameNumber, const QImage &frame, cons
     }
 
     QPixmap scaled = QPixmap::fromImage(frame.scaled(target, Qt::KeepAspectRatio,
-                                                      Qt::FastTransformation));
+                                                      Qt::SmoothTransformation));
     // 缓存里就带好 dpr：setScaledPixmap() 再设置同值会提前返回，
     // 避免隐式共享的 pixmap 因修改 dpr 而每帧深拷贝一份像素
     scaled.setDevicePixelRatio(dpr);
@@ -612,9 +586,6 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animatio
     // 帧未就绪时由 onAnimationTimer/showAnimationFrame 稍后重试
     movie->jumpToFrame(0);
 
-    Qt::TransformationMode mode = smoothAnimatedImages ? Qt::SmoothTransformation : Qt::FastTransformation;
-    pixmapItem.setTransformationMode(mode);
-
     updatePixmap(movie->currentPixmap());
 
     emit durationChanged(movie->frameCount());
@@ -657,10 +628,6 @@ void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
     pixmap = std::make_unique<QPixmap>(std::move(pixmapParam));
     pixmap->setDevicePixelRatio(dpr);
     pixmapItem.setPixmap(*pixmap);
-
-    Qt::TransformationMode mode = (mScalingFilter == QI_FILTER_NEAREST)
-                                  ? Qt::FastTransformation : Qt::SmoothTransformation;
-    pixmapItem.setTransformationMode(mode);
     pixmapItem.show();
 
     updateMinScale();
@@ -829,7 +796,7 @@ void ImageViewerV2::stopPosAnimation()
 }
 
 // ============================================================================
-// Settings and Filters
+// Settings
 // ============================================================================
 void ImageViewerV2::toggleTransparencyGrid()
 {
@@ -842,32 +809,6 @@ void ImageViewerV2::setLoopPlayback(bool mode)
     if (movie && mode && loopPlayback != mode)
         startAnimation();
     loopPlayback = mode;
-}
-
-void ImageViewerV2::setFilterNearest()
-{
-    setScalingFilterImpl(QI_FILTER_NEAREST);
-}
-
-void ImageViewerV2::setFilterBilinear()
-{
-    setScalingFilterImpl(QI_FILTER_BILINEAR);
-}
-
-Qt::TransformationMode ImageViewerV2::selectTransformationMode()
-{
-    if (forceFastScale)
-        return Qt::FastTransformation;
-
-    if (movie) {
-        if (!smoothAnimatedImages || (pixmapItem.scale() > 1.0f && !smoothUpscaling))
-            return Qt::FastTransformation;
-    } else {
-        if ((pixmapItem.scale() > 1.0f && !smoothUpscaling) || mScalingFilter == QI_FILTER_NEAREST)
-            return Qt::FastTransformation;
-    }
-
-    return Qt::SmoothTransformation;
 }
 
 void ImageViewerV2::setExpandImage(bool mode)
@@ -904,11 +845,6 @@ void ImageViewerV2::requestScaling()
         return;
     }
 
-    if (!smoothUpscaling && scale >= 1.0) {
-        lastRequestedScale = -1.0f;
-        return;
-    }
-
     if (scaleTimer->isActive())
         scaleTimer->stop();
 
@@ -921,7 +857,7 @@ void ImageViewerV2::requestScaling()
             return;
         }
         lastRequestedScale = static_cast<float>(scale);
-        emit scalingRequested(requested, mScalingFilter);
+        emit scalingRequested(requested);
     } else {
         lastRequestedScale = -1.0f;
     }
@@ -1071,7 +1007,6 @@ void ImageViewerV2::doZoom(float newScale, bool center)
         sceneCenterBefore = mapToScene(viewport()->rect().center());
 
     pixmapItem.setScale(newScale);
-    pixmapItem.setTransformationMode(selectTransformationMode());
     swapToOriginalPixmap();
 
     if (center)
@@ -1519,9 +1454,6 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent* event)
 
             mouseInteraction = MOUSE_ZOOM;
 
-            if (viewport()->width() * viewport()->height() > LARGE_VIEWPORT_SIZE)
-                forceFastScale = true;
-
             mouseMoveZoom(event);
         }
         return;
@@ -1533,11 +1465,6 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent* event)
 void ImageViewerV2::mouseReleaseEvent(QMouseEvent* event)
 {
     unsetCursor();
-
-    if (forceFastScale) {
-        forceFastScale = false;
-        pixmapItem.setTransformationMode(selectTransformationMode());
-    }
 
     if (!pixmap || mouseInteraction == MOUSE_NONE) {
         QGraphicsView::mouseReleaseEvent(event);
@@ -1746,11 +1673,6 @@ bool ImageViewerV2::scaledImageFits() const
     const QSize sz = scaledSizeR();
     return (sz.width() <= static_cast<int>(static_cast<float>(viewport()->width()) * dpr) &&
             sz.height() <= static_cast<int>(static_cast<float>(viewport()->height()) * dpr));
-}
-
-ScalingFilter ImageViewerV2::scalingFilter() const
-{
-    return mScalingFilter;
 }
 
 QWidget* ImageViewerV2::widget()

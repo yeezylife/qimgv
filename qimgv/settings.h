@@ -44,14 +44,6 @@ enum PanelPosition {
     PANEL_RIGHT
 };
 
-enum ScalingFilter {
-    QI_FILTER_NEAREST,
-    QI_FILTER_BILINEAR,
-    QI_FILTER_CV_BILINEAR_SHARPEN,
-    QI_FILTER_CV_CUBIC,
-    QI_FILTER_CV_CUBIC_SHARPEN
-};
-
 enum ZoomIndicatorMode {
     INDICATOR_DISABLED,
     INDICATOR_ENABLED,
@@ -124,14 +116,8 @@ public:
     QStringList savedPaths();
     void setSavedPaths(const QStringList &paths);
     const QString &tmpDir();
-    bool smoothUpscaling();
-    void setSmoothUpscaling(bool mode);
     void setExpandImage(bool mode);
     bool expandImage();
-    ScalingFilter scalingFilter();
-    void setScalingFilter(ScalingFilter mode);
-    bool smoothAnimatedImages();
-    void setSmoothAnimatedImages(bool mode);
     bool panelFullscreenOnly();
     void setPanelFullscreenOnly(bool mode);
     QVersionNumber lastVersion();
@@ -306,8 +292,6 @@ private:
     mutable bool mMouseScrollingSpeedCacheValid;
     
     // 缓存枚举设置值
-    mutable ScalingFilter mCachedScalingFilter;
-    mutable bool mScalingFilterCacheValid;
     mutable QRect mCachedWindowGeometry;
     mutable bool mWindowGeometryCacheValid;
     mutable ImageFitMode mCachedImageFitMode;
@@ -327,9 +311,7 @@ private:
     mutable bool mCachedUnlockMinZoom;
     mutable bool mUnlockMinZoomCacheValid;
 
-    // 缓存布尔设置值（缩放/加载热路径：smoothUpscaling 每次缩放请求、videoPlayback 每个加载任务）
-    mutable bool mCachedSmoothUpscaling;
-    mutable bool mSmoothUpscalingCacheValid;
+    // 缓存布尔设置值（加载热路径：videoPlayback 每个加载任务）
     mutable bool mCachedVideoPlayback;
     mutable bool mVideoPlaybackCacheValid;
     

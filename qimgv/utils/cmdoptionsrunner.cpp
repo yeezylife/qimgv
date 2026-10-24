@@ -9,9 +9,6 @@ void CmdOptionsRunner::showBuildOptions() {
 #ifdef USE_KDE_BLUR
     features << "USE_KDE_BLUR";
 #endif
-#ifdef USE_OPENCV
-    features << "USE_OPENCV";
-#endif
     
     qDebug() << "\nEnabled build options:";
     if(!features.count()) {

@@ -212,7 +212,6 @@ void Core::initActions() {
     connect(actionManager, &ActionManager::sortBySize, this, &Core::sortBySize);
     connect(actionManager, &ActionManager::toggleImageInfo, this, &Core::onToggleImageInfo);
     connect(actionManager, &ActionManager::toggleShuffle, this, &Core::toggleShuffle);
-    connect(actionManager, &ActionManager::toggleScalingFilter, mw.get(), &MW::toggleScalingFilter);
     connect(actionManager, &ActionManager::showInDirectory, this, &Core::showInDirectory);
     connect(actionManager, &ActionManager::toggleMute, mw.get(), &MW::toggleMute);
     connect(actionManager, &ActionManager::volumeUp, mw.get(), &MW::volumeUp);
@@ -264,11 +263,6 @@ void Core::onUpdate() {
         actionManager->resetDefaults("print");
         actionManager->resetDefaults("openSettings");
     }
-
-#ifdef USE_OPENCV
-    if(lastVer < QVersionNumber(0,9,0))
-        settings->setScalingFilter(QI_FILTER_CV_CUBIC);
-#endif
 
     actionManager->adjustFromVersion(lastVer);
 
@@ -1098,7 +1092,7 @@ void Core::rotateByDegrees(int degrees) {
 }
 
 void Core::resize(QSize size) {
-    edit_template(false, tr("Resize"), ImageLib::scaled, size, QI_FILTER_BILINEAR);
+    edit_template(false, tr("Resize"), ImageLib::scaled, size);
 }
 
 void Core::crop(QRect rect) {
@@ -1258,13 +1252,12 @@ void Core::print() {
     p.exec();
 }
 
-void Core::scalingRequest(QSize size, ScalingFilter filter) {
+void Core::scalingRequest(QSize size) {
     if(mw->isVisible() && state.hasActiveImage) {
         // ⭐ 只查缓存：异步加载在途时 resize/滚轮不能在这里同步解码整图
         std::shared_ptr<Image> forScale = model->cachedImage(state.currentFilePath);
         if(forScale) {
-            // GUI 线程快照设置，worker 只读请求对象，不再访问 Settings
-            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath, filter, settings->smoothUpscaling()));
+            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath));
         }
     }
 }

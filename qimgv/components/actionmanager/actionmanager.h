@@ -127,7 +127,6 @@ signals:
     void sortBySize();
     void toggleImageInfo();
     void toggleShuffle();
-    void toggleScalingFilter();
     void showInDirectory();
     void toggleMute();
     void volumeUp();

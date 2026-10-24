@@ -5,24 +5,17 @@
 #include <QString>
 #include <memory>
 #include "sourcecontainers/image.h"
-#include "settings.h"
 
 class ScalerRequest {
 public:
-    ScalerRequest() noexcept
-        : m_filter(QI_FILTER_BILINEAR)
-    {}
+    ScalerRequest() noexcept = default;
 
     ScalerRequest(std::shared_ptr<Image> image,
                   QSize size,
-                  QString path,
-                  ScalingFilter filter,
-                  bool smoothUpscaling) noexcept
+                  QString path) noexcept
         : m_image(std::move(image))
         , m_size(size)
         , m_path(std::move(path))
-        , m_filter(filter)
-        , m_smoothUpscaling(smoothUpscaling)
     {}
 
     // ✅ 保持默认语义（Qt6 已优化）
@@ -48,21 +41,10 @@ public:
         return m_path;
     }
 
-    [[nodiscard]] ScalingFilter filter() const noexcept {
-        return m_filter;
-    }
-
-    // 主线程提交时快照，worker 只读：避免解码线程访问 Settings（跨线程竞争）
-    [[nodiscard]] bool smoothUpscaling() const noexcept {
-        return m_smoothUpscaling;
-    }
-
     // 🚀 指针比较避免字符串比较（非常关键）；代数不参与相等比较
     bool operator==(const ScalerRequest& other) const noexcept {
         return m_image.get() == other.m_image.get() &&
-               m_size == other.m_size &&
-               m_filter == other.m_filter &&
-               m_smoothUpscaling == other.m_smoothUpscaling;
+               m_size == other.m_size;
     }
 
     bool operator!=(const ScalerRequest& other) const noexcept {
@@ -73,9 +55,6 @@ private:
     std::shared_ptr<Image> m_image;
     QSize m_size;
     QString m_path;
-    ScalingFilter m_filter;
-    // 紧随 m_filter：复用其后原有的对齐填充，sizeof 不变
-    bool m_smoothUpscaling = true;
     quint64 m_generation = 0;
 };
 

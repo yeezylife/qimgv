@@ -9,25 +9,25 @@ Qt6 + C++23 image viewer. Single CMake project, no tests/linter/formatter config
 > Verify changes by careful code review; compilation is covered by CI (`.github/workflows/`).
 > The commands below are reference-only (canonical/CI builds), not to be executed here.
 
-Deps (clang64): `qt6-base qt6-svg qt6-imageformats qt6-tools kimageformats libjxl libraw opencv lcms2 libavif libheif` + (`mpv kwindowsystem` for video/strict builds).
+Deps (clang64): `qt6-base qt6-svg qt6-imageformats qt6-tools kimageformats libjxl libraw lcms2 libavif libheif` + (`mpv kwindowsystem` for video/strict builds).
 
 ```bash
 # Release (matches qimgv-qt6-build.yml; VIDEO off in release, x86-64-v3 only: Haswell+)
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_CXX_EXTENSIONS=OFF \
-  -DVIDEO_SUPPORT=OFF -DOPENCV_SUPPORT=ON -DCMAKE_PREFIX_PATH=/clang64 \
+  -DVIDEO_SUPPORT=OFF -DCMAKE_PREFIX_PATH=/clang64 \
   -DCMAKE_CXX_FLAGS="-DNDEBUG -DQT_NO_DEBUG_OUTPUT -O3 -march=x86-64-v3 -flto=thin -fstrict-aliasing -fvisibility=hidden -fvisibility-inlines-hidden -ffunction-sections -fdata-sections"
 cmake --build build --config Release
 
 # Debug strict check (matches qimgv-CI-Strict-Check.yml / debug.yml: -Werror + ASan/UBSan)
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_CXX_EXTENSIONS=OFF \
-  -DVIDEO_SUPPORT=ON -DOPENCV_SUPPORT=ON -DCMAKE_PREFIX_PATH=/clang64 \
+  -DVIDEO_SUPPORT=ON -DCMAKE_PREFIX_PATH=/clang64 \
   -DCMAKE_CXX_FLAGS="-O0 -g3 -fno-omit-frame-pointer -march=x86-64-v3 -Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wold-style-cast -Wcast-qual -Wcast-align -Wzero-as-null-pointer-constant -Wnon-virtual-dtor -Woverloaded-virtual -Wsuggest-override -Wshadow -Wundef -Wdouble-promotion -Wformat=2 -fsanitize=address,undefined"
 cmake --build build --config Debug
 ```
 
-Options: `-DVIDEO_SUPPORT` (defines `USE_MPV`), `-DOPENCV_SUPPORT` (defines `USE_OPENCV`, adds `qimgv/3rdparty/QtOpenCV`), `-DKDE_SUPPORT=OFF` (defines `USE_KDE_BLUR`). No `ctest`, no test suite — verify by compiling (CI only, not on this machine).
+Options: `-DVIDEO_SUPPORT` (defines `USE_MPV`), `-DKDE_SUPPORT=OFF` (defines `USE_KDE_BLUR`). No `ctest`, no test suite — verify by compiling (CI only, not on this machine).
 
 ## Architecture
 

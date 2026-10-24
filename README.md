@@ -102,7 +102,7 @@
   <ul>
     <li><strong>操作系统</strong>：Windows 10+</li>
     <li><strong>编译器</strong>：支持 C++23 的编译器（MSVC 2019+、GCC 7+、Clang 5+）</li>
-    <li><strong>依赖库</strong>：Qt6（6.2+）、OpenCV等</li>
+    <li><strong>依赖库</strong>：Qt6（6.2+）等</li>
   </ul>
 
   <h2>🖥️ 使用方法</h2>
@@ -242,7 +242,7 @@
   <ul>
     <li><strong>OS</strong>: Windows 10+</li>
     <li><strong>Compiler</strong>: C++23 compatible (MSVC 2019+, GCC 7+, Clang 5+)</li>
-    <li><strong>Libraries</strong>: Qt6 (6.2+), OpenCV, etc.</li>
+    <li><strong>Libraries</strong>: Qt6 (6.2+), etc.</li>
   </ul>
 
   <h2>🖥️ Usage Guide</h2>

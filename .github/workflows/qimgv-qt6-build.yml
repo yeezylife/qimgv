@@ -35,7 +35,6 @@ jobs:
             mingw-w64-clang-x86_64-kimageformats
             mingw-w64-clang-x86_64-libjxl
             mingw-w64-clang-x86_64-libraw
-            mingw-w64-clang-x86_64-opencv
             mingw-w64-clang-x86_64-lcms2
             mingw-w64-clang-x86_64-libavif
             mingw-w64-clang-x86_64-libheif
@@ -62,7 +61,6 @@ jobs:
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_EXTENSIONS=OFF \
             -DVIDEO_SUPPORT=OFF \
-            -DOPENCV_SUPPORT=ON \
             -DCMAKE_PREFIX_PATH=/clang64 \
             -DCMAKE_CXX_FLAGS="\
               -DNDEBUG \

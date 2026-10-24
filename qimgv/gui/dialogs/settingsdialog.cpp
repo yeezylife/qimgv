@@ -40,12 +40,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui->videoPlaybackGroup->setEnabled(false);
 #endif
 
-#ifdef USE_OPENCV
-    ui->scalingQualityComboBox->addItem("Bilinear+sharpen (OpenCV)");
-    ui->scalingQualityComboBox->addItem("Bicubic (OpenCV)");
-    ui->scalingQualityComboBox->addItem("Bicubic+sharpen (OpenCV)");
-#endif
-
     if(!settings->supportedFormats().contains("jxl"))
         ui->animatedJxlCheckBox->hide();
 
@@ -168,10 +162,8 @@ void SettingsDialog::readSettings() {
     ui->transparencyGridCheckBox->setChecked(settings->transparencyGrid());
     ui->enableSmoothScrollCheckBox->setChecked(settings->enableSmoothScroll());
     ui->usePreloaderCheckBox->setChecked(settings->usePreloader());
-    ui->smoothUpscalingCheckBox->setChecked(settings->smoothUpscaling());
     ui->expandImageCheckBox->setChecked(settings->expandImage());
     ui->expandImagesGroupContents->setEnabled(settings->expandImage());
-    ui->smoothAnimatedImagesCheckBox->setChecked(settings->smoothAnimatedImages());
     ui->bgOpacitySlider->setValue(static_cast<int>(settings->backgroundOpacity() * 100));
     ui->blurBackgroundCheckBox->setChecked(settings->blurBackground());
     ui->sortingComboBox->setCurrentIndex(settings->sortingMode());
@@ -253,7 +245,6 @@ void SettingsDialog::readSettings() {
         ui->fitMode1to1->setChecked(true);
 
     // ##### UI #####
-    ui->scalingQualityComboBox->setCurrentIndex(settings->scalingFilter());
     ui->fullscreenCheckBox->setChecked(settings->fullscreenMode());
     ui->useSystemColorsCheckBox->setChecked(settings->useSystemColorScheme());
     ui->modifySystemSchemeLabel->setVisible(settings->useSystemColorScheme());
@@ -266,7 +257,7 @@ void SettingsDialog::readSettings() {
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::saveSettings() {
-    // 不再阻塞等待全局线程池：后台加载/缩放任务仅读一次设置（如 smoothUpscaling），
+    // 不再阻塞等待全局线程池：后台加载/缩放任务只读设置快照，
     // 等待会把保存设置卡在无关的图片后台任务上，故移除
     settings->setLoopSlideshow(ui->loopSlideshowCheckBox->isChecked());
     settings->setFullscreenMode(ui->fullscreenCheckBox->isChecked());
@@ -286,9 +277,7 @@ void SettingsDialog::saveSettings() {
     settings->setTransparencyGrid(ui->transparencyGridCheckBox->isChecked());
     settings->setEnableSmoothScroll(ui->enableSmoothScrollCheckBox->isChecked());
     settings->setUsePreloader(ui->usePreloaderCheckBox->isChecked());
-    settings->setSmoothUpscaling(ui->smoothUpscalingCheckBox->isChecked());
     settings->setExpandImage(ui->expandImageCheckBox->isChecked());
-    settings->setSmoothAnimatedImages(ui->smoothAnimatedImagesCheckBox->isChecked());
 
     settings->setBackgroundOpacity(static_cast<qreal>(ui->bgOpacitySlider->value()) / 100.f);
     settings->setBlurBackground(ui->blurBackgroundCheckBox->isChecked());
@@ -329,7 +318,6 @@ void SettingsDialog::saveSettings() {
         settings->setFolderEndAction(FOLDER_END_GOTO_ADJACENT);
 
     settings->setMpvBinary(ui->mpvLineEdit->text());
-    settings->setScalingFilter(static_cast<ScalingFilter>(ui->scalingQualityComboBox->currentIndex()));
     settings->setImageScrolling(static_cast<ImageScrolling>(ui->imageScrollingComboBox->currentIndex()));
     settings->setShowSaveOverlay(ui->saveOverlayCheckBox->isChecked());
     settings->setJxlAnimation(ui->animatedJxlCheckBox->isChecked());

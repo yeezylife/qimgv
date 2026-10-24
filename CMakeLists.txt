@@ -22,7 +22,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # USER OPTIONS
 # Usage: cmake -DVIDEO_SUPPORT=ON [...]
 option(VIDEO_SUPPORT "Enable video support" ON)
-option(OPENCV_SUPPORT "Enable HQ scaling via OpenCV" ON)
 option(KDE_SUPPORT "Support blur when using KDE" OFF)
 
 if(UNIX AND NOT APPLE)
@@ -41,11 +40,6 @@ message(STATUS "Qt Version: " ${QT_VERSION})
 
 if(KDE_SUPPORT)
     find_package(KF6WindowSystem REQUIRED)
-endif()
-
-if(OPENCV_SUPPORT)
-    find_package(PkgConfig REQUIRED)
-    find_package(OpenCV REQUIRED core imgproc)
 endif()
 
 ##############################################################

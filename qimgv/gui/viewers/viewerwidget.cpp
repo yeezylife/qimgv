@@ -38,10 +38,6 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     connect(imageViewer, &ImageViewerV2::scaleChanged, this, &ViewerWidget::onScaleChanged);
     connect(imageViewer, &ImageViewerV2::playbackFinished, this, &ViewerWidget::onAnimationPlaybackFinished);
     connect(this, &ViewerWidget::toggleTransparencyGrid, imageViewer, &ImageViewerV2::toggleTransparencyGrid);
-    connect(this, &ViewerWidget::setFilterNearest,       imageViewer, &ImageViewerV2::setFilterNearest);
-    connect(this, &ViewerWidget::setFilterBilinear,      imageViewer, &ImageViewerV2::setFilterBilinear);
-    connect(this, &ViewerWidget::setScalingFilter,       imageViewer, &ImageViewerV2::setScalingFilter);
-
 
     videoPlayer = new VideoPlayerInitProxy(this);
     layout->addWidget(videoPlayer);
@@ -393,10 +389,6 @@ bool ViewerWidget::lockZoomEnabled() {
 
 bool ViewerWidget::lockViewEnabled() {
     return imageViewer->lockViewEnabled();
-}
-
-ScalingFilter ViewerWidget::scalingFilter() {
-    return imageViewer->scalingFilter();
 }
 
 void ViewerWidget::mousePressEvent(QMouseEvent *event) {

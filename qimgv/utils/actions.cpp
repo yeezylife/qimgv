@@ -65,7 +65,6 @@ void Actions::init() {
         {"sortBySize", QVersionNumber(0,7,83)},
         {"toggleImageInfo", QVersionNumber(0,7,84)},
         {"toggleShuffle", QVersionNumber(0,8,3)},
-        {"toggleScalingFilter", QVersionNumber(0,8,3)},
         {"toggleMute", QVersionNumber(0,8,7)},
         {"volumeUp", QVersionNumber(0,8,7)},
         {"volumeDown", QVersionNumber(0,8,7)},

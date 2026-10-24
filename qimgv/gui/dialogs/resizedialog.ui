@@ -257,74 +257,6 @@
           </item>
          </layout>
         </item>
-        <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Maximum</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>10</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_4">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Filter:</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="currentIndex">
-           <number>1</number>
-          </property>
-          <item>
-           <property name="text">
-            <string>Nearest</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Bilinear</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Bicubic</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Lanczos3</string>
-           </property>
-          </item>
-         </widget>
-        </item>
        </layout>
       </widget>
      </item>
@@ -584,7 +516,6 @@
   <tabstop>percent</tabstop>
   <tabstop>width</tabstop>
   <tabstop>height</tabstop>
-  <tabstop>comboBox</tabstop>
   <tabstop>resComboBox</tabstop>
   <tabstop>fitDesktopButton</tabstop>
   <tabstop>fillDesktopButton</tabstop>

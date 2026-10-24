@@ -30,7 +30,6 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mStylesheetCacheValid = false;
     mZoomStepCacheValid = false;
     mMouseScrollingSpeedCacheValid = false;
-    mScalingFilterCacheValid = false;
     mWindowGeometryCacheValid = false;
     mImageFitModeCacheValid = false;
     mPanelPreviewsSizeCacheValid = false;
@@ -38,7 +37,6 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     mMemoryAllocationLimitCacheValid = false;
     mUsePreloaderCacheValid = false;
     mUnlockMinZoomCacheValid = false;
-    mSmoothUpscalingCacheValid = false;
     mVideoPlaybackCacheValid = false;
     mSavedPathsCacheValid = false;
     mBookmarksCacheValid = false;
@@ -878,22 +876,6 @@ int Settings::slideshowInterval() {
     return interval;
 }
 //------------------------------------------------------------------------------
-bool Settings::smoothUpscaling() {
-    // ⭐ 缩放请求热路径（core.cpp scalingRequest）：QSettings::value 含互斥锁与键查找，缓存后仅一次布尔判断
-    if (mSmoothUpscalingCacheValid) {
-        return mCachedSmoothUpscaling;
-    }
-
-    mCachedSmoothUpscaling = settingsConf->value("smoothUpscaling", true).toBool();
-    mSmoothUpscalingCacheValid = true;
-    return mCachedSmoothUpscaling;
-}
-
-void Settings::setSmoothUpscaling(bool mode) {
-    settingsConf->setValue("smoothUpscaling", mode);
-    mSmoothUpscalingCacheValid = false;
-}
-//------------------------------------------------------------------------------
 bool Settings::expandImage() {
     return settingsConf->value("expandImage", false).toBool();
 }
@@ -924,42 +906,6 @@ int Settings::ImageSaveQuality() {
 void Settings::setImageSaveQuality(int value) {
     settingsConf->setValue("ImageSaveQuality", value);
     mImageSaveQualityCacheValid = false;
-}
-//------------------------------------------------------------------------------
-ScalingFilter Settings::scalingFilter() {
-    if (mScalingFilterCacheValid) {
-        return mCachedScalingFilter;
-    }
-    
-    int defaultFilter = 1;
-#ifdef USE_OPENCV
-    // default to a nicer QI_FILTER_CV_CUBIC
-    defaultFilter = 3;
-#endif
-    int mode = settingsConf->value("scalingFilter", defaultFilter).toInt();
-#ifndef USE_OPENCV
-    if(mode > 2)
-        mode = 1;
-#endif
-    if(mode < 0 || mode > 4)
-        mode = 1;
-    
-    mCachedScalingFilter = static_cast<ScalingFilter>(mode);
-    mScalingFilterCacheValid = true;
-    return mCachedScalingFilter;
-}
-
-void Settings::setScalingFilter(ScalingFilter mode) {
-    settingsConf->setValue("scalingFilter", mode);
-    mScalingFilterCacheValid = false;
-}
-//------------------------------------------------------------------------------
-bool Settings::smoothAnimatedImages() {
-    return settingsConf->value("smoothAnimatedImages", true).toBool();
-}
-
-void Settings::setSmoothAnimatedImages(bool mode) {
-    settingsConf->setValue("smoothAnimatedImages", mode);
 }
 //------------------------------------------------------------------------------
 bool Settings::infoBarFullscreen() {

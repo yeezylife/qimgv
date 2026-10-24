@@ -36,7 +36,6 @@ public:
     bool isDisplaying();
     bool lockZoomEnabled();
     bool lockViewEnabled();
-    ScalingFilter scalingFilter();
 
 private:
     QVBoxLayout *layout;
@@ -71,7 +70,7 @@ private slots:
     void onAnimationPlaybackFinished();
 
 signals:
-    void scalingRequested(QSize, ScalingFilter);
+    void scalingRequested(QSize);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();
@@ -86,9 +85,6 @@ signals:
     void fitWindowStretch();
     void toggleTransparencyGrid();
     void draggedOut();
-    void setFilterNearest();
-    void setFilterBilinear();
-    void setScalingFilter(ScalingFilter filter);
     void playbackFinished();
     void toggleLockZoom();
     void toggleLockView();

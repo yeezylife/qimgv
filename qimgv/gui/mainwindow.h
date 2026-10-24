@@ -186,7 +186,7 @@ signals:
     void saveAsRequested(QString);
     void sortingSelected(SortingMode);
     // viewerWidget
-    void scalingRequested(QSize, ScalingFilter);
+    void scalingRequested(QSize);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();
@@ -255,10 +255,6 @@ public slots:
     void onSortingChanged(SortingMode);
     void toggleImageInfoOverlay();
     void toggleRenameOverlay(const QString & currentName);
-    void setFilterNearest();
-    void setFilterBilinear();
-    void setFilter(ScalingFilter filter);
-    void toggleScalingFilter();
     void setDirectoryPath(const QString & path);
     void toggleLockZoom();
     void toggleLockView();

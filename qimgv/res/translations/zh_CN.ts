@@ -738,31 +738,6 @@
         <translation>保持纵横比例</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/resizedialog.ui" line="304"/>
-        <source>Filter:</source>
-        <translation>过滤器:</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/resizedialog.ui" line="330"/>
-        <source>Nearest</source>
-        <translation>Nearest</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/resizedialog.ui" line="335"/>
-        <source>Bilinear</source>
-        <translation>Bilinear</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/resizedialog.ui" line="340"/>
-        <source>Bicubic</source>
-        <translation>Bicubic</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/resizedialog.ui" line="345"/>
-        <source>Lanczos3</source>
-        <translation>Lanczos3</translation>
-    </message>
-    <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="358"/>
         <source>Common sizes:</source>
         <translation>正常尺寸:</translation>
@@ -1432,41 +1407,6 @@
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3589"/>
         <source>%</source>
         <translation>%</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2567"/>
-        <source>Scaling quality</source>
-        <translation>缩放质量</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2673"/>
-        <source>When unchecked, nearest neighbor algorithm will be used for upscaling.</source>
-        <translation>取消选中时, 使用nearest neighbo算法进行放大.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2676"/>
-        <source>Smooth upscaling</source>
-        <translation>平滑放大</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2695"/>
-        <source>Smooth animated images</source>
-        <translation>平滑动画图像</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2594"/>
-        <source>Scaling filter:</source>
-        <translation>缩放过滤器:</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2626"/>
-        <source>Nearest neighbor</source>
-        <translation>Nearest neighbor</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/settingsdialog.ui" line="2631"/>
-        <source>Bilinear</source>
-        <translation>Bilinear</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2316"/>

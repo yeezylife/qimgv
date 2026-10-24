@@ -315,51 +315,6 @@ void MW::toggleRenameOverlay(const QString& currentName) {
     }
 }
 
-void MW::toggleScalingFilter() {
-    ScalingFilter configuredFilter = settings->scalingFilter();
-    if(viewerWidget->scalingFilter() == configuredFilter) {
-        setFilterNearest();
-    } else {
-        setFilter(configuredFilter);
-    }
-}
-
-void MW::setFilterNearest() {
-    showMessage("Filter: nearest", 600);
-    viewerWidget->setFilterNearest();
-}
-
-void MW::setFilterBilinear() {
-    showMessage("Filter: bilinear", 600);
-    viewerWidget->setFilterBilinear();
-}
-
-void MW::setFilter(ScalingFilter filter) {
-    QString filterName;
-    switch (filter) {
-        case QI_FILTER_NEAREST:
-            filterName = QStringLiteral("nearest");
-            break;
-        case ScalingFilter::QI_FILTER_BILINEAR:
-            filterName = QStringLiteral("bilinear");
-            break;
-        case QI_FILTER_CV_BILINEAR_SHARPEN:
-            filterName = QStringLiteral("bilinear + sharpen");
-            break;
-        case QI_FILTER_CV_CUBIC:
-            filterName = QStringLiteral("bicubic");
-            break;
-        case QI_FILTER_CV_CUBIC_SHARPEN:
-            filterName = QStringLiteral("bicubic + sharpen");
-            break;
-        default:
-            filterName = QStringLiteral("configured ") + QString::number(static_cast<int>(filter));
-            break;
-    }
-    showMessage(QStringLiteral("Filter %1").arg(filterName), 600);
-    viewerWidget->setScalingFilter(filter);
-}
-
 bool MW::isCropPanelActive() {
     return (activeSidePanel == SIDEPANEL_CROP);
 }

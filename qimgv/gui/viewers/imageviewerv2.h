@@ -45,7 +45,6 @@ public:
     QSize sourceSize() const;
     bool isDisplaying() const;
     bool imageFits() const;
-    ScalingFilter scalingFilter() const;
     QWidget* widget();
 
     bool scaledImageFits() const;
@@ -76,9 +75,6 @@ public slots:
     void setExpandImage(bool mode);
     void show();
     void hide();
-    void setFilterNearest();
-    void setFilterBilinear();
-    void setScalingFilter(ScalingFilter filter);
     void setLoopPlayback(bool mode);
     void toggleTransparencyGrid();
     void nextFrame();
@@ -100,7 +96,7 @@ public slots:
     void pauseResume();
 
 signals:
-    void scalingRequested(QSize size, ScalingFilter filter);
+    void scalingRequested(QSize size);
     // silent=true：非交互缩放（打开图片自动适配、窗口缩放等），供指示器决定是否闪动
     void scaleChanged(qreal scale, bool silent);
     void sourceSizeChanged(QSize size);
@@ -168,9 +164,6 @@ private:
 
     bool transparencyGrid;
     bool expandImage;
-    bool smoothAnimatedImages;
-    bool smoothUpscaling;
-    bool forceFastScale;
     bool keepFitMode;
     bool loopPlayback;
     bool mIsFullscreen;
@@ -199,7 +192,6 @@ private:
     ImageFitMode imageFitMode;
     ImageFitMode imageFitModeDefault;
     ImageFocusPoint focusIn1to1;
-    ScalingFilter mScalingFilter;
 
     int zoomThreshold;
     int dragThreshold;
@@ -210,7 +202,6 @@ private:
     static constexpr qreal WHEEL_SCROLL_MULTIPLIER = 2.0;
     static constexpr int ANIMATION_SPEED = 150;
     static constexpr float FAST_SCALE_THRESHOLD = 1.0f;
-    static constexpr int LARGE_VIEWPORT_SIZE = 2073600;
     // 后台预解码尚未产出目标帧时的重试间隔
     static constexpr int FRAME_PENDING_RETRY_MS = 10;
 
@@ -219,7 +210,6 @@ private:
     static constexpr int ZOOM_THRESHOLD_FACTOR = 4;
 
     void initSettings();
-    void setScalingFilterImpl(ScalingFilter filter);
     void setFitModeImpl(ImageFitMode mode);
     bool imageFitsInternal() const;
     float currentScaleInternal() const;
@@ -273,7 +263,6 @@ private:
     void updatePixmap(const QPixmap& newPixmap);
     void updatePixmap(QPixmap&& newPixmap);
     void swapToOriginalPixmap();
-    Qt::TransformationMode selectTransformationMode();
     // ⭐ showImage 双重载公共内核：reset→装配→fit→请求缩放一次完成
     void showImageImpl(QPixmap pixmap);
 

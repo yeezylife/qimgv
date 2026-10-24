@@ -31,21 +31,11 @@ void ScalerRunnable::run()
         return;
     }
 
-    // 2️⃣ 缩放
+    // 2️⃣ 缩放（统一使用 Qt 平滑变换）
     const QImage& sourceImage = *imgPtr;
-    ScalingFilter effectiveFilter = m_request.filter();
     const QSize& targetSize = m_request.sizeRef();
 
-    bool useNearest = (effectiveFilter == QI_FILTER_NEAREST) ||
-                      ((targetSize.width()  > sourceImage.width() ||
-                        targetSize.height() > sourceImage.height()) &&
-                       !m_request.smoothUpscaling());
-
-    ScalingFilter filterToUse = useNearest ? QI_FILTER_NEAREST : effectiveFilter;
-
-    QImage scaled = ImageLib::scaled(sourceImage,
-                                     targetSize,
-                                     filterToUse);
+    QImage scaled = ImageLib::scaled(sourceImage, targetSize);
 
     // 🚀 缩放结束后再自检一次：单次 resize 调用内部无法中断，
     // 但后续的格式转换 + QPixmap 构造（整图像素拷贝）可以省掉

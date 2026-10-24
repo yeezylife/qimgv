@@ -1,10 +1,6 @@
 #include "imagelib.h"
 #include <memory>
 
-#ifdef USE_OPENCV
-#include "3rdparty/QtOpenCV/cvmatandqimage.h"
-#endif
-
 void ImageLib::recolor(QPixmap &pixmap, const QColor &color) {
     if (pixmap.isNull()) return;
     
@@ -121,97 +117,20 @@ QImage ImageLib::exifRotated(QImage src, int orientation) {
     }
 }
 
-// --- 缩放：Qt 路径 ---
+// --- 缩放：统一使用 Qt 平滑变换 ---
 
-QImage ImageLib::scaled(QImage source, QSize destSize, ScalingFilter filter) {
+QImage ImageLib::scaled(QImage source, QSize destSize) {
     if (source.isNull()) return QImage();
 
     if (destSize == source.size()) {
         return std::move(source);   // ✅ 消除不必要的深拷贝
     }
 
-    QImage scaleTarget = std::move(source);
-
-    if (scaleTarget.format() == QImage::Format_Indexed8) {
-        scaleTarget = std::move(scaleTarget)
-                        .convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    // Indexed8 直接做平滑插值效果很差，先转成 32 位预乘格式
+    if (source.format() == QImage::Format_Indexed8) {
+        source = std::move(source)
+                     .convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
-#ifdef USE_OPENCV
-    if (filter > 1 && !QtOcv::isSupported(scaleTarget.format()))
-        filter = QI_FILTER_BILINEAR;
-#endif
-
-    // lambda 使用 const 引用，避免不必要的拷贝（scaled 不支持右值重载）
-    auto scaleQtMove = [](const QImage& img, QSize destSize, bool smooth) -> QImage {
-        Qt::TransformationMode mode = smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
-        return img.scaled(destSize, Qt::KeepAspectRatio, mode);
-    };
-
-    switch (filter) {
-        case QI_FILTER_NEAREST:
-            return scaleQtMove(scaleTarget, destSize, false);
-
-        case QI_FILTER_BILINEAR:
-            return scaleQtMove(scaleTarget, destSize, true);
-
-#ifdef USE_OPENCV
-        case QI_FILTER_CV_BILINEAR_SHARPEN:
-            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_LINEAR, 0);
-
-        case QI_FILTER_CV_CUBIC:
-            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 0);
-
-        case QI_FILTER_CV_CUBIC_SHARPEN:
-            return scaled_CV(std::move(scaleTarget), destSize, cv::INTER_CUBIC, 1);
-#endif
-
-        default:
-            return scaleQtMove(scaleTarget, destSize, true);
-    }
+    return source.scaled(destSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
-
-#ifdef USE_OPENCV
-QImage ImageLib::scaled_CV(QImage source, QSize destSize,
-                           cv::InterpolationFlags filter, int sharpen)
-{
-    if (source.isNull()) return QImage();
-    if (destSize == source.size()) {
-        return std::move(source);   // ✅ 消除不必要的深拷贝
-    }
-
-    // 避免 QImage 隐式 detach
-    const QImage& srcRef = source;
-
-    QtOcv::MatColorOrder order;
-    cv::Mat srcMat = QtOcv::image2Mat_shared(srcRef, &order);
-    if (srcMat.empty()) return QImage();
-
-    cv::InterpolationFlags actualFilter = filter;
-    int actualSharpen = sharpen;
-
-    if (destSize.width() < srcRef.width()) {
-        float scale = float(destSize.width()) / float(srcRef.width());
-        if (scale < 0.5f && filter != cv::INTER_NEAREST) {
-            actualFilter = cv::INTER_AREA;
-            if (filter == cv::INTER_CUBIC)
-                actualSharpen = 1;
-        }
-    }
-
-    cv::Mat dstMat;
-    cv::resize(srcMat, dstMat,
-               cv::Size(destSize.width(), destSize.height()),
-               0, 0, actualFilter);
-
-    if (actualSharpen && actualFilter != cv::INTER_NEAREST) {
-        double amount = 0.25 * actualSharpen;
-        cv::Mat blurred;
-        cv::GaussianBlur(dstMat, blurred, cv::Size(0, 0), 2);
-        cv::addWeighted(dstMat, 1.0 + amount, blurred, -amount, 0, dstMat);
-    }
-
-    // 零拷贝返回：cv::Mat 内部引用计数自动管理生命周期，安全共享
-    return QtOcv::mat2Image_shared(dstMat, srcRef.format());
-}
-#endif

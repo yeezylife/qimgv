@@ -6,6 +6,7 @@
 #include <QDebug>
 #include "gui/customwidgets/floatingwidget.h"
 #include "utils/imagelib.h"
+#include "settings.h"
 
 enum ActiveHighlightZone {
     HIGHLIGHT_NONE,

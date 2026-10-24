@@ -126,11 +126,6 @@ QImage ImageLib::scaled(QImage source, QSize destSize) {
         return std::move(source);   // ✅ 消除不必要的深拷贝
     }
 
-    // Indexed8 直接做平滑插值效果很差，先转成 32 位预乘格式
-    if (source.format() == QImage::Format_Indexed8) {
-        source = std::move(source)
-                     .convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
-
+    // 直接交给 Qt 的平滑变换：Qt 6.10.1 已能处理 Format_Indexed8，无需提前转换
     return source.scaled(destSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }

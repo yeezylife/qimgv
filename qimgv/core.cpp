@@ -1252,19 +1252,21 @@ void Core::print() {
     p.exec();
 }
 
-void Core::scalingRequest(QSize size) {
+void Core::scalingRequest(QSize size, quint64 viewerToken) {
     if(mw->isVisible() && state.hasActiveImage) {
         // ⭐ 只查缓存：异步加载在途时 resize/滚轮不能在这里同步解码整图
         std::shared_ptr<Image> forScale = model->cachedImage(state.currentFilePath);
         if(forScale) {
-            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath));
+            model->scaler->requestScaled(
+                ScalerRequest(forScale, size, state.currentFilePath, viewerToken));
         }
     }
 }
 
 void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
     if (state.hasActiveImage && samePath(req.pathRef(), state.currentFilePath)) {
-        mw->onScalingFinished(scaled); 
+        // 视图令牌原样回传，由 ImageViewerV2 校验是否仍属于当前视图状态
+        mw->onScalingFinished(scaled, req.viewerToken());
     }
 }
 

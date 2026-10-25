@@ -89,14 +89,14 @@ public slots:
     void showImage(const QPixmap& pixmap);
     void showImage(QPixmap&& pixmap);
     void showAnimation(const std::shared_ptr<ImageAnimated>& animation);
-    void setScaledPixmap(const QPixmap& newFrame);
-    void setScaledPixmap(QPixmap&& newFrame);
+    void setScaledPixmap(const QPixmap& newFrame, quint64 viewerToken);
+    void setScaledPixmap(QPixmap&& newFrame, quint64 viewerToken);
     void enableDrags();
     void disableDrags();
     void pauseResume();
 
 signals:
-    void scalingRequested(QSize size);
+    void scalingRequested(QSize size, quint64 viewerToken);
     // silent=true：非交互缩放（打开图片自动适配、窗口缩放等），供指示器决定是否闪动
     void scaleChanged(qreal scale, bool silent);
     void sourceSizeChanged(QSize size);
@@ -144,6 +144,8 @@ private:
     QHash<int, QPixmap> mScaledFrameCache;
     QList<int> mScaledFrameOrder;
     QSize mScaledFrameSize;
+    // 视图令牌：换图/重置/切动画/DPR 变化时递增；在途缩放结果必须带回同一令牌才允许显示
+    quint64 mViewerToken = 0;
     QGraphicsPixmapItem pixmapItem;
     QGraphicsPixmapItem pixmapItemScaled;
     QPixmap checkboard;
@@ -229,6 +231,8 @@ private:
     // 动画缩小播放的缩放帧缓存（按目标尺寸整体失效，容量按内存预算做有界 LRU）
     QPixmap scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target);
     void clearScaledFrameCache();
+    // 使所有在途 CPU 缩放结果失效（换图、重置、切动画、DPR 变化、不再需要缩放时）
+    void invalidateViewerToken() noexcept { ++mViewerToken; }
 
     void fitNormal();
     void fitWidth();

@@ -104,11 +104,11 @@ void ImageViewerV2::initializeTimers()
     scaleTimer->setSingleShot(true);
     scaleTimer->setInterval(80);
 
-    scrollAnimationX = new QPropertyAnimation(this, "scrollX");
+    scrollAnimationX = new QPropertyAnimation(this, "scrollX", this);
     scrollAnimationX->setEasingCurve(QEasingCurve::OutSine);
     scrollAnimationX->setDuration(ANIMATION_SPEED);
 
-    scrollAnimationY = new QPropertyAnimation(this, "scrollY");
+    scrollAnimationY = new QPropertyAnimation(this, "scrollY", this);
     scrollAnimationY->setEasingCurve(QEasingCurve::OutSine);
     scrollAnimationY->setDuration(ANIMATION_SPEED);
 }
@@ -149,6 +149,9 @@ void ImageViewerV2::onDPRChanged()
         // 缩放帧缓存里存的是带旧 dpr 的 pixmap，换屏后必须整体失效
         clearScaledFrameCache();
         mScaledFrameSize = QSize();
+        // 旧 dpr 下的在途结果同样不能再用；同时清除去重状态，让新 dpr 重新发起请求
+        invalidateViewerToken();
+        lastRequestedScale = -1.0f;
         pixmap->setDevicePixelRatio(dpr);
         pixmapItem.setPixmap(*pixmap);
         pixmapItem.show();
@@ -403,7 +406,7 @@ void ImageViewerV2::onAnimationTimer()
                 return;
             }
             // ⭐ 循环播放时同一帧/同一目标尺寸只缩放一次
-            setScaledPixmap(scaledFrameFor(movie->currentFrameNumber(), *frameImage, target));
+            setScaledPixmap(scaledFrameFor(movie->currentFrameNumber(), *frameImage, target), mViewerToken);
             emit frameChanged(movie->currentFrameNumber());
             animationTimer->start(movie->nextFrameDelay());
             return;
@@ -640,6 +643,9 @@ void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
 
 void ImageViewerV2::reset()
 {
+    // 换图/关闭/切动画都走这里：旧视图状态下的在途缩放结果一律作废
+    invalidateViewerToken();
+    lastRequestedScale = -1.0f;
     stopPosAnimation();
     // 缩放帧缓存按"当前动画 + 目标尺寸"有效，动画一变即失效
     clearScaledFrameCache();
@@ -666,8 +672,11 @@ void ImageViewerV2::closeImage()
     reset();
 }
 
-void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame)
+void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame, quint64 viewerToken)
 {
+    // 令牌不匹配：结果来自换图/重置/切动画/DPR 变化之前的视图状态
+    if (viewerToken != mViewerToken)
+        return;
     if (!movie && newFrame.size() != scaledSizeR())
         return;
 
@@ -678,8 +687,10 @@ void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame)
     pixmapItemScaled.show();
 }
 
-void ImageViewerV2::setScaledPixmap(QPixmap&& newFrame)
+void ImageViewerV2::setScaledPixmap(QPixmap&& newFrame, quint64 viewerToken)
 {
+    if (viewerToken != mViewerToken)
+        return;
     if (!movie && newFrame.size() != scaledSizeR())
         return;
 
@@ -841,6 +852,8 @@ void ImageViewerV2::requestScaling()
 
     const qreal scale = pixmapItem.scale();
     if (scale == 1.0 || movie) {
+        // 全尺寸直出/动画帧走自己的流水线：在途 CPU 缩放结果已无意义
+        invalidateViewerToken();
         lastRequestedScale = -1.0f;
         return;
     }
@@ -857,8 +870,10 @@ void ImageViewerV2::requestScaling()
             return;
         }
         lastRequestedScale = static_cast<float>(scale);
-        emit scalingRequested(requested);
+        emit scalingRequested(requested, mViewerToken);
     } else {
+        // 放大显示由 QGraphicsView 直接绘制，不再需要后台缩放结果
+        invalidateViewerToken();
         lastRequestedScale = -1.0f;
     }
 }

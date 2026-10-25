@@ -319,8 +319,8 @@ bool MW::isCropPanelActive() {
     return (activeSidePanel == SIDEPANEL_CROP);
 }
 
-void MW::onScalingFinished(const QPixmap& scaled) {
-    viewerWidget->onScalingFinished(scaled);
+void MW::onScalingFinished(const QPixmap& scaled, quint64 viewerToken) {
+    viewerWidget->onScalingFinished(scaled, viewerToken);
 }
 
 void MW::saveWindowGeometry() {

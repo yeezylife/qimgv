@@ -26,16 +26,17 @@ void ImageStatic::loadWith(int allocationLimitMB) {
     }
 }
 
-// 将 QImageIOHandler 的变换标志转换为 EXIF orientation 数字
+// 将 QImageIOHandler 的变换标志转换为 EXIF orientation 数字。
+// 映射与 Qt 的 exif2Qt() 保持一一对应，避免 EXIF 5/7 被漏判或互换。
 static int transformationToExifOrientation(QImageIOHandler::Transformations t) {
     if (t == QImageIOHandler::TransformationNone) return 1;
-    if (t == QImageIOHandler::TransformationRotate180) return 3;
-    if (t == QImageIOHandler::TransformationRotate90) return 6;
-    if (t == QImageIOHandler::TransformationRotate270) return 8;
     if (t == QImageIOHandler::TransformationMirror) return 2;
+    if (t == QImageIOHandler::TransformationRotate180) return 3;
     if (t == QImageIOHandler::TransformationFlip) return 4;
-    if (t == (QImageIOHandler::TransformationMirror | QImageIOHandler::TransformationRotate270)) return 5;
-    if (t == (QImageIOHandler::TransformationMirror | QImageIOHandler::TransformationRotate90)) return 7;
+    if (t == QImageIOHandler::TransformationFlipAndRotate90) return 5;
+    if (t == QImageIOHandler::TransformationRotate90) return 6;
+    if (t == QImageIOHandler::TransformationMirrorAndRotate90) return 7;
+    if (t == QImageIOHandler::TransformationRotate270) return 8;
     return 1;
 }
 

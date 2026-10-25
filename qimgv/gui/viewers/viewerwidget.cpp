@@ -296,9 +296,9 @@ ImageFitMode ViewerWidget::fitMode() {
     return imageViewer->fitMode();
 }
 
-void ViewerWidget::onScalingFinished(const QPixmap& scaled) {
+void ViewerWidget::onScalingFinished(const QPixmap& scaled, quint64 viewerToken) {
     // 修复：改为常引用，并移除 std::move
-    imageViewer->setScaledPixmap(scaled);
+    imageViewer->setScaledPixmap(scaled, viewerToken);
 }
 
 void ViewerWidget::closeImage() {

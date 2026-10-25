@@ -32,7 +32,7 @@ public:
 
     bool showImage(const QPixmap& pixmap);
     bool showAnimation(const std::shared_ptr<ImageAnimated>& image);
-    void onScalingFinished(const QPixmap& scaled);
+    void onScalingFinished(const QPixmap& scaled, quint64 viewerToken);
     bool isDisplaying();
     bool lockZoomEnabled();
     bool lockViewEnabled();
@@ -70,7 +70,7 @@ private slots:
     void onAnimationPlaybackFinished();
 
 signals:
-    void scalingRequested(QSize);
+    void scalingRequested(QSize, quint64 viewerToken);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

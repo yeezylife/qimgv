@@ -1,5 +1,6 @@
 #include "documentinfo.h"
 #include "videoformats.h"
+#include <QImageIOHandler>
 #include <QtEndian>
 
 using namespace Qt::StringLiterals;
@@ -8,6 +9,19 @@ using namespace Qt::StringLiterals;
 static bool hasApngFormat() {
     static const bool hasApng = QImageReader::supportedImageFormats().contains("apng");
     return hasApng;
+}
+
+// 与 read() 后实际显示的方向保持一致的尺寸。
+// Qt 6.12 起由 effectiveSize() 统一处理；旧版本按同一规则补齐，避免抬高最低 Qt 版本。
+static QSize orientedSize(const QImageReader &reader) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    return reader.effectiveSize();
+#else
+    QSize size = reader.size();
+    if(reader.autoTransform() && reader.transformation().testFlag(QImageIOHandler::TransformationRotate90))
+        size.transpose();
+    return size;
+#endif
 }
 
 // ====================== header cache ======================
@@ -371,7 +385,9 @@ void DocumentInfo::loadExifTags() const {
 
     if(exifTags.isEmpty()) {
 
-        QSize size = reader.size();
+        // 尺寸 fallback 必须跟随最终显示方向：90°/270° 旋转会交换宽高
+        reader.setAutoTransform(true);
+        const QSize size = orientedSize(reader);
 
         if(size.isValid()) {
             exifTags.insert(

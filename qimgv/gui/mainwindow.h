@@ -15,8 +15,8 @@
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QEvent>
-#include <QPixmap>
 #include <QPointer>
+#include <QImage>
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
 #include "gui/overlays/controlsoverlay.h"
@@ -77,8 +77,8 @@ class MW : public FloatingWidgetContainer
 public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
-    void onScalingFinished(const QPixmap& scaled);
-    void showImage(const QPixmap& pixmap);
+    void onScalingFinished(const QImage& scaled, quint64 requestToken);
+    void showImage(const QImage& image);
     void showAnimation(const std::shared_ptr<ImageAnimated>& image);
     void showVideo(QString file);
     // 幻灯片启动时恢复已暂停的动画播放（只对当前显示中的有效动画生效）
@@ -186,7 +186,7 @@ signals:
     void saveAsRequested(QString);
     void sortingSelected(SortingMode);
     // viewerWidget
-    void scalingRequested(QSize);
+    void scalingRequested(QSize, quint64);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

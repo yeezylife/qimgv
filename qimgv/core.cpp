@@ -1252,19 +1252,19 @@ void Core::print() {
     p.exec();
 }
 
-void Core::scalingRequest(QSize size) {
+void Core::scalingRequest(QSize size, quint64 viewerToken) {
     if(mw->isVisible() && state.hasActiveImage) {
         // ⭐ 只查缓存：异步加载在途时 resize/滚轮不能在这里同步解码整图
         std::shared_ptr<Image> forScale = model->cachedImage(state.currentFilePath);
         if(forScale) {
-            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath));
+            model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath, viewerToken));
         }
     }
 }
 
-void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
+void Core::onScalingFinished(const QImage& scaled, const ScalerRequest& req) {
     if (state.hasActiveImage && samePath(req.pathRef(), state.currentFilePath)) {
-        mw->onScalingFinished(scaled); 
+        mw->onScalingFinished(scaled, req.viewerToken());
     }
 }
 
@@ -1626,9 +1626,11 @@ void Core::guiSetImage(const std::shared_ptr<Image>& img) {
     }
     DocumentType type = img->type();
     if(type == STATIC) {
-        QPixmap pixmap;
-        img->getPixmap(pixmap);
-        mw->showImage(pixmap);
+        // Canvas Painter takes QImage directly; avoid the extra QImage→QPixmap
+        // conversion and keep the decoded pixels for texture upload.
+        const auto image = img->getImage();
+        if(image && !image->isNull())
+            mw->showImage(*image);
     } else if(type == ANIMATED) {
         auto animated = std::dynamic_pointer_cast<ImageAnimated>(img);
         if(animated)

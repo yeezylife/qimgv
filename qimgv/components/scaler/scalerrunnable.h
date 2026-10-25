@@ -2,7 +2,7 @@
 
 #include <QObject>
 #include <QRunnable>
-#include <QPixmap>
+#include <QImage>
 #include <atomic>
 #include "scalerrequest.h"
 
@@ -18,8 +18,9 @@ public:
     void run() override;
 
 signals:
-    // ✅ worker 线程直接产出 QPixmap（隐式共享），UI 线程零深拷贝
-    void finished(QPixmap scaled, ScalerRequest req);
+    // ✅ worker 线程直接产出 QImage（隐式共享），UI 线程零深拷贝。
+    // Canvas Painter 的 addImage() 接受 QImage，省掉 QPixmap 往返转换。
+    void finished(QImage scaled, ScalerRequest req);
 
 private:
     // 请求是否已被更新的一代取代（阶段边界自检）

@@ -33,8 +33,10 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # FIND PACKAGES
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets Svg PrintSupport OpenGLWidgets)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg PrintSupport OpenGLWidgets)
+# Qt 6.12 is required for the Qt Canvas Painter module (QCanvasPainterWidget /
+# QCanvasPainter). The image viewer has no QGraphicsView display fallback.
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets Svg PrintSupport OpenGLWidgets CanvasPainter)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Core Widgets Svg PrintSupport OpenGLWidgets CanvasPainter)
 
 message(STATUS "Qt Version: " ${QT_VERSION})
 

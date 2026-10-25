@@ -1,21 +1,29 @@
 #pragma once
 
-#include <QGraphicsView>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
+#include <QCanvasPainterWidget>
+#include <QCanvasImage>
 #include <QImage>
 #include <QElapsedTimer>
 #include <QWheelEvent>
+#include <QMouseEvent>
+#include <QResizeEvent>
+#include <QShowEvent>
 #include <QPropertyAnimation>
-#include <QScrollBar>
 #include <QColor>
 #include <QHash>
 #include <QList>
+#include <QPair>
+#include <QPointF>
+#include <QRectF>
+#include <QSizeF>
 #include <QTimer>
 #include <memory>
 #include "settings.h"
 
 class ImageAnimated;
+QT_BEGIN_NAMESPACE
+class QCanvasPainter;
+QT_END_NAMESPACE
 
 enum MouseInteractionState {
     MOUSE_NONE,
@@ -32,12 +40,15 @@ enum ViewLockMode {
     LOCK_ALL
 };
 
-class ImageViewerV2 : public QGraphicsView
+// Image display widget. All static images and every decoded animation frame are
+// drawn by QCanvasPainter (Qt 6.12 Canvas Painter / QRhi). There is deliberately
+// no QGraphicsView fallback path.
+class ImageViewerV2 : public QCanvasPainterWidget
 {
     Q_OBJECT
 public:
     explicit ImageViewerV2(QWidget* parent = nullptr);
-    ~ImageViewerV2();
+    ~ImageViewerV2() override;
 
     ImageFitMode fitMode() const;
     QRect scaledRectR() const;
@@ -86,17 +97,18 @@ public slots:
     void toggleLockView();
     bool lockViewEnabled() const;
 
-    void showImage(const QPixmap& pixmap);
-    void showImage(QPixmap&& pixmap);
+    void showImage(const QImage& image);
+    void showImage(QImage&& image);
     void showAnimation(const std::shared_ptr<ImageAnimated>& animation);
-    void setScaledPixmap(const QPixmap& newFrame);
-    void setScaledPixmap(QPixmap&& newFrame);
+    // 静态图异步缩放结果：requestToken 用于丢弃快速切图/连续变焦后的过期结果
+    void setScaledImage(const QImage& newFrame, quint64 requestToken);
+    void setScaledImage(QImage&& newFrame, quint64 requestToken);
     void enableDrags();
     void disableDrags();
     void pauseResume();
 
 signals:
-    void scalingRequested(QSize size);
+    void scalingRequested(QSize size, quint64 requestToken);
     // silent=true：非交互缩放（打开图片自动适配、窗口缩放等），供指示器决定是否闪动
     void scaleChanged(qreal scale, bool silent);
     void sourceSizeChanged(QSize size);
@@ -114,8 +126,12 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void showEvent(QShowEvent* event) override;
-    void drawBackground(QPainter* painter, const QRectF& rect) override;
-    bool eventFilter(QObject* obj, QEvent* ev) override;
+    bool event(QEvent* ev) override;
+
+    // QCanvasPainterWidget
+    void initializeResources(QCanvasPainter* painter) override;
+    void paint(QCanvasPainter* painter) override;
+    void graphicsResourcesInvalidated() override;
 
 private slots:
     void onAnimationTimer();
@@ -135,23 +151,53 @@ private:
     int scrollY() const;
     void setScrollY(int y);
 
-    QGraphicsScene* scene;
-    std::unique_ptr<QPixmap> pixmap;
-    QPixmap pixmapScaled;
+    // Full-resolution image (static) or current full-resolution animation frame.
+    QImage mSourceImage;
+    // Frame that is actually displayed. It can be mSourceImage or a CPU-scaled
+    // version produced by the existing scaler / animation scaled-frame cache.
+    QImage mDisplayImage;
+    bool mDisplayingScaled = false;
     std::shared_ptr<ImageAnimated> movie;
     // 缩放帧缓存：键为帧号，仅在 mScaledFrameSize 匹配时有效。
     // mScaledFrameOrder 维护 LRU（front 最旧、back 最新），与 hash 的键集合保持一致。
-    QHash<int, QPixmap> mScaledFrameCache;
+    QHash<int, QImage> mScaledFrameCache;
     QList<int> mScaledFrameOrder;
     QSize mScaledFrameSize;
-    QGraphicsPixmapItem pixmapItem;
-    QGraphicsPixmapItem pixmapItemScaled;
-    QPixmap checkboard;
+    QImage mCheckerboardImage;
+
+    // --- Canvas Painter GPU resources ---
+    // Static images keep their full-resolution texture while a CPU-downscaled
+    // texture is displayed, so continuous zooming does not re-upload the full
+    // image on every interaction. Animation frames intentionally do not use this
+    // cache: only the currently displayed frame owns a texture.
+    QCanvasImage mSourceTexture;
+    qint64 mSourceTextureKey = -1;
+    quint64 mSourceTextureGeneration = 0;
+    bool mSourceTextureValid = false;
+    QCanvasImage mImageTexture;
+    QCanvasImage mCheckerTexture;
+    // Old QCanvasImage handles cannot be released outside a painter callback.
+    // They are moved here and released from paint() on the next frame.
+    QList<QCanvasImage> mPendingTextureReleases;
+    qint64 mTextureKey = -1;
+    quint64 mTextureGeneration = 0;
+    quint64 mTextureDisplaySerial = 0;
+    bool mTextureValid = false;
+    // 静态图/动画每次显示内容变化都递增，用于丢弃过期异步结果与失效纹理
+    quint64 mImageGeneration = 0;
+    quint64 mDisplaySerial = 0;
+    // 异步缩放请求令牌：只有最近一次请求、且当前图片未变化的结果才可落地
+    quint64 mScalingRequestSerial = 0;
+    quint64 mActiveScalingRequest = 0;
+
+    // Scene-free view state. Coordinates are logical pixels: the image occupies
+    // (0, 0, sourceLogicalSize * scale); mViewCenter is the scene point shown at
+    // the viewport center. This replaces QGraphicsView's scene/scrollbar math.
+    QPointF mViewCenter;
+    float mScale = 1.0f;
 
     QTimer* animationTimer;
     QTimer* scaleTimer;
-    QScrollBar* horizontalScroll;
-    QScrollBar* verticalScroll;
     QPropertyAnimation* scrollAnimationX;
     QPropertyAnimation* scrollAnimationY;
     QElapsedTimer lastTouchpadScroll;
@@ -167,7 +213,6 @@ private:
     bool keepFitMode;
     bool loopPlayback;
     bool mIsFullscreen;
-    bool scrollBarWorkaround;
     // 切回动画时首帧可能已被环形缓冲回收：等首帧解码出来再启动播放计时器，
     // 避免计时器按旧播放头继续请求、与首帧请求互相覆盖
     bool mStartAnimationOnFrameReady = false;
@@ -205,18 +250,21 @@ private:
     // 后台预解码尚未产出目标帧时的重试间隔
     static constexpr int FRAME_PENDING_RETRY_MS = 10;
 
-    static constexpr int SCENE_SIZE = 200000;
-    static constexpr int CENTER_OFFSET = 10000;
     static constexpr int ZOOM_THRESHOLD_FACTOR = 4;
+
+    // 保守的跨平台纹理上限。超出时先降采样再上传，绝不回退 QGraphicsView。
+    // 8192 covers 4K/8K sources while staying within the guaranteed texture
+    // limits of older desktop GPUs; larger sources are downsampled for upload.
+    static constexpr int MAX_TEXTURE_DIMENSION = 8192;
+    static constexpr qsizetype MAX_TEXTURE_BYTES =
+        static_cast<qsizetype>(256) * 1024 * 1024;
 
     void initSettings();
     void setFitModeImpl(ImageFitMode mode);
     bool imageFitsInternal() const;
     float currentScaleInternal() const;
 
-    void initializeScene();
     void initializeTimers();
-    void initializeScrollBars();
     void setupConnections();
 
     void adjustZoom(bool zoomIn, bool atCursor);
@@ -225,9 +273,10 @@ private:
     void scheduleScaling();
     void doZoom(float newScale, bool center = true);
     void setZoomAnchor(QPoint viewportPos);
+    quint64 invalidateScalingRequests();
 
     // 动画缩小播放的缩放帧缓存（按目标尺寸整体失效，容量按内存预算做有界 LRU）
-    QPixmap scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target);
+    QImage scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target);
     void clearScaledFrameCache();
 
     void fitNormal();
@@ -260,13 +309,34 @@ private:
     void applySavedViewportPos();
     void lockZoom();
 
-    void updatePixmap(const QPixmap& newPixmap);
-    void updatePixmap(QPixmap&& newPixmap);
-    void swapToOriginalPixmap();
-    // ⭐ showImage 双重载公共内核：reset→装配→fit→请求缩放一次完成
-    void showImageImpl(QPixmap pixmap);
+    // --- image/geometry helpers replacing QGraphicsScene/QGraphicsItem ---
+    QSizeF sourceLogicalSize() const;
+    QSizeF displayedLogicalSize() const;
+    QRectF imageRectScene() const;
+    QRectF imageRectViewport() const;
+    QRectF viewportRectF() const;
+    QPointF mapToScene(QPoint viewportPos) const;
+    QPointF mapToScene(QPointF viewportPos) const;
+    QRectF mapToScene(QRect viewportRect) const;
+    QPointF mapFromScene(QPointF scenePos) const;
+    QRectF mapFromScene(QRectF sceneRect) const;
+    void centerOn(QPointF scenePos);
+    void centerOn(qreal x, qreal y);
+
+    void setSourceImage(const QImage& image);
+    void setAnimationFrame(const QImage& frame);
+    void setAnimationScaledFrame(const QImage& frame);
+    void swapToOriginalImage();
+    void invalidateImageTexture();
+    void invalidateSourceTexture();
+    void ensureImageTexture(QCanvasPainter* painter);
+    void ensureSourceTexture(QCanvasPainter* painter);
+    void releasePendingTextures(QCanvasPainter* painter);
+    void paintCheckerboard(QCanvasPainter* painter, const QRectF& area);
+    QImage prepareTextureImage(const QImage& image) const;
+    static bool imageHasTransparency(const QImage& image);
+    void updateBackgroundColor();
+    void queueTextureRelease(const QCanvasImage& texture);
 
     void reset();
-    QPointF sceneRoundPos(QPointF scenePoint) const;
-    QRectF sceneRoundRect(QRectF sceneRect) const;
 };

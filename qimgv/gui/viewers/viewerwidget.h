@@ -30,9 +30,9 @@ public:
     void setInteractionEnabled(bool mode);
     bool interactionEnabled();
 
-    bool showImage(const QPixmap& pixmap);
+    bool showImage(const QImage& image);
     bool showAnimation(const std::shared_ptr<ImageAnimated>& image);
-    void onScalingFinished(const QPixmap& scaled);
+    void onScalingFinished(const QImage& scaled, quint64 requestToken);
     bool isDisplaying();
     bool lockZoomEnabled();
     bool lockViewEnabled();
@@ -70,7 +70,7 @@ private slots:
     void onAnimationPlaybackFinished();
 
 signals:
-    void scalingRequested(QSize);
+    void scalingRequested(QSize, quint64);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

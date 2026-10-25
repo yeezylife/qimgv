@@ -4,6 +4,7 @@
 #include <QSize>
 #include <QString>
 #include <memory>
+#include <utility>
 #include "sourcecontainers/image.h"
 
 class ScalerRequest {
@@ -12,10 +13,12 @@ public:
 
     ScalerRequest(std::shared_ptr<Image> image,
                   QSize size,
-                  QString path) noexcept
+                  QString path,
+                  quint64 viewerToken = 0) noexcept
         : m_image(std::move(image))
         , m_size(size)
         , m_path(std::move(path))
+        , m_viewerToken(viewerToken)
     {}
 
     // ✅ 保持默认语义（Qt6 已优化）
@@ -41,6 +44,9 @@ public:
         return m_path;
     }
 
+    // 视图侧请求令牌：原样带回，用于丢弃快速切图/连续变焦后的过期缩放结果
+    [[nodiscard]] quint64 viewerToken() const noexcept { return m_viewerToken; }
+
     // 🚀 指针比较避免字符串比较（非常关键）；代数不参与相等比较
     bool operator==(const ScalerRequest& other) const noexcept {
         return m_image.get() == other.m_image.get() &&
@@ -55,6 +61,7 @@ private:
     std::shared_ptr<Image> m_image;
     QSize m_size;
     QString m_path;
+    quint64 m_viewerToken = 0;
     quint64 m_generation = 0;
 };
 

@@ -214,10 +214,10 @@ void MW::preShowResize(QSize sz) {
 }
 
 // 修改后的函数签名
-void MW::showImage(const QPixmap& pixmap) {
+void MW::showImage(const QImage& image) {
     if(settings->autoResizeWindow())
-        preShowResize(pixmap.size());
-    viewerWidget->showImage(pixmap);
+        preShowResize(image.size());
+    viewerWidget->showImage(image);
     updateCropPanelData();
 }
 
@@ -319,8 +319,8 @@ bool MW::isCropPanelActive() {
     return (activeSidePanel == SIDEPANEL_CROP);
 }
 
-void MW::onScalingFinished(const QPixmap& scaled) {
-    viewerWidget->onScalingFinished(scaled);
+void MW::onScalingFinished(const QImage& scaled, quint64 requestToken) {
+    viewerWidget->onScalingFinished(scaled, requestToken);
 }
 
 void MW::saveWindowGeometry() {

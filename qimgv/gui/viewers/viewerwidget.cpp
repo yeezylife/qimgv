@@ -229,13 +229,13 @@ bool ViewerWidget::interactionEnabled() {
     return mInteractionEnabled;
 }
 
-bool ViewerWidget::showImage(const QPixmap& pixmap) {
-    if(pixmap.isNull())
+bool ViewerWidget::showImage(const QImage& image) {
+    if(image.isNull())
         return false;
     stopPlayback();
     videoControls->hide();
     enableImageViewer();
-    imageViewer->showImage(pixmap);
+    imageViewer->showImage(image);
     hideCursorTimed(false);
     return true;
 }
@@ -296,9 +296,8 @@ ImageFitMode ViewerWidget::fitMode() {
     return imageViewer->fitMode();
 }
 
-void ViewerWidget::onScalingFinished(const QPixmap& scaled) {
-    // 修复：改为常引用，并移除 std::move
-    imageViewer->setScaledPixmap(scaled);
+void ViewerWidget::onScalingFinished(const QImage& scaled, quint64 requestToken) {
+    imageViewer->setScaledImage(scaled, requestToken);
 }
 
 void ViewerWidget::closeImage() {
@@ -462,9 +461,9 @@ void ViewerWidget::hideCursor() {
     // O(1) 替代 widgetAt 的 O(n) 遍历
     bool inTarget = false;
 
-    if(imageViewer && imageViewer->viewport()) {
-        const QPoint p = imageViewer->viewport()->mapFrom(this, pos);
-        if(imageViewer->viewport()->rect().contains(p))
+    if(imageViewer) {
+        const QPoint p = imageViewer->mapFrom(this, pos);
+        if(imageViewer->rect().contains(p))
             inTarget = true;
     }
 
@@ -621,11 +620,11 @@ void ViewerWidget::readSettings() {
     mVideoControlsAreaValid = false;
     videoControls->onVideoMuted(!settings->playVideoSounds());
     if(settings->clickableEdges()) {
-        imageViewer->viewport()->installEventFilter(this);
+        imageViewer->installEventFilter(this);
         videoPlayer->installEventFilter(this);
         clickZoneOverlay->show();
     } else {
-        imageViewer->viewport()->removeEventFilter(this);
+        imageViewer->removeEventFilter(this);
         videoPlayer->removeEventFilter(this);
         imageViewer->enableDrags();
         clickZoneOverlay->hide();

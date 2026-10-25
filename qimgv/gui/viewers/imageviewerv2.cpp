@@ -1,31 +1,33 @@
 #include "imageviewerv2.h"
 #include "sourcecontainers/imageanimated.h"
 #include <QApplication>
-#include <QPainter>
-#include <QProcess>
+#include <QCanvasPainter>
+#include <QCanvasImagePattern>
+#include <QDebug>
+#include <QMouseEvent>
 #include <QPropertyAnimation>
-#include <QScreen>
-#include <ranges>
+#include <QResizeEvent>
+#include <QShowEvent>
 #include <algorithm>
+#include <cmath>
+#include <iterator>
+#include <ranges>
+#include <utility>
 
 ImageViewerV2::ImageViewerV2(QWidget* parent)
-    : QGraphicsView(parent)
-    , scene(nullptr)
-    , pixmap(nullptr)
+    : QCanvasPainterWidget(parent)
     , movie(nullptr)
     , animationTimer(nullptr)
     , scaleTimer(nullptr)
-    , horizontalScroll(nullptr)
-    , verticalScroll(nullptr)
     , scrollAnimationX(nullptr)
     , scrollAnimationY(nullptr)
     , mouseInteraction(MOUSE_NONE)
+    , scaledImageFitsCache(true)
     , transparencyGrid(false)
     , expandImage(false)
     , keepFitMode(false)
     , loopPlayback(true)
     , mIsFullscreen(false)
-    , scrollBarWorkaround(true)
     , useFixedZoomLevels(false)
     , trackpadDetection(true)
     , dragsEnabled(true)
@@ -44,16 +46,13 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     , imageFitModeDefault(FIT_WINDOW)
     , zoomThreshold(ZOOM_THRESHOLD_FACTOR)
     , dragThreshold(10)
-    , scaledImageFitsCache(true)
 {
-    setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
-    viewport()->setAttribute(Qt::WA_OpaquePaintEvent, true);
+    // 只做图片合成，不需要 MSAA；QRhiWidget 默认使用 RGBA8 后端纹理。
+    setSampleCount(1);
     setFocusPolicy(Qt::NoFocus);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setAcceptDrops(false);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setFrameShape(QFrame::NoFrame);
+    setMouseTracking(false);
 
     if (qApp->platformName() == "wayland")
         wayland = true;
@@ -61,39 +60,16 @@ ImageViewerV2::ImageViewerV2(QWidget* parent)
     dpr = static_cast<float>(devicePixelRatioF());
     zoomThreshold = static_cast<int>(dpr * ZOOM_THRESHOLD_FACTOR);
 
-    initializeScene();
     initializeTimers();
-    initializeScrollBars();
     setupConnections();
 
-    checkboard = QPixmap(":res/icons/common/other/checkerboard.png");
+    mCheckerboardImage = QImage(":res/icons/common/other/checkerboard.png");
     lastTouchpadScroll.start();
 
     initSettings();  // replaced virtual call readSettings()
 }
 
 ImageViewerV2::~ImageViewerV2() = default;
-
-void ImageViewerV2::initializeScene()
-{
-    pixmapItem.setTransformationMode(Qt::SmoothTransformation);
-    pixmapItem.setScale(1.0f);
-    pixmapItem.setOffset(CENTER_OFFSET, CENTER_OFFSET);
-    pixmapItem.setTransformOriginPoint(CENTER_OFFSET, CENTER_OFFSET);
-
-    pixmapItemScaled.setScale(1.0f);
-    pixmapItemScaled.setOffset(CENTER_OFFSET, CENTER_OFFSET);
-    pixmapItemScaled.setTransformOriginPoint(CENTER_OFFSET, CENTER_OFFSET);
-
-    scene = new QGraphicsScene();
-    scene->setSceneRect(0, 0, SCENE_SIZE, SCENE_SIZE);
-    scene->setBackgroundBrush(QColor(60, 60, 103));
-    scene->addItem(&pixmapItem);
-    scene->addItem(&pixmapItemScaled);
-    pixmapItemScaled.hide();
-
-    setScene(scene);
-}
 
 void ImageViewerV2::initializeTimers()
 {
@@ -104,19 +80,13 @@ void ImageViewerV2::initializeTimers()
     scaleTimer->setSingleShot(true);
     scaleTimer->setInterval(80);
 
-    scrollAnimationX = new QPropertyAnimation(this, "scrollX");
+    scrollAnimationX = new QPropertyAnimation(this, "scrollX", this);
     scrollAnimationX->setEasingCurve(QEasingCurve::OutSine);
     scrollAnimationX->setDuration(ANIMATION_SPEED);
 
-    scrollAnimationY = new QPropertyAnimation(this, "scrollY");
+    scrollAnimationY = new QPropertyAnimation(this, "scrollY", this);
     scrollAnimationY->setEasingCurve(QEasingCurve::OutSine);
     scrollAnimationY->setDuration(ANIMATION_SPEED);
-}
-
-void ImageViewerV2::initializeScrollBars()
-{
-    horizontalScroll = horizontalScrollBar();
-    verticalScroll = verticalScrollBar();
 }
 
 void ImageViewerV2::setupConnections()
@@ -128,31 +98,28 @@ void ImageViewerV2::setupConnections()
     connect(settings, &Settings::settingsChanged, this, &ImageViewerV2::readSettings);
 }
 
-bool ImageViewerV2::eventFilter(QObject* obj, QEvent* ev)
+bool ImageViewerV2::event(QEvent* ev)
 {
-    if (ev->type() == QEvent::DevicePixelRatioChange) {
+    if (ev->type() == QEvent::DevicePixelRatioChange)
         onDPRChanged();
-    }
-    return QGraphicsView::eventFilter(obj, ev);
+    return QCanvasPainterWidget::event(ev);
 }
 
 void ImageViewerV2::onDPRChanged()
 {
-    float newDpr = static_cast<float>(devicePixelRatioF());
-    if (dpr == newDpr)
+    const float newDpr = static_cast<float>(devicePixelRatioF());
+    if (qFuzzyCompare(1.0f + dpr, 1.0f + newDpr))
         return;
 
     dpr = newDpr;
     zoomThreshold = static_cast<int>(dpr * ZOOM_THRESHOLD_FACTOR);
 
-    if (pixmap) {
-        // 缩放帧缓存里存的是带旧 dpr 的 pixmap，换屏后必须整体失效
-        clearScaledFrameCache();
-        mScaledFrameSize = QSize();
-        pixmap->setDevicePixelRatio(dpr);
-        pixmapItem.setPixmap(*pixmap);
-        pixmapItem.show();
-        pixmapItem.update();
+    if (!mSourceImage.isNull()) {
+        // CPU-scaled QImages are stored without a baked-in DPR; their texture
+        // pixels are DPR-independent. Only the logical destination rect changes,
+        // so the display texture can be reused. If the fit scale changes,
+        // doZoom() invalidates the old CPU result and requestScaling() computes
+        // a new target.
         updateMinScale();
         mSilentScaleChange = true;
         applyFitMode();
@@ -164,7 +131,7 @@ void ImageViewerV2::onDPRChanged()
 
 int ImageViewerV2::scrollX() const
 {
-    return horizontalScroll ? horizontalScroll->value() : 0;
+    return qRound(mViewCenter.x());
 }
 
 void ImageViewerV2::setScrollX(int x)
@@ -174,7 +141,7 @@ void ImageViewerV2::setScrollX(int x)
 
 int ImageViewerV2::scrollY() const
 {
-    return verticalScroll ? verticalScroll->value() : 0;
+    return qRound(mViewCenter.y());
 }
 
 void ImageViewerV2::setScrollY(int y)
@@ -229,16 +196,16 @@ void ImageViewerV2::setFitModeImpl(ImageFitMode mode)
 
 bool ImageViewerV2::imageFitsInternal() const
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return true;
 
-    return (pixmap->width() <= static_cast<int>(static_cast<float>(viewport()->width()) * dpr) &&
-            pixmap->height() <= static_cast<int>(static_cast<float>(viewport()->height()) * dpr));
+    return (mSourceImage.width() <= static_cast<int>(static_cast<float>(width()) * dpr) &&
+            mSourceImage.height() <= static_cast<int>(static_cast<float>(height()) * dpr));
 }
 
 float ImageViewerV2::currentScaleInternal() const
 {
-    return static_cast<float>(pixmapItem.scale());
+    return mScale;
 }
 
 // ----------------------------------------------------------------------------
@@ -247,6 +214,7 @@ float ImageViewerV2::currentScaleInternal() const
 void ImageViewerV2::readSettings()
 {
     initSettings();
+    update();
 }
 
 void ImageViewerV2::setFitMode(ImageFitMode mode)
@@ -267,10 +235,296 @@ float ImageViewerV2::currentScale() const
 void ImageViewerV2::onFullscreenModeChanged(bool mode)
 {
     mIsFullscreen = mode;
-    QColor bgColor = mode ? settings->colorScheme().background_fullscreen
-                          : settings->colorScheme().background;
-    bgColor.setAlphaF(mode ? 1.0f : static_cast<float>(settings->backgroundOpacity()));
-    scene->setBackgroundBrush(bgColor);
+    updateBackgroundColor();
+}
+
+// ============================================================================
+// Canvas Painter resources / painting
+// ============================================================================
+void ImageViewerV2::initializeResources(QCanvasPainter* painter)
+{
+    Q_UNUSED(painter);
+    // initializeResources() is also called after graphicsResourcesInvalidated().
+    // Every QCanvasImage belongs to the new QRhi lifetime; drop stale handles.
+    mImageTexture = {};
+    mSourceTexture = {};
+    mCheckerTexture = {};
+    mPendingTextureReleases.clear();
+    mTextureValid = false;
+    mSourceTextureValid = false;
+    mTextureKey = -1;
+    mSourceTextureKey = -1;
+    mTextureGeneration = 0;
+    mTextureDisplaySerial = 0;
+    mSourceTextureGeneration = 0;
+}
+
+void ImageViewerV2::graphicsResourcesInvalidated()
+{
+    // The old textures are gone with the old QRhi; do not try to removeImage()
+    // them. The current QImage stays in mDisplayImage and is uploaded again by
+    // the next paint().
+    mImageTexture = {};
+    mSourceTexture = {};
+    mCheckerTexture = {};
+    mPendingTextureReleases.clear();
+    mTextureValid = false;
+    mSourceTextureValid = false;
+    mTextureKey = -1;
+    mSourceTextureKey = -1;
+    mTextureGeneration = 0;
+    mTextureDisplaySerial = 0;
+    mSourceTextureGeneration = 0;
+    update();
+}
+
+void ImageViewerV2::paint(QCanvasPainter* painter)
+{
+    // Pending textures are released at the end of this paint pass. They are kept
+    // until then because addImage() may return one of the still-cached handles
+    // (removal is deferred by QCanvasPainter), in which case it becomes current
+    // again and must be removed from the release queue.
+    if (mDisplayImage.isNull()) {
+        releasePendingTextures(painter);
+        return;
+    }
+
+    QCanvasImage texture;
+    if (!movie && !mDisplayingScaled) {
+        // Static image at full resolution: keep this texture alive while a
+        // scaled version is shown, so zoom interactions do not re-upload it.
+        ensureSourceTexture(painter);
+        texture = mSourceTexture;
+    } else {
+        // Animation frame, or CPU-downscaled static image.
+        ensureImageTexture(painter);
+        texture = mImageTexture;
+    }
+
+    if (texture.isNull()) {
+        releasePendingTextures(painter);
+        return;
+    }
+
+    // A texture that was queued for release can still be returned by
+    // addImage()'s internal cache (removal is deferred). In that case it is the
+    // current texture again, so take it out of the release queue.
+    for (qsizetype i = mPendingTextureReleases.size(); i > 0; --i) {
+        if (mPendingTextureReleases.at(i - 1).id() == texture.id())
+            mPendingTextureReleases.removeAt(i - 1);
+    }
+
+    const QRectF imageRect = imageRectViewport();
+    const QRectF visible = imageRect.intersected(viewportRectF());
+    if (visible.isEmpty()) {
+        releasePendingTextures(painter);
+        return;
+    }
+
+    if (transparencyGrid && imageHasTransparency(mDisplayImage))
+        paintCheckerboard(painter, visible);
+
+    // QCanvasImage is uploaded as raw pixels. Use its real pixel size as source
+    // rect, while the destination rect is logical pixels (source size / dpr *
+    // view scale). This keeps DPR, fit and zoom independent from the texture's
+    // (possibly downsampled) size.
+    painter->drawImage(texture,
+                       QRectF(0, 0, texture.width(), texture.height()),
+                       imageRect);
+
+    releasePendingTextures(painter);
+}
+
+void ImageViewerV2::ensureImageTexture(QCanvasPainter* painter)
+{
+    if (mDisplayImage.isNull())
+        return;
+
+    const qint64 key = mDisplayImage.cacheKey();
+    if (mTextureValid
+        && key == mTextureKey
+        && mTextureGeneration == mImageGeneration
+        && mTextureDisplaySerial == mDisplaySerial) {
+        return;
+    }
+
+    const QImage upload = prepareTextureImage(mDisplayImage);
+    if (upload.isNull()) {
+        invalidateImageTexture();
+        return;
+    }
+
+    QCanvasImage newTexture = painter->addImage(upload);
+    if (newTexture.isNull()) {
+        // Do not keep drawing a stale frame if the upload failed.
+        qWarning() << "ImageViewerV2: failed to create Canvas Painter texture";
+        invalidateImageTexture();
+        return;
+    }
+
+    if (!mImageTexture.isNull())
+        queueTextureRelease(mImageTexture);
+
+    mImageTexture = newTexture;
+    mTextureKey = key;
+    mTextureGeneration = mImageGeneration;
+    mTextureDisplaySerial = mDisplaySerial;
+    mTextureValid = true;
+}
+
+void ImageViewerV2::ensureSourceTexture(QCanvasPainter* painter)
+{
+    if (mSourceImage.isNull())
+        return;
+
+    const qint64 key = mSourceImage.cacheKey();
+    if (mSourceTextureValid
+        && key == mSourceTextureKey
+        && mSourceTextureGeneration == mImageGeneration) {
+        return;
+    }
+
+    const QImage upload = prepareTextureImage(mSourceImage);
+    if (upload.isNull()) {
+        invalidateSourceTexture();
+        return;
+    }
+
+    QCanvasImage newTexture = painter->addImage(upload);
+    if (newTexture.isNull()) {
+        qWarning() << "ImageViewerV2: failed to create source Canvas Painter texture";
+        invalidateSourceTexture();
+        return;
+    }
+
+    if (!mSourceTexture.isNull())
+        queueTextureRelease(mSourceTexture);
+
+    mSourceTexture = newTexture;
+    mSourceTextureKey = key;
+    mSourceTextureGeneration = mImageGeneration;
+    mSourceTextureValid = true;
+}
+
+void ImageViewerV2::invalidateImageTexture()
+{
+    if (!mImageTexture.isNull()) {
+        queueTextureRelease(mImageTexture);
+        mImageTexture = {};
+    }
+    mTextureValid = false;
+    mTextureKey = -1;
+}
+
+void ImageViewerV2::invalidateSourceTexture()
+{
+    if (!mSourceTexture.isNull()) {
+        queueTextureRelease(mSourceTexture);
+        mSourceTexture = {};
+    }
+    mSourceTextureValid = false;
+    mSourceTextureKey = -1;
+}
+
+void ImageViewerV2::queueTextureRelease(const QCanvasImage& texture)
+{
+    if (texture.isNull())
+        return;
+    for (const QCanvasImage& pending : std::as_const(mPendingTextureReleases)) {
+        if (pending.id() == texture.id())
+            return;
+    }
+    mPendingTextureReleases.append(texture);
+}
+
+void ImageViewerV2::releasePendingTextures(QCanvasPainter* painter)
+{
+    for (const QCanvasImage& texture : std::as_const(mPendingTextureReleases))
+        painter->removeImage(texture);
+    mPendingTextureReleases.clear();
+}
+
+QImage ImageViewerV2::prepareTextureImage(const QImage& image) const
+{
+    if (image.isNull())
+        return QImage();
+
+    const qreal pixelWidth = image.width();
+    const qreal pixelHeight = image.height();
+    qreal factor = 1.0;
+
+    // Conservative limits that are valid on desktop GPUs. If a source exceeds
+    // either the maximum texture dimension or the per-texture VRAM budget, it is
+    // downsampled once for upload. The on-screen geometry still uses the
+    // original logical size, so the picture is simply sampled from a smaller
+    // texture instead of falling back to any CPU painting backend.
+    if (pixelWidth > MAX_TEXTURE_DIMENSION || pixelHeight > MAX_TEXTURE_DIMENSION) {
+        factor = qMin(factor, qMin(static_cast<qreal>(MAX_TEXTURE_DIMENSION) / pixelWidth,
+                                   static_cast<qreal>(MAX_TEXTURE_DIMENSION) / pixelHeight));
+    }
+
+    const qreal bytes = pixelWidth * pixelHeight * 4.0;
+    if (bytes > static_cast<qreal>(MAX_TEXTURE_BYTES))
+        factor = qMin(factor, std::sqrt(static_cast<qreal>(MAX_TEXTURE_BYTES) / bytes));
+
+    if (factor >= 1.0)
+        return image;
+
+    const QSize target(qMax(1, qRound(pixelWidth * factor)),
+                       qMax(1, qRound(pixelHeight * factor)));
+    QImage scaled = image.scaled(target, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (scaled.isNull())
+        qWarning() << "ImageViewerV2: texture size limit fallback failed for" << image.size();
+    return scaled;
+}
+
+bool ImageViewerV2::imageHasTransparency(const QImage& image)
+{
+    if (image.hasAlphaChannel())
+        return true;
+
+    // QImageReader may hand us a palette image; hasAlphaChannel() is false for
+    // Indexed8 even when the color table contains transparent entries.
+    if (image.format() == QImage::Format_Indexed8) {
+        const int colorCount = image.colorCount();
+        for (int i = 0; i < colorCount; ++i) {
+            if (image.color(i).alpha() < 255)
+                return true;
+        }
+    }
+    return false;
+}
+
+void ImageViewerV2::paintCheckerboard(QCanvasPainter* painter, const QRectF& area)
+{
+    if (mCheckerboardImage.isNull())
+        return;
+
+    if (mCheckerTexture.isNull()) {
+        mCheckerTexture = painter->addImage(
+            mCheckerboardImage,
+            QCanvasPainter::ImageFlags(QCanvasPainter::ImageFlag::Repeat));
+        if (mCheckerTexture.isNull())
+            return;
+    }
+
+    const qreal imageDpr = qMax<qreal>(1.0, mCheckerboardImage.devicePixelRatio());
+    const QSizeF tileSize(static_cast<qreal>(mCheckerboardImage.width()) / imageDpr,
+                          static_cast<qreal>(mCheckerboardImage.height()) / imageDpr);
+    QCanvasImagePattern pattern(mCheckerTexture, area.topLeft(), tileSize);
+    painter->setFillStyle(pattern);
+    painter->fillRect(area);
+}
+
+void ImageViewerV2::updateBackgroundColor()
+{
+    QColor bgColor = mIsFullscreen ? settings->colorScheme().background_fullscreen
+                                   : settings->colorScheme().background;
+    const qreal opacity = mIsFullscreen
+                              ? 1.0
+                              : qBound(0.0, settings->backgroundOpacity(), 1.0);
+    bgColor.setAlphaF(opacity);
+    setFillColor(bgColor);
 }
 
 // ============================================================================
@@ -383,12 +637,12 @@ void ImageViewerV2::onAnimationTimer()
     }
 
     // 缩小播放时直接走已缩放帧流水线，避免每帧全尺寸上传+绘制缩放
-    if (pixmapItem.scale() < 1.0f) {
+    if (mScale < 1.0f) {
         // scaledSizeR() 已是设备像素（= 屏上实际占用的像素），再乘 dpr 会多出 dpr² 倍像素
         const QSize target = scaledSizeR();
         if (target.isValid() && !target.isEmpty()) {
-            // ⭐ 直接在 QImage 域缩放到目标尺寸，只对缩小后的产物做 QPixmap 转换：
-            // 全尺寸帧不再每帧转换/上传（4K 动画每帧可省数十 MB 像素拷贝）
+            // ⭐ 直接在 QImage 域缩放到目标尺寸，只对缩小后的产物做纹理上传：
+            // 全尺寸帧不再每帧上传（4K 动画每帧可省数十 MB 像素拷贝）
             const auto frameImage = movie->getImage();
             if (!frameImage) {
                 // 不留下已停住的 single-shot 定时器：能继续解码就重试，否则明确停止。
@@ -402,18 +656,23 @@ void ImageViewerV2::onAnimationTimer()
                     emit playbackFinished();
                 return;
             }
+            // 保留当前全尺寸帧，缩放回 1:1 时无需等下一轮解码
+            mSourceImage = *frameImage;
             // ⭐ 循环播放时同一帧/同一目标尺寸只缩放一次
-            setScaledPixmap(scaledFrameFor(movie->currentFrameNumber(), *frameImage, target));
+            const QImage scaledFrame = scaledFrameFor(movie->currentFrameNumber(), *frameImage, target);
+            if (scaledFrame.isNull())
+                setAnimationFrame(*frameImage);
+            else
+                setAnimationScaledFrame(scaledFrame);
             emit frameChanged(movie->currentFrameNumber());
             animationTimer->start(movie->nextFrameDelay());
             return;
         }
     }
 
-    // ImageAnimated::currentPixmap() 返回当前帧缓存（同一帧只转换一次）；
-    // 用移动语义传递，避免 setDevicePixelRatio 触发一次整帧深拷贝
-    QPixmap frame = movie->currentPixmap();
-    if (frame.isNull()) {
+    // 直接使用解码器发布的最新帧 QImage，避免 QImage→QPixmap 后再转回 QImage。
+    const auto frameImage = movie->getImage();
+    if (!frameImage) {
         // 与上面的空 QImage 分支一致：要么安排重试，要么明确结束播放
         if (movie->isDecoding()) {
             animationTimer->start(FRAME_PENDING_RETRY_MS);
@@ -424,15 +683,17 @@ void ImageViewerV2::onAnimationTimer()
             emit playbackFinished();
         return;
     }
-    updatePixmap(std::move(frame));
+    setAnimationFrame(*frameImage);
 
     emit frameChanged(movie->currentFrameNumber());
     animationTimer->start(movie->nextFrameDelay());
 }
 
 // 缩放帧缓存：按"当前目标尺寸"为键，尺寸变化即整体失效。
-// 目标尺寸通常只在窗口缩放/变焦后变化，因此循环播放几乎不再重复缩放
-QPixmap ImageViewerV2::scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target)
+// 目标尺寸通常只在窗口缩放/变焦后变化，因此循环播放几乎不再重复缩放。
+// This is a CPU cache only; it never registers all animation frames as GPU
+// textures. At most the currently displayed frame owns a QCanvasImage.
+QImage ImageViewerV2::scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target)
 {
     if (mScaledFrameSize != target) {
         clearScaledFrameCache();
@@ -464,11 +725,8 @@ QPixmap ImageViewerV2::scaledFrameFor(int frameNumber, const QImage &frame, cons
         mScaledFrameCache.remove(mScaledFrameOrder.takeFirst());
     }
 
-    QPixmap scaled = QPixmap::fromImage(frame.scaled(target, Qt::KeepAspectRatio,
-                                                      Qt::SmoothTransformation));
-    // 缓存里就带好 dpr：setScaledPixmap() 再设置同值会提前返回，
-    // 避免隐式共享的 pixmap 因修改 dpr 而每帧深拷贝一份像素
-    scaled.setDevicePixelRatio(dpr);
+    QImage scaled = frame.scaled(target, Qt::KeepAspectRatio,
+                                 Qt::SmoothTransformation);
     mScaledFrameCache.insert(frameNumber, scaled);
     mScaledFrameOrder.append(frameNumber);
     return scaled;
@@ -534,8 +792,9 @@ bool ImageViewerV2::showAnimationFrame(int frame)
     }
 
     emit frameChanged(movie->currentFrameNumber());
-    // 使用移动语义传递临时对象，避免拷贝
-    updatePixmap(movie->currentPixmap());
+    const auto frameImage = movie->getImage();
+    if (frameImage)
+        setAnimationFrame(*frameImage);
     // 切回动画时首帧已就绪：现在才开始播放计时，避免计时器从旧播放头抢跑
     if (mStartAnimationOnFrameReady) {
         mStartAnimationOnFrameReady = false;
@@ -547,32 +806,30 @@ bool ImageViewerV2::showAnimationFrame(int frame)
 // ============================================================================
 // Display Operations
 // ============================================================================
-void ImageViewerV2::updatePixmap(const QPixmap& newPixmap)
+void ImageViewerV2::setSourceImage(const QImage& image)
 {
-    if (!pixmap)
-        pixmap = std::make_unique<QPixmap>();
-
-    *pixmap = newPixmap;
-    pixmap->setDevicePixelRatio(dpr);
-
-    pixmapItemScaled.hide();
-    pixmapItem.setPixmap(*pixmap);
-    if (!pixmapItem.isVisible())
-        pixmapItem.show();
+    mSourceImage = image;
+    mDisplayImage = image;
+    mDisplayingScaled = false;
+    ++mDisplaySerial;
+    invalidateImageTexture();
 }
 
-void ImageViewerV2::updatePixmap(QPixmap&& newPixmap)
+void ImageViewerV2::setAnimationFrame(const QImage& frame)
 {
-    if (!pixmap)
-        pixmap = std::make_unique<QPixmap>();
+    setSourceImage(frame);
+    update();
+}
 
-    *pixmap = std::move(newPixmap);
-    pixmap->setDevicePixelRatio(dpr);
-
-    pixmapItemScaled.hide();
-    pixmapItem.setPixmap(*pixmap);
-    if (!pixmapItem.isVisible())
-        pixmapItem.show();
+void ImageViewerV2::setAnimationScaledFrame(const QImage& frame)
+{
+    if (frame.isNull())
+        return;
+    mDisplayImage = frame;
+    mDisplayingScaled = true;
+    ++mDisplaySerial;
+    invalidateImageTexture();
+    update();
 }
 
 void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animation)
@@ -586,7 +843,9 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animatio
     // 帧未就绪时由 onAnimationTimer/showAnimationFrame 稍后重试
     movie->jumpToFrame(0);
 
-    updatePixmap(movie->currentPixmap());
+    const auto firstFrame = movie->getImage();
+    if (firstFrame)
+        setSourceImage(*firstFrame);
 
     emit durationChanged(movie->frameCount());
     emit frameChanged(0);
@@ -604,38 +863,34 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animatio
         mStartAnimationOnFrameReady = true;
         showAnimationFrame(0);
     }
+    update();
 }
 
-void ImageViewerV2::showImage(const QPixmap& newPixmap)
+void ImageViewerV2::showImage(const QImage& image)
 {
-    showImageImpl(QPixmap(newPixmap));
+    showImage(QImage(image));
 }
 
-void ImageViewerV2::showImage(QPixmap&& newPixmap)
-{
-    showImageImpl(std::move(newPixmap));
-}
-
-void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
+void ImageViewerV2::showImage(QImage&& image)
 {
     // ⭐ 复用 reset() 清空旧图（含 viewport 位置重置与刷新），避免双份维护分叉
     reset();
 
-    if(pixmapParam.isNull())
+    if (image.isNull())
         return;
 
-    pixmapItemScaled.hide();
-    pixmap = std::make_unique<QPixmap>(std::move(pixmapParam));
-    pixmap->setDevicePixelRatio(dpr);
-    pixmapItem.setPixmap(*pixmap);
-    pixmapItem.show();
+    mSourceImage = std::move(image);
+    mDisplayImage = mSourceImage;
+    mDisplayingScaled = false;
+    ++mDisplaySerial;
+    invalidateImageTexture();
 
     updateMinScale();
 
     applyInitialFit();
 
-    // ⭐ setPixmap 已触发 scene 更新，不再 viewport()->update() 二次刷新
     requestScaling();
+    update();
 }
 
 void ImageViewerV2::reset()
@@ -644,12 +899,21 @@ void ImageViewerV2::reset()
     // 缩放帧缓存按"当前动画 + 目标尺寸"有效，动画一变即失效
     clearScaledFrameCache();
     mScaledFrameSize = QSize();
-    pixmapItemScaled.setPixmap(QPixmap());
-    pixmapScaled = QPixmap();
-    pixmapItem.setPixmap(QPixmap());
-    pixmapItem.setScale(1.0f);
-    pixmapItem.setOffset(CENTER_OFFSET, CENTER_OFFSET);
-    pixmap.reset();
+
+    mSourceImage = QImage();
+    mDisplayImage = QImage();
+    mDisplayingScaled = false;
+    mScale = 1.0f;
+    mViewCenter = QPointF(0, 0);
+    lastRequestedScale = -1.0f;
+
+    // Invalidate both the current image lifetime and any pending scaler result.
+    ++mImageGeneration;
+    ++mDisplaySerial;
+    invalidateScalingRequests();
+    invalidateImageTexture();
+    invalidateSourceTexture();
+
     stopAnimation();
     // 暂停只是挂起任务（保留 reader）；切走必须真正退出任务，
     // 否则单线程池会被挂起的任务占住，下一个动画永远排不到
@@ -657,8 +921,8 @@ void ImageViewerV2::reset()
         movie->stopDecoding();
     mStartAnimationOnFrameReady = false;
     movie = nullptr;
-    centerOn(CENTER_OFFSET, CENTER_OFFSET);
-    viewport()->update();
+
+    update();
 }
 
 void ImageViewerV2::closeImage()
@@ -666,33 +930,45 @@ void ImageViewerV2::closeImage()
     reset();
 }
 
-void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame)
+void ImageViewerV2::setScaledImage(const QImage& newFrame, quint64 requestToken)
 {
-    if (!movie && newFrame.size() != scaledSizeR())
-        return;
-
-    pixmapScaled = newFrame;
-    pixmapScaled.setDevicePixelRatio(dpr);
-    pixmapItemScaled.setPixmap(pixmapScaled);
-    pixmapItem.hide();
-    pixmapItemScaled.show();
+    setScaledImage(QImage(newFrame), requestToken);
 }
 
-void ImageViewerV2::setScaledPixmap(QPixmap&& newFrame)
+void ImageViewerV2::setScaledImage(QImage&& newFrame, quint64 requestToken)
 {
+    // A token of 0 means "no request", and a different token means the image or
+    // zoom changed while the worker was running: never let that old result
+    // overwrite the current picture.
+    if (requestToken == 0 || requestToken != mActiveScalingRequest)
+        return;
+    if (newFrame.isNull())
+        return;
     if (!movie && newFrame.size() != scaledSizeR())
         return;
 
-    pixmapScaled = std::move(newFrame);
-    pixmapScaled.setDevicePixelRatio(dpr);
-    pixmapItemScaled.setPixmap(pixmapScaled);
-    pixmapItem.hide();
-    pixmapItemScaled.show();
+    mDisplayImage = std::move(newFrame);
+    mDisplayingScaled = true;
+    ++mDisplaySerial;
+    invalidateImageTexture();
+    update();
+}
+
+void ImageViewerV2::swapToOriginalImage()
+{
+    if (!mDisplayingScaled || mSourceImage.isNull())
+        return;
+
+    mDisplayImage = mSourceImage;
+    mDisplayingScaled = false;
+    ++mDisplaySerial;
+    invalidateImageTexture();
+    update();
 }
 
 bool ImageViewerV2::isDisplaying() const
 {
-    return (pixmap != nullptr);
+    return !mSourceImage.isNull();
 }
 
 // ============================================================================
@@ -728,11 +1004,10 @@ void ImageViewerV2::scroll(int dx, int dy, bool animated)
 
 void ImageViewerV2::scrollSmooth(int dx, int dy)
 {
-    auto updateAnimation = [this](QPropertyAnimation* animation, QScrollBar* scrollbar, int delta) {
+    auto updateAnimation = [this](QPropertyAnimation* animation, int current, int delta) {
         if (!delta)
             return;
 
-        const int current = scrollbar->value();
         int newEnd = current + delta;
 
         const bool reversed = ((newEnd < current && current < animation->endValue().toInt()) ||
@@ -750,10 +1025,10 @@ void ImageViewerV2::scrollSmooth(int dx, int dy)
     };
 
     if (dx)
-        updateAnimation(scrollAnimationX, horizontalScroll, dx);
+        updateAnimation(scrollAnimationX, scrollX(), dx);
 
     if (dy)
-        updateAnimation(scrollAnimationY, verticalScroll, dy);
+        updateAnimation(scrollAnimationY, scrollY(), dy);
 
     saveViewportPos();
 }
@@ -762,24 +1037,24 @@ void ImageViewerV2::scrollSmooth(int dx, int dy)
 void ImageViewerV2::scrollPrecise(int dx, int dy)
 {
     stopPosAnimation();
-    horizontalScroll->setValue(horizontalScroll->value() + dx);
-    verticalScroll->setValue(verticalScroll->value() + dy);
+    mViewCenter.rx() += dx;
+    mViewCenter.ry() += dy;
     adjustViewport();
     saveViewportPos();
 }
 
 void ImageViewerV2::scrollToX(int x)
 {
-    horizontalScroll->setValue(x);
+    mViewCenter.setX(x);
     adjustViewport();
-    viewport()->update();
+    update();
 }
 
 void ImageViewerV2::scrollToY(int y)
 {
-    verticalScroll->setValue(y);
+    mViewCenter.setY(y);
     adjustViewport();
-    viewport()->update();
+    update();
 }
 
 void ImageViewerV2::onScrollTimelineFinished()
@@ -801,7 +1076,7 @@ void ImageViewerV2::stopPosAnimation()
 void ImageViewerV2::toggleTransparencyGrid()
 {
     transparencyGrid = !transparencyGrid;
-    scene->update();
+    update();
 }
 
 void ImageViewerV2::setLoopPlayback(bool mode)
@@ -824,7 +1099,7 @@ void ImageViewerV2::setExpandImage(bool mode)
 void ImageViewerV2::show()
 {
     setMouseTracking(false);
-    QGraphicsView::show();
+    QWidget::show();
     setMouseTracking(true);
 }
 
@@ -836,12 +1111,13 @@ void ImageViewerV2::hide()
 
 void ImageViewerV2::requestScaling()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
-    const qreal scale = pixmapItem.scale();
+    const qreal scale = static_cast<qreal>(mScale);
     if (scale == 1.0 || movie) {
         lastRequestedScale = -1.0f;
+        invalidateScalingRequests();
         return;
     }
 
@@ -849,18 +1125,28 @@ void ImageViewerV2::requestScaling()
         scaleTimer->stop();
 
     if (scale < FAST_SCALE_THRESHOLD) {
-        // scaledSizeR() 是设备像素：结果 pixmap 会带 dpr 显示，
+        // scaledSizeR() 是设备像素：结果 QImage 会按 dpr 显示，
         // 若再乘 dpr，换入时尺寸会放大 dpr 倍且像素数多出 dpr² 倍
         const QSize requested = scaledSizeR();
+        if (requested.isEmpty())
+            return;
         if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
             // avoid repeated identical scale requests
             return;
         }
         lastRequestedScale = static_cast<float>(scale);
-        emit scalingRequested(requested);
+        const quint64 token = invalidateScalingRequests();
+        emit scalingRequested(requested, token);
     } else {
         lastRequestedScale = -1.0f;
+        invalidateScalingRequests();
     }
+}
+
+quint64 ImageViewerV2::invalidateScalingRequests()
+{
+    mActiveScalingRequest = ++mScalingRequestSerial;
+    return mActiveScalingRequest;
 }
 
 void ImageViewerV2::enableDrags()
@@ -901,7 +1187,7 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
     if (atCursor && underMouse())
         setZoomAnchor(mapFromGlobal(cursor().pos()));
     else
-        setZoomAnchor(viewport()->rect().center());
+        setZoomAnchor(rect().center());
 
     const float current = currentScaleInternal();
 
@@ -937,16 +1223,18 @@ void ImageViewerV2::adjustZoom(bool zoomIn, bool atCursor)
 
     imageFitMode = FIT_FREE;
 
-    if (pixmapItem.scale() == fitWindowScale)
+    if (mScale == fitWindowScale)
         imageFitMode = FIT_WINDOW;
-    else if (pixmapItem.scale() == fitWindowStretchScale)
+    else if (mScale == fitWindowStretchScale)
         imageFitMode = FIT_WINDOW_STRETCH;
 }
 
 void ImageViewerV2::setZoomAnchor(QPoint viewportPos)
 {
+    const QPointF scenePos = mapToScene(viewportPos);
+    const qreal safeScale = qMax<qreal>(0.0001, mScale);
     zoomAnchor = QPair<QPointF, QPoint>(
-        pixmapItem.mapFromScene(mapToScene(viewportPos)),
+        QPointF(scenePos.x() / safeScale, scenePos.y() / safeScale),
         viewportPos
     );
 }
@@ -957,29 +1245,29 @@ void ImageViewerV2::zoomAnchored(float newScale)
 
     if (current == newScale) {
         // 缩放量不变时仍做一次边缘钳制，等价原调用方的 adjustViewport
-        centerOn(clampViewportCenter(mapToScene(viewport()->rect().center())));
+        centerOn(clampViewportCenter(mapToScene(rect().center())));
         return;
     }
 
-    const QPoint viewportCenter = viewport()->rect().center();
+    const QPoint viewportCenter = rect().center();
     const QPointF sceneCenter = mapToScene(viewportCenter);
 
     doZoom(newScale, false);
 
-    const QPointF anchorScene =
-        pixmapItem.mapToScene(zoomAnchor.first);
+    const QPointF anchorScene(zoomAnchor.first.x() * static_cast<qreal>(mScale),
+                              zoomAnchor.first.y() * static_cast<qreal>(mScale));
 
     const QPoint mapped =
-        mapFromScene(anchorScene);
+        mapFromScene(anchorScene).toPoint();
 
     const QPointF diff =
-        zoomAnchor.second - mapped;
+        QPointF(zoomAnchor.second) - QPointF(mapped);
 
     // 锚点保持 + 边缘钳制合并为一次 centerOn（原实现由调用方再调 adjustViewport）
     centerOn(clampViewportCenter(sceneCenter - diff));
 
     // ⭐ 交互变焦（滚轮/触控板/拖动）连续触发：这里只重排去抖定时器，
-    // 停顿 80ms 后才请求一次缩放。期间视图用 item 自身的缩放做近似显示，
+    // 停顿 80ms 后才请求一次缩放。期间视图用源图纹理采样做近似显示，
     // 不必为每一个中间缩放比例白算一整张图
     scheduleScaling();
 }
@@ -991,7 +1279,7 @@ void ImageViewerV2::scheduleScaling()
 
 void ImageViewerV2::doZoom(float newScale, bool center)
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
     newScale = qBound(minScale, newScale, maxScale);
@@ -1001,29 +1289,21 @@ void ImageViewerV2::doZoom(float newScale, bool center)
         return;
 
     // ✅ 关键：保持当前 scene 中心不变（仅在调用方需要时执行）。
-    // 必须在 setScale 之前计算，否则取到的是缩放后的中心。
+    // 必须在 scale 改变之前计算，否则取到的是缩放后的中心。
     QPointF sceneCenterBefore;
     if (center)
-        sceneCenterBefore = mapToScene(viewport()->rect().center());
+        sceneCenterBefore = mapToScene(rect().center());
 
-    pixmapItem.setScale(newScale);
-    swapToOriginalPixmap();
+    mScale = newScale;
+    swapToOriginalImage();
+    // Any in-flight CPU downscale targeted the old scale/size.
+    invalidateScalingRequests();
 
     if (center)
         centerOn(sceneCenterBefore);
 
+    update();
     emit scaleChanged(newScale, mSilentScaleChange);
-}
-
-void ImageViewerV2::swapToOriginalPixmap()
-{
-    if (!pixmap || !pixmapItemScaled.isVisible())
-        return;
-
-    pixmapItemScaled.hide();
-    pixmapItemScaled.setPixmap(QPixmap());
-    pixmapScaled = QPixmap();
-    pixmapItem.show();
 }
 
 // ============================================================================
@@ -1031,8 +1311,11 @@ void ImageViewerV2::swapToOriginalPixmap()
 // ============================================================================
 void ImageViewerV2::updateFitWindowScale()
 {
-    float scaleFitX = static_cast<float>(viewport()->width()) * dpr / static_cast<float>(pixmap->width());
-    float scaleFitY = static_cast<float>(viewport()->height()) * dpr / static_cast<float>(pixmap->height());
+    if (mSourceImage.isNull())
+        return;
+
+    const float scaleFitX = static_cast<float>(width()) * dpr / static_cast<float>(mSourceImage.width());
+    const float scaleFitY = static_cast<float>(height()) * dpr / static_cast<float>(mSourceImage.height());
 
     fitWindowScale = qMin(scaleFitX, scaleFitY);
 
@@ -1042,10 +1325,10 @@ void ImageViewerV2::updateFitWindowScale()
 
 void ImageViewerV2::updateFitWindowStretchScale()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
-    fitWindowStretchScale = static_cast<float>(viewport()->height()) * dpr / static_cast<float>(pixmap->height());
+    fitWindowStretchScale = static_cast<float>(height()) * dpr / static_cast<float>(mSourceImage.height());
 
     if (expandImage && fitWindowStretchScale > expandLimit)
         fitWindowStretchScale = expandLimit;
@@ -1053,17 +1336,14 @@ void ImageViewerV2::updateFitWindowStretchScale()
 
 void ImageViewerV2::updateMinScale()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
     updateFitWindowScale();
     updateFitWindowStretchScale();
 
     if (settings->unlockMinZoom()) {
-        if (!pixmap->isNull())
-            minScale = static_cast<float>(qMax(10. / pixmap->width(), 10. / pixmap->height()));
-        else
-            minScale = 1.0f;
+        minScale = static_cast<float>(qMax(10. / mSourceImage.width(), 10. / mSourceImage.height()));
     } else {
         minScale = imageFitsInternal() ? 1.0f : fitWindowScale;
     }
@@ -1074,10 +1354,10 @@ void ImageViewerV2::updateMinScale()
 
 void ImageViewerV2::fitWidth()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
-    float scaleX = static_cast<float>(viewport()->width()) * dpr / static_cast<float>(pixmap->width());
+    float scaleX = static_cast<float>(width()) * dpr / static_cast<float>(mSourceImage.width());
 
     if (!expandImage && scaleX > 1.0f)
         scaleX = 1.0f;
@@ -1085,18 +1365,18 @@ void ImageViewerV2::fitWidth()
         scaleX = expandLimit;
 
     if (currentScaleInternal() != scaleX) {
-        swapToOriginalPixmap();
+        swapToOriginalImage();
         doZoom(scaleX);
     }
 
     // 合并原 centerIfNecessary + 顶部对齐 + snapToEdges 的三次 centerOn 为一次，
-    // 每次 centerOn 都会更新滚动条并触发重绘；先算出目标中心再统一钳制，
+    // 每次 centerOn 都会更新视图中心并触发重绘；先算出目标中心再统一钳制，
     // 最终位置与原实现完全一致
-    const QRectF img = pixmapItem.sceneBoundingRect();
-    const int viewportW = viewport()->width();
-    const int viewportH = viewport()->height();
+    const QRectF img = imageRectScene();
+    const int viewportW = width();
+    const int viewportH = height();
 
-    QPointF center = mapToScene(viewport()->rect().center());
+    QPointF center = mapToScene(rect().center());
     if (qRound(img.width()) <= viewportW)
         center.setX(img.center().x());
     // 高度判断与 viewport 同为逻辑像素（scene 尺寸）：
@@ -1111,23 +1391,19 @@ void ImageViewerV2::fitWidth()
 
 void ImageViewerV2::fitWindow()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
     if (imageFitsInternal() && !expandImage) {
         fitNormal();
     } else {
         if (currentScaleInternal() != fitWindowScale) {
-            swapToOriginalPixmap();
+            swapToOriginalImage();
             doZoom(fitWindowScale);
         }
-
-        if (scrollBarWorkaround) {
-            scrollBarWorkaround = false;
-            QTimer::singleShot(0, this, &ImageViewerV2::centerOnPixmap);
-        } else {
-            centerOnPixmap();
-        }
+        // QGraphicsView scrollbar workaround is no longer needed: the view center
+        // is a plain value now, so centering can happen immediately.
+        centerOnPixmap();
     }
 }
 
@@ -1138,38 +1414,33 @@ void ImageViewerV2::fitNormal()
 
 void ImageViewerV2::fitWindowStretch()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
     updateFitWindowStretchScale();
 
     if (currentScaleInternal() != fitWindowStretchScale) {
-        swapToOriginalPixmap();
+        swapToOriginalImage();
         doZoom(fitWindowStretchScale);
     }
 
-    if (scrollBarWorkaround) {
-        scrollBarWorkaround = false;
-        QTimer::singleShot(0, this, &ImageViewerV2::centerOnPixmap);
-    } else {
-        centerOnPixmap();
-    }
+    centerOnPixmap();
 }
 
 void ImageViewerV2::fitFree(float scale)
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
     if (focusIn1to1 == FOCUS_TOP) {
         doZoom(scale);
 
         // 与原逻辑一致：居中 + 可选顶部对齐后统一钳制，合并为单次 centerOn
-        const QRectF img = pixmapItem.sceneBoundingRect();
-        const int viewportH = viewport()->height();
+        const QRectF img = imageRectScene();
+        const int viewportH = height();
 
-        QPointF center = mapToScene(viewport()->rect().center());
-        if (qRound(img.width()) <= viewport()->width())
+        QPointF center = mapToScene(rect().center());
+        if (qRound(img.width()) <= width())
             center.setX(img.center().x());
         // 高度判断与 viewport 同为逻辑像素（scene 尺寸），见 fitWidth() 中的说明
         if (qRound(img.height()) <= viewportH)
@@ -1182,7 +1453,7 @@ void ImageViewerV2::fitFree(float scale)
         centerOn(snappedCenter(center));
     } else {
         if (focusIn1to1 == FOCUS_CENTER)
-            setZoomAnchor(viewport()->rect().center());
+            setZoomAnchor(rect().center());
         else
             setZoomAnchor(mapFromGlobal(cursor().pos()));
 
@@ -1244,21 +1515,17 @@ void ImageViewerV2::setFitWindowStretch()
 
 void ImageViewerV2::centerOnPixmap()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
-    const QRectF img = pixmapItem.sceneBoundingRect();
-
-    const qreal x = img.center().x();
-    const qreal y = img.center().y();
-
-    centerOn(x, y);
+    const QRectF img = imageRectScene();
+    centerOn(img.center());
 }
 
 QPointF ImageViewerV2::snappedCenter(QPointF center) const
 {
-    const QRectF img = pixmapItem.sceneBoundingRect();
-    const QRectF vport = mapToScene(viewport()->rect()).boundingRect();
+    const QRectF img = imageRectScene();
+    const QRectF vport = mapToScene(rect());
 
     const qreal vW = vport.width();
     const qreal vH = vport.height();
@@ -1283,12 +1550,12 @@ QPointF ImageViewerV2::snappedCenter(QPointF center) const
 
 QPointF ImageViewerV2::clampViewportCenter(QPointF center) const
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return center;
 
-    const QRectF img = pixmapItem.sceneBoundingRect();
-    const int viewportW = viewport()->width();
-    const int viewportH = viewport()->height();
+    const QRectF img = imageRectScene();
+    const int viewportW = width();
+    const int viewportH = height();
 
     // 居中优先（与 centerIfNecessary 判断条件一致）
     if (qRound(img.width()) <= viewportW)
@@ -1301,10 +1568,10 @@ QPointF ImageViewerV2::clampViewportCenter(QPointF center) const
 
 void ImageViewerV2::adjustViewport()
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return;
 
-    const QPointF centerTarget = mapToScene(viewport()->rect().center());
+    const QPointF centerTarget = mapToScene(rect().center());
     centerOn(clampViewportCenter(centerTarget));
 }
 
@@ -1331,7 +1598,7 @@ bool ImageViewerV2::lockZoomEnabled() const
 
 void ImageViewerV2::lockZoom()
 {
-    lockedScale = static_cast<float>(pixmapItem.scale());
+    lockedScale = mScale;
     imageFitMode = FIT_FREE;
     saveViewportPos();
 }
@@ -1360,10 +1627,12 @@ void ImageViewerV2::saveViewportPos()
     if (mViewLock != LOCK_ALL)
         return;
 
-    const QRectF itemRect = pixmapItem.sceneBoundingRect();
+    const QRectF itemRect = imageRectScene();
+    if (itemRect.width() <= 0.0 || itemRect.height() <= 0.0)
+        return;
 
     const QPointF sceneCenter =
-        mapToScene(viewport()->rect().center());
+        mapToScene(rect().center());
 
     savedViewportPos.setX(qBound(
         0.0,
@@ -1378,7 +1647,9 @@ void ImageViewerV2::saveViewportPos()
 
 void ImageViewerV2::applySavedViewportPos()
 {
-    const QRectF itemRect = pixmapItem.sceneBoundingRect();
+    const QRectF itemRect = imageRectScene();
+    if (itemRect.width() <= 0.0 || itemRect.height() <= 0.0)
+        return;
 
     const QPointF newScenePos(
         itemRect.left() + itemRect.width() * savedViewportPos.x(),
@@ -1394,8 +1665,8 @@ void ImageViewerV2::applySavedViewportPos()
 // ============================================================================
 void ImageViewerV2::mousePressEvent(QMouseEvent* event)
 {
-    if (!pixmap) {
-        QGraphicsView::mousePressEvent(event);
+    if (mSourceImage.isNull()) {
+        QWidget::mousePressEvent(event);
         return;
     }
 
@@ -1408,15 +1679,15 @@ void ImageViewerV2::mousePressEvent(QMouseEvent* event)
     if (event->button() & Qt::RightButton) {
         setZoomAnchor(event->pos());
     } else {
-        QGraphicsView::mousePressEvent(event);
+        QWidget::mousePressEvent(event);
     }
 }
 
 void ImageViewerV2::mouseMoveEvent(QMouseEvent* event)
 {
-    QGraphicsView::mouseMoveEvent(event);
+    QWidget::mouseMoveEvent(event);
 
-    if (!pixmap || mouseInteraction == MOUSE_DRAG || mouseInteraction == MOUSE_WHEEL_ZOOM)
+    if (mSourceImage.isNull() || mouseInteraction == MOUSE_DRAG || mouseInteraction == MOUSE_WHEEL_ZOOM)
         return;
 
     if (event->buttons() & Qt::LeftButton) {
@@ -1432,8 +1703,8 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent* event)
         }
 
         if (mouseInteraction == MOUSE_DRAG_BEGIN) {
-            if ((abs(mousePressPos.x() - event->pos().x()) > dragThreshold) ||
-                (abs(mousePressPos.y() - event->pos().y()) > dragThreshold)) {
+            if ((std::abs(mousePressPos.x() - event->pos().x()) > dragThreshold) ||
+                (std::abs(mousePressPos.y() - event->pos().y()) > dragThreshold)) {
                 mouseInteraction = MOUSE_NONE;
                 emit draggedOut();
             }
@@ -1466,8 +1737,8 @@ void ImageViewerV2::mouseReleaseEvent(QMouseEvent* event)
 {
     unsetCursor();
 
-    if (!pixmap || mouseInteraction == MOUSE_NONE) {
-        QGraphicsView::mouseReleaseEvent(event);
+    if (mSourceImage.isNull() || mouseInteraction == MOUSE_NONE) {
+        QWidget::mouseReleaseEvent(event);
         event->ignore();
     }
 
@@ -1495,9 +1766,9 @@ void ImageViewerV2::mouseMoveZoom(QMouseEvent* event)
 
     zoomAnchored(newScale);
 
-    if (pixmapItem.scale() == fitWindowScale)
+    if (mScale == fitWindowScale)
         imageFitMode = FIT_WINDOW;
-    else if (pixmapItem.scale() == fitWindowStretchScale)
+    else if (mScale == fitWindowStretchScale)
         imageFitMode = FIT_WINDOW_STRETCH;
 }
 
@@ -1517,7 +1788,7 @@ void ImageViewerV2::wheelEvent(QWheelEvent* event)
 
     if (event->modifiers() != Qt::NoModifier) {
         event->ignore();
-        QGraphicsView::wheelEvent(event);
+        QWidget::wheelEvent(event);
         return;
     }
 
@@ -1529,7 +1800,7 @@ void ImageViewerV2::wheelEvent(QWheelEvent* event)
             isWheel = (event->phase() == Qt::NoScrollPhase);
         else
             isWheel = angleDelta.y() &&
-                      (abs(angleDelta.y()) >= 120 &&
+                      (std::abs(angleDelta.y()) >= 120 &&
                       !(angleDelta.y() % 60)) &&
                       lastTouchpadScroll.elapsed() > 250;
     }
@@ -1540,7 +1811,7 @@ void ImageViewerV2::wheelEvent(QWheelEvent* event)
         handleMouseWheelScroll(event);
     } else {
         event->ignore();
-        QGraphicsView::wheelEvent(event);
+        QWidget::wheelEvent(event);
     }
 
     saveViewportPos();
@@ -1569,11 +1840,10 @@ void ImageViewerV2::handleTrackpadScroll(QWheelEvent* event)
         const int dx = qAbs(angleDelta.x()) > qAbs(pixelDelta.x()) ? angleDelta.x() : pixelDelta.x();
         const int dy = qAbs(angleDelta.y()) > qAbs(pixelDelta.y()) ? angleDelta.y() : pixelDelta.y();
 
-        const int newH = qRound(horizontalScroll->value() - dx * TRACKPAD_SCROLL_MULTIPLIER);
-        const int newV = qRound(verticalScroll->value() - dy * TRACKPAD_SCROLL_MULTIPLIER);
-
-        horizontalScroll->setValue(newH);
-        verticalScroll->setValue(newV);
+        // Scrollbars used to provide this translation; move the view center
+        // directly now (same sign as the old scrollbar delta).
+        mViewCenter.rx() -= dx * TRACKPAD_SCROLL_MULTIPLIER;
+        mViewCenter.ry() -= dy * TRACKPAD_SCROLL_MULTIPLIER;
 
         adjustViewport();
     }
@@ -1595,10 +1865,10 @@ void ImageViewerV2::handleMouseWheelScroll(QWheelEvent* event)
 
 void ImageViewerV2::resizeEvent(QResizeEvent* event)
 {
-    QGraphicsView::resizeEvent(event);
+    QCanvasPainterWidget::resizeEvent(event);
     mousePressPos = mapFromGlobal(cursor().pos());
 
-    if (parentWidget()->isVisible()) {
+    if (parentWidget() && parentWidget()->isVisible()) {
         stopPosAnimation();
         updateMinScale();
 
@@ -1620,7 +1890,23 @@ void ImageViewerV2::resizeEvent(QResizeEvent* event)
 
 void ImageViewerV2::showEvent(QShowEvent* event)
 {
-    QGraphicsView::showEvent(event);
+    QWidget::showEvent(event);
+
+    if (!qFuzzyCompare(1.0f + dpr, 1.0f + static_cast<float>(devicePixelRatioF())))
+        onDPRChanged();
+
+    // If the initial scale request was emitted while the window was still
+    // hidden, Core may have skipped it. Show is the first point where a CPU
+    // downscale request can be started; otherwise the full image stays sampled
+    // by the GPU until the user changes zoom.
+    if (!mSourceImage.isNull() && !movie && !mDisplayingScaled && mScale < 1.0f) {
+        QTimer::singleShot(0, this, [this]() {
+            if (!mSourceImage.isNull() && !movie && !mDisplayingScaled && mScale < 1.0f) {
+                lastRequestedScale = -1.0f;
+                requestScaling();
+            }
+        });
+    }
 
     // 延迟执行 FIT_ORIGINAL 计算，避免嵌套事件循环和潜在的性能/递归问题。
     // 这和原来的 processEvents 目的一致：在控件显示后再重新布局/缩放。
@@ -1635,24 +1921,89 @@ void ImageViewerV2::showEvent(QShowEvent* event)
     }
 }
 
-void ImageViewerV2::drawBackground(QPainter* painter, const QRectF& rect)
+// ============================================================================
+// Geometry helpers (replace QGraphicsScene / QGraphicsPixmapItem)
+// ============================================================================
+QSizeF ImageViewerV2::sourceLogicalSize() const
 {
-    QGraphicsView::drawBackground(painter, rect);
+    if (mSourceImage.isNull())
+        return QSizeF();
+    const qreal imageDpr = qMax<qreal>(0.0001, static_cast<qreal>(dpr));
+    return QSizeF(static_cast<qreal>(mSourceImage.width()) / imageDpr,
+                  static_cast<qreal>(mSourceImage.height()) / imageDpr);
+}
 
-    if (!isDisplaying() || !transparencyGrid || !pixmap->hasAlphaChannel())
+QSizeF ImageViewerV2::displayedLogicalSize() const
+{
+    if (mDisplayingScaled && !mDisplayImage.isNull()) {
+        const qreal imageDpr = qMax<qreal>(0.0001, static_cast<qreal>(dpr));
+        return QSizeF(static_cast<qreal>(mDisplayImage.width()) / imageDpr,
+                      static_cast<qreal>(mDisplayImage.height()) / imageDpr);
+    }
+
+    const QSizeF source = sourceLogicalSize();
+    const qreal scale = static_cast<qreal>(mScale);
+    return QSizeF(source.width() * scale, source.height() * scale);
+}
+
+QRectF ImageViewerV2::imageRectScene() const
+{
+    const QSizeF imageSize = displayedLogicalSize();
+    return QRectF(QPointF(0, 0), imageSize);
+}
+
+QRectF ImageViewerV2::viewportRectF() const
+{
+    return QRectF(0, 0, width(), height());
+}
+
+QPointF ImageViewerV2::mapToScene(QPoint viewportPos) const
+{
+    return mapToScene(QPointF(viewportPos));
+}
+
+QPointF ImageViewerV2::mapToScene(QPointF viewportPos) const
+{
+    return QPointF(mViewCenter.x() + viewportPos.x() - width() / 2.0,
+                   mViewCenter.y() + viewportPos.y() - height() / 2.0);
+}
+
+QRectF ImageViewerV2::mapToScene(QRect viewportRect) const
+{
+    return QRectF(mapToScene(viewportRect.topLeft()),
+                  mapToScene(viewportRect.bottomRight()));
+}
+
+QPointF ImageViewerV2::mapFromScene(QPointF scenePos) const
+{
+    return QPointF(width() / 2.0 + scenePos.x() - mViewCenter.x(),
+                   height() / 2.0 + scenePos.y() - mViewCenter.y());
+}
+
+QRectF ImageViewerV2::mapFromScene(QRectF sceneRect) const
+{
+    return QRectF(mapFromScene(sceneRect.topLeft()), sceneRect.size());
+}
+
+QRectF ImageViewerV2::imageRectViewport() const
+{
+    const QSizeF imageSize = displayedLogicalSize();
+    if (imageSize.isEmpty())
+        return QRectF();
+    return QRectF(mapFromScene(QPointF(0, 0)), imageSize);
+}
+
+void ImageViewerV2::centerOn(QPointF scenePos)
+{
+    if (mViewCenter == scenePos)
         return;
+    mViewCenter = scenePos;
+    update();
+}
 
-    // 直接按已知状态算术计算 item 的 scene 矩形，避免每次绘制都走 QGraphicsItem
-    // 矩阵换算：pixmapItem 位置恒为原点、offset 与 transformOriginPoint 均为
-    // CENTER_OFFSET、仅 scale 变化，故 sceneBoundingRect = (offset, scale * size / dpr)
-    const QPointF off = pixmapItem.offset();
-    const qreal s = pixmapItem.scale();
-    const qreal pixDpr = pixmap->devicePixelRatio();
-    const QRectF itemRect(off.x(), off.y(),
-                          static_cast<qreal>(pixmap->width()) / pixDpr * s,
-                          static_cast<qreal>(pixmap->height()) / pixDpr * s);
-
-    painter->drawTiledPixmap(rect.intersected(itemRect), checkboard);
+void ImageViewerV2::centerOn(qreal x, qreal y)
+{
+    centerOn(QPointF(x, y));
 }
 
 // ============================================================================
@@ -1665,14 +2016,14 @@ ImageFitMode ImageViewerV2::fitMode() const
 
 bool ImageViewerV2::scaledImageFits() const
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return true;
 
     // scaledSizeR() 与 imageFitsInternal() 同为设备像素口径：
     // viewport 是逻辑像素，需乘 dpr 换算，否则 HiDPI 下会误判"图放不下"
     const QSize sz = scaledSizeR();
-    return (sz.width() <= static_cast<int>(static_cast<float>(viewport()->width()) * dpr) &&
-            sz.height() <= static_cast<int>(static_cast<float>(viewport()->height()) * dpr));
+    return (sz.width() <= static_cast<int>(static_cast<float>(width()) * dpr) &&
+            sz.height() <= static_cast<int>(static_cast<float>(height()) * dpr));
 }
 
 QWidget* ImageViewerV2::widget()
@@ -1687,32 +2038,26 @@ bool ImageViewerV2::hasAnimation() const
 
 QSize ImageViewerV2::scaledSizeR() const
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return QSize(0, 0);
 
-    float s = currentScaleInternal();
-    return QSize(qRound(static_cast<float>(pixmap->width()) * s), qRound(static_cast<float>(pixmap->height()) * s));
+    const float s = currentScaleInternal();
+    return QSize(qRound(static_cast<float>(mSourceImage.width()) * s),
+                 qRound(static_cast<float>(mSourceImage.height()) * s));
 }
 
 QRect ImageViewerV2::scaledRectR() const
 {
-    const QRectF mapped = mapFromScene(pixmapItem.sceneBoundingRect()).boundingRect();
+    if (mSourceImage.isNull())
+        return QRect();
+
+    const QRectF mapped = imageRectViewport();
     return QRect(mapped.topLeft().toPoint(), mapped.bottomRight().toPoint());
 }
 
 QSize ImageViewerV2::sourceSize() const
 {
-    if (!pixmap)
+    if (mSourceImage.isNull())
         return QSize(0, 0);
-    return pixmap->size();
-}
-
-QPointF ImageViewerV2::sceneRoundPos(QPointF scenePoint) const
-{
-    return mapToScene(mapFromScene(scenePoint));
-}
-
-QRectF ImageViewerV2::sceneRoundRect(QRectF sceneRect) const
-{
-    return QRectF(sceneRoundPos(sceneRect.topLeft()), sceneRect.size());
+    return mSourceImage.size();
 }

@@ -13,7 +13,7 @@ Scaler::~Scaler() {
     // 先作废所有在算的任务（它们在阶段边界自检代数），并丢弃排队请求：
     // 队列中的过期请求不会启动；已在 QImage::scaled() 内的任务无法中断，
     // waitForDone() 最多等正在执行的一到两次缩放返回
-    //（之后的自检会跳过格式转换/QPixmap 构造）。
+    //（之后的自检会跳过不必要的格式转换）。
     // 必须等待：runnable 持有 mGeneration 指针且 finished 直连到本对象。
     mGeneration.fetch_add(1, std::memory_order_relaxed);
     {
@@ -54,7 +54,7 @@ void Scaler::startRequest(const ScalerRequest& req) {
     auto *runnable = new ScalerRunnable(req, &mGeneration);
     runnable->setAutoDelete(true);
 
-    // ✅ 关键：worker 线程直接产出 QPixmap，UI 线程零深拷贝
+    // ✅ worker 线程直接产出 QImage，UI 线程零深拷贝
     connect(runnable, &ScalerRunnable::finished,
             this, &Scaler::onTaskFinish,
             Qt::DirectConnection);
@@ -62,7 +62,7 @@ void Scaler::startRequest(const ScalerRequest& req) {
     pool->start(runnable);
 }
 
-void Scaler::onTaskFinish(QPixmap scaled, ScalerRequest req) {
+void Scaler::onTaskFinish(QImage scaled, ScalerRequest req) {
     // ⭐ 只有"最新一代"的结果值得交付：更新一代的请求已在路上/已在算，
     // 交付旧尺寸只会让视图来回跳一帧
     const bool current = (req.generation() == mGeneration.load(std::memory_order_relaxed));

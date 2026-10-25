@@ -13,21 +13,21 @@ void ScalerRunnable::run()
     // 🚀 陈旧性自检：排队期间若有更新的请求到来（代数已递增），直接放弃，避免白算一次缩放
     if (outdated())
     {
-        emit finished(QPixmap(), std::move(m_request));
+        emit finished(QImage(), std::move(m_request));
         return;
     }
 
     const auto& imageContainer = m_request.imageRef();
     if (!imageContainer)
     {
-        emit finished(QPixmap(), std::move(m_request));
+        emit finished(QImage(), std::move(m_request));
         return;
     }
 
     auto imgPtr = imageContainer->getImage();
     if (!imgPtr || imgPtr->isNull())
     {
-        emit finished(QPixmap(), std::move(m_request));
+        emit finished(QImage(), std::move(m_request));
         return;
     }
 
@@ -38,21 +38,16 @@ void ScalerRunnable::run()
     QImage scaled = ImageLib::scaled(sourceImage, targetSize);
 
     // 🚀 缩放结束后再自检一次：单次 resize 调用内部无法中断，
-    // 但后续的格式转换 + QPixmap 构造（整图像素拷贝）可以省掉
+    // 但后续不再需要的格式转换可以省掉
     if (outdated())
     {
-        emit finished(QPixmap(), std::move(m_request));
+        emit finished(QImage(), std::move(m_request));
         return;
     }
 
-    // 3️⃣ 🚀 关键优化：像素转换移入 worker 线程（Windows raster 允许在非 GUI 线程创建 QPixmap），
-    //    UI 线程只做隐式共享浅拷贝。已是 ARGB32_Premultiplied 时跳过格式转换。
-    QPixmap result = (scaled.format() == QImage::Format_ARGB32_Premultiplied)
-                         ? QPixmap::fromImage(scaled, Qt::NoFormatConversion)
-                         : QPixmap::fromImage(scaled);
-
-    // m_request 生命周期结束 → move
-    emit finished(std::move(result), std::move(m_request));
+    // 3️⃣ 保留现有缩放/质量逻辑（ImageLib::scaled + SmoothTransformation），
+    //    直接交付 QImage 给 Canvas Painter，不再在 worker 里构造 QPixmap。
+    emit finished(std::move(scaled), std::move(m_request));
 }
 
 bool ScalerRunnable::outdated() const

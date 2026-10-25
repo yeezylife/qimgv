@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QThreadPool>
 #include <QMutex>
-#include <QPixmap>
+#include <QImage>
 #include <atomic>
 #include "scalerrequest.h"
 #include "scalerrunnable.h"
@@ -15,14 +15,14 @@ public:
     ~Scaler() override;
 
 signals:
-    // ✅ QPixmap 由 worker 线程产出（隐式共享），经 queued 连接浅拷贝送达 UI 线程
-    void scalingFinished(QPixmap result, ScalerRequest request);
+    // ✅ QImage 由 worker 线程产出（隐式共享），经 queued 连接浅拷贝送达 UI 线程
+    void scalingFinished(QImage result, ScalerRequest request);
 
 public slots:
     void requestScaled(const ScalerRequest &req);
 
 private slots:
-    void onTaskFinish(QPixmap scaled, ScalerRequest req);
+    void onTaskFinish(QImage scaled, ScalerRequest req);
 
 private:
     void startRequest(const ScalerRequest &req);

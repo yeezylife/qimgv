@@ -9,6 +9,7 @@
 #include <QTranslator>
 #include <QSettings>
 #include <QHash>
+#include <QImage>
 #include "appversion.h"
 #include "settings.h"
 #include "components/directorymanager/directorymanager.h"
@@ -173,8 +174,8 @@ private slots:
     void rotateLeft();
     void rotateRight();
     void close();
-    void scalingRequest(QSize size);
-    void onScalingFinished(const QPixmap& scaled, const ScalerRequest& req);
+    void scalingRequest(QSize size, quint64 viewerToken);
+    void onScalingFinished(const QImage& scaled, const ScalerRequest& req);
     void copyCurrentFile(const QString& destDirectory);
     void moveCurrentFile(const QString& destDirectory);
     void copyPathsTo(const QList<QString>& paths, const QString& destDirectory);

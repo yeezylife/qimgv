@@ -50,7 +50,7 @@ target_compile_features(qimgv PRIVATE cxx_std_23)
 set_target_properties(qimgv PROPERTIES CXX_EXTENSIONS OFF)
 
 # LINK STUFF
-target_link_libraries(qimgv PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg Qt6::PrintSupport Qt6::OpenGLWidgets)
+target_link_libraries(qimgv PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg Qt6::PrintSupport Qt6::OpenGLWidgets Qt6::CanvasPainter)
 
 # OPTION DEFINITIONS, LINKING
 if(KDE_SUPPORT)

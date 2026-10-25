@@ -321,7 +321,7 @@ void ImageViewerV2::paint(QCanvasPainter* painter)
         return;
     }
 
-    if (transparencyGrid && imageHasTransparency(mDisplayImage))
+    if (transparencyGrid && sourceImageHasTransparency())
         paintCheckerboard(painter, visible);
 
     // QCanvasImage is uploaded as raw pixels. Use its real pixel size as source
@@ -485,14 +485,24 @@ bool ImageViewerV2::imageHasTransparency(const QImage& image)
 
     // QImageReader may hand us a palette image; hasAlphaChannel() is false for
     // Indexed8 even when the color table contains transparent entries.
-    if (image.format() == QImage::Format_Indexed8) {
-        const int colorCount = image.colorCount();
-        for (int i = 0; i < colorCount; ++i) {
-            if (qAlpha(image.color(i)) < 255)
-                return true;
-        }
+    if (image.format() != QImage::Format_Indexed8)
+        return false;
+
+    // At most 256 entries, and the caller caches the result per source image.
+    const QList<QRgb> palette = image.colorTable();
+    return std::ranges::any_of(palette, [](QRgb color) {
+        return qAlpha(color) < 255;
+    });
+}
+
+bool ImageViewerV2::sourceImageHasTransparency()
+{
+    const qint64 key = mSourceImage.cacheKey();
+    if (key != mSourceTransparencyKey) {
+        mSourceTransparencyKey = key;
+        mSourceHasTransparency = imageHasTransparency(mSourceImage);
     }
-    return false;
+    return mSourceHasTransparency;
 }
 
 void ImageViewerV2::paintCheckerboard(QCanvasPainter* painter, const QRectF& area)

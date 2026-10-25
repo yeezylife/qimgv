@@ -164,6 +164,10 @@ private:
     QList<int> mScaledFrameOrder;
     QSize mScaledFrameSize;
     QImage mCheckerboardImage;
+    // 透明性是源图的属性：按源图 cacheKey 缓存，棋盘格判定不必每帧重扫调色板，
+    // 且缩放帧即便换了 QImage 格式也沿用源图的结论。
+    qint64 mSourceTransparencyKey = 0;
+    bool mSourceHasTransparency = false;
 
     // --- Canvas Painter GPU resources ---
     // Static images keep their full-resolution texture while a CPU-downscaled
@@ -335,6 +339,7 @@ private:
     void paintCheckerboard(QCanvasPainter* painter, const QRectF& area);
     QImage prepareTextureImage(const QImage& image) const;
     static bool imageHasTransparency(const QImage& image);
+    bool sourceImageHasTransparency();
     void updateBackgroundColor();
     void queueTextureRelease(const QCanvasImage& texture);
 

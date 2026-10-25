@@ -345,6 +345,9 @@ void DocumentInfo::loadExifTags() const {
     }
 
     QImageReader reader(fileInfo.absoluteFilePath());
+    // Match the EXIF orientation applied by the image loader, so the fallback
+    // dimensions describe the image as it is actually displayed.
+    reader.setAutoTransform(true);
 
     if(!reader.canRead())
         return;
@@ -371,7 +374,7 @@ void DocumentInfo::loadExifTags() const {
 
     if(exifTags.isEmpty()) {
 
-        QSize size = reader.size();
+        const QSize size = reader.effectiveSize();
 
         if(size.isValid()) {
             exifTags.insert(

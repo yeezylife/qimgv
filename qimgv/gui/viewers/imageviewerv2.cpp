@@ -365,7 +365,7 @@ void ImageViewerV2::ensureImageTexture(QCanvasPainter* painter)
     if (!mImageTexture.isNull())
         queueTextureRelease(mImageTexture);
 
-    mImageTexture = newTexture;
+    mImageTexture = std::move(newTexture);
     mTextureKey = key;
     mTextureGeneration = mImageGeneration;
     mTextureDisplaySerial = mDisplaySerial;
@@ -400,7 +400,7 @@ void ImageViewerV2::ensureSourceTexture(QCanvasPainter* painter)
     if (!mSourceTexture.isNull())
         queueTextureRelease(mSourceTexture);
 
-    mSourceTexture = newTexture;
+    mSourceTexture = std::move(newTexture);
     mSourceTextureKey = key;
     mSourceTextureGeneration = mImageGeneration;
     mSourceTextureValid = true;
@@ -488,7 +488,7 @@ bool ImageViewerV2::imageHasTransparency(const QImage& image)
     if (image.format() == QImage::Format_Indexed8) {
         const int colorCount = image.colorCount();
         for (int i = 0; i < colorCount; ++i) {
-            if (image.color(i).alpha() < 255)
+            if (qAlpha(image.color(i)) < 255)
                 return true;
         }
     }
@@ -523,7 +523,7 @@ void ImageViewerV2::updateBackgroundColor()
     const qreal opacity = mIsFullscreen
                               ? 1.0
                               : qBound(0.0, settings->backgroundOpacity(), 1.0);
-    bgColor.setAlphaF(opacity);
+    bgColor.setAlphaF(static_cast<float>(opacity));
     setFillColor(bgColor);
 }
 

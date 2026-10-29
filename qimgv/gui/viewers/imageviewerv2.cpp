@@ -643,7 +643,8 @@ void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
 
 void ImageViewerV2::reset()
 {
-    // 换图/关闭/切动画都走这里：旧视图状态下的在途缩放结果一律作废
+    // 换图/关闭/切动画都走这里：旧视图状态下的在途缩放结果与去抖请求一律作废
+    scaleTimer->stop();
     invalidatePendingScaling();
     stopPosAnimation();
     // 缩放帧缓存按"当前动画 + 目标尺寸"有效，动画一变即失效

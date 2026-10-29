@@ -186,7 +186,8 @@ signals:
     void saveAsRequested(QString);
     void sortingSelected(SortingMode);
     // viewerWidget
-    void scalingRequested(QSize, quint64 viewerToken);
+    // 目标尺寸是设备像素；dpr 随请求一起交给 worker，结果落地时无需再改 dpr
+    void scalingRequested(QSize, qreal dpr, quint64 viewerToken);
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

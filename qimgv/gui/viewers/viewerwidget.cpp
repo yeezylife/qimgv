@@ -297,7 +297,7 @@ ImageFitMode ViewerWidget::fitMode() {
 }
 
 void ViewerWidget::onScalingFinished(const QPixmap& scaled, quint64 viewerToken) {
-    // 修复：改为常引用，并移除 std::move
+    // 常引用直通：dpr 已由 worker 打进 pixmap，这里始终是隐式共享浅拷贝
     imageViewer->setScaledPixmap(scaled, viewerToken);
 }
 

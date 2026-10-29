@@ -2,8 +2,8 @@
 #include "utils/imagelib.h"
 #include <utility>
 
-ScalerRunnable::ScalerRunnable(const ScalerRequest& request, std::atomic<quint64>* generation)
-    : m_request(request),
+ScalerRunnable::ScalerRunnable(ScalerRequest request, std::atomic<quint64>* generation)
+    : m_request(std::move(request)),
       m_generation(generation)
 {
 }
@@ -50,6 +50,10 @@ void ScalerRunnable::run()
     QPixmap result = (scaled.format() == QImage::Format_ARGB32_Premultiplied)
                          ? QPixmap::fromImage(scaled, Qt::NoFormatConversion)
                          : QPixmap::fromImage(scaled);
+
+    // ⭐ 此刻 result 是唯一引用：在这里打上 dpr 零代价；
+    //    等结果回到 GUI 线程再 setDevicePixelRatio()，就会因隐式共享解除而整帧深拷贝一次。
+    result.setDevicePixelRatio(m_request.devicePixelRatio());
 
     // m_request 生命周期结束 → move
     emit finished(std::move(result), std::move(m_request));

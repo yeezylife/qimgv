@@ -173,7 +173,7 @@ private slots:
     void rotateLeft();
     void rotateRight();
     void close();
-    void scalingRequest(QSize size, quint64 viewerToken);
+    void scalingRequest(QSize size, qreal dpr, quint64 viewerToken);
     void onScalingFinished(const QPixmap& scaled, const ScalerRequest& req);
     void copyCurrentFile(const QString& destDirectory);
     void moveCurrentFile(const QString& destDirectory);

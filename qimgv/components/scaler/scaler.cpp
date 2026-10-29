@@ -1,5 +1,6 @@
 #include "scaler.h"
 #include <QMutexLocker>
+#include <utility>
 
 Scaler::Scaler(QObject *parent)
     : QObject(parent)
@@ -24,7 +25,7 @@ Scaler::~Scaler() {
     pool->waitForDone();
 }
 
-void Scaler::requestScaled(const ScalerRequest &req) {
+void Scaler::requestScaled(ScalerRequest req) {
     bool start = false;
     ScalerRequest toStart;
 
@@ -33,7 +34,7 @@ void Scaler::requestScaled(const ScalerRequest &req) {
 
         // 🚀 每次请求递增代数并打戳，在算/排队中的旧任务据此自检是否已过期。
         // 中间请求只保留最后一次：连续变焦时更早的尺寸已经没人需要
-        mPending = req;
+        mPending = std::move(req);
         mPending.setGeneration(mGeneration.fetch_add(1, std::memory_order_relaxed) + 1);
         mHasPending = true;
 
@@ -46,12 +47,12 @@ void Scaler::requestScaled(const ScalerRequest &req) {
     }
 
     if (start) {
-        startRequest(toStart);
+        startRequest(std::move(toStart));
     }
 }
 
-void Scaler::startRequest(const ScalerRequest& req) {
-    auto *runnable = new ScalerRunnable(req, &mGeneration);
+void Scaler::startRequest(ScalerRequest req) {
+    auto *runnable = new ScalerRunnable(std::move(req), &mGeneration);
     runnable->setAutoDelete(true);
 
     // ✅ 关键：worker 线程直接产出 QPixmap，UI 线程零深拷贝
@@ -85,7 +86,7 @@ void Scaler::onTaskFinish(QPixmap scaled, ScalerRequest req) {
     }
 
     if (start) {
-        startRequest(nextReq);
+        startRequest(std::move(nextReq));
     }
 
     if (current && !scaled.isNull()) {

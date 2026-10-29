@@ -19,13 +19,15 @@ signals:
     void scalingFinished(QPixmap result, ScalerRequest request);
 
 public slots:
-    void requestScaled(const ScalerRequest &req);
+    // 按值接收：调用方传入的是临时对象，直接 move 进队列/任务，
+    // 省掉每次请求沿路多次 shared_ptr 原子引用计数。
+    void requestScaled(ScalerRequest req);
 
 private slots:
     void onTaskFinish(QPixmap scaled, ScalerRequest req);
 
 private:
-    void startRequest(const ScalerRequest &req);
+    void startRequest(ScalerRequest req);
 
     QThreadPool *pool;
 

@@ -89,14 +89,19 @@ public slots:
     void showImage(const QPixmap& pixmap);
     void showImage(QPixmap&& pixmap);
     void showAnimation(const std::shared_ptr<ImageAnimated>& animation);
-    void setScaledPixmap(const QPixmap& newFrame, quint64 viewerToken);
-    void setScaledPixmap(QPixmap&& newFrame, quint64 viewerToken);
     void enableDrags();
     void disableDrags();
     void pauseResume();
 
+public:
+    // 只被 ViewerWidget 和本类直接调用（仓库内没有字符串式 connect）：
+    // 保持普通成员函数，将来改签名就不会静默断开连接。
+    void setScaledPixmap(const QPixmap& newFrame, quint64 viewerToken);
+    void setScaledPixmap(QPixmap&& newFrame, quint64 viewerToken);
+
 signals:
-    void scalingRequested(QSize size, quint64 viewerToken);
+    // size 为设备像素；dpr 是该像素尺寸对应的显示比例，worker 直接打在结果 QPixmap 上
+    void scalingRequested(QSize size, qreal dpr, quint64 viewerToken);
     // silent=true：非交互缩放（打开图片自动适配、窗口缩放等），供指示器决定是否闪动
     void scaleChanged(qreal scale, bool silent);
     void sourceSizeChanged(QSize size);
@@ -231,8 +236,14 @@ private:
     // 动画缩小播放的缩放帧缓存（按目标尺寸整体失效，容量按内存预算做有界 LRU）
     QPixmap scaledFrameFor(int frameNumber, const QImage &frame, const QSize &target);
     void clearScaledFrameCache();
-    // 使所有在途 CPU 缩放结果失效（换图、重置、切动画、DPR 变化、不再需要缩放时）
-    void invalidateViewerToken() noexcept { ++mViewerToken; }
+    // 作废在途 CPU 缩放结果，并解除"同尺寸请求去重"的锁存。
+    // 两者必须成对：只作废结果会让之后的同尺寸请求被 qFuzzyCompare 吞掉，
+    // 画面就会永久停在 QGraphicsView 的近似缩放上。
+    void invalidatePendingScaling() noexcept
+    {
+        ++mViewerToken;
+        lastRequestedScale = -1.0f;
+    }
 
     void fitNormal();
     void fitWidth();

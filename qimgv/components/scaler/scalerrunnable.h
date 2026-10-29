@@ -4,16 +4,18 @@
 #include <QRunnable>
 #include <QPixmap>
 #include <atomic>
+#include <utility>
 #include "scalerrequest.h"
 
 class ScalerRunnable : public QObject, public QRunnable
 {
     Q_OBJECT
 public:
-    explicit ScalerRunnable(const ScalerRequest& request, std::atomic<quint64>* generation);
+    // 按值接收并 move：请求由任务独占，不再复制一次 shared_ptr
+    explicit ScalerRunnable(ScalerRequest request, std::atomic<quint64>* generation);
 
     // 保持兼容
-    void setRequest(const ScalerRequest& request) { m_request = request; }
+    void setRequest(ScalerRequest request) { m_request = std::move(request); }
 
     void run() override;
 

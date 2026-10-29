@@ -146,12 +146,12 @@ void ImageViewerV2::onDPRChanged()
     zoomThreshold = static_cast<int>(dpr * ZOOM_THRESHOLD_FACTOR);
 
     if (pixmap) {
-        // 缩放帧缓存里存的是带旧 dpr 的 pixmap，换屏后必须整体失效
+        // 旧 dpr 下的一切都必须失效：缩放帧缓存、在途结果、请求去重锁存
         clearScaledFrameCache();
         mScaledFrameSize = QSize();
-        // 旧 dpr 下的在途结果同样不能再用；同时清除去重状态，让新 dpr 重新发起请求
-        invalidateViewerToken();
-        lastRequestedScale = -1.0f;
+        invalidatePendingScaling();
+        // 显式退回全尺寸图，不依赖 applyFitMode()/doZoom() 的副作用
+        swapToOriginalPixmap();
         pixmap->setDevicePixelRatio(dpr);
         pixmapItem.setPixmap(*pixmap);
         pixmapItem.show();
@@ -644,8 +644,7 @@ void ImageViewerV2::showImageImpl(QPixmap pixmapParam)
 void ImageViewerV2::reset()
 {
     // 换图/关闭/切动画都走这里：旧视图状态下的在途缩放结果一律作废
-    invalidateViewerToken();
-    lastRequestedScale = -1.0f;
+    invalidatePendingScaling();
     stopPosAnimation();
     // 缩放帧缓存按"当前动画 + 目标尺寸"有效，动画一变即失效
     clearScaledFrameCache();
@@ -681,6 +680,8 @@ void ImageViewerV2::setScaledPixmap(const QPixmap& newFrame, quint64 viewerToken
         return;
 
     pixmapScaled = newFrame;
+    // worker 已按请求里的 dpr 打好标记，这里同值早退、不触发隐式共享解除；
+    // 保留这一行是为了兜住"结果 dpr 与当前视图不一致"的旧调用路径。
     pixmapScaled.setDevicePixelRatio(dpr);
     pixmapItemScaled.setPixmap(pixmapScaled);
     pixmapItem.hide();
@@ -851,31 +852,26 @@ void ImageViewerV2::requestScaling()
         return;
 
     const qreal scale = pixmapItem.scale();
-    if (scale == 1.0 || movie) {
-        // 全尺寸直出/动画帧走自己的流水线：在途 CPU 缩放结果已无意义
-        invalidateViewerToken();
-        lastRequestedScale = -1.0f;
+    // 1:1 直出、放大由 QGraphicsView 直绘、动画帧有自己的缩放帧流水线：
+    // 这三者都不需要后台 CPU 缩放结果，顺手作废在途结果与去重锁存
+    if (movie || scale >= FAST_SCALE_THRESHOLD) {
+        invalidatePendingScaling();
         return;
     }
 
     if (scaleTimer->isActive())
         scaleTimer->stop();
 
-    if (scale < FAST_SCALE_THRESHOLD) {
-        // scaledSizeR() 是设备像素：结果 pixmap 会带 dpr 显示，
-        // 若再乘 dpr，换入时尺寸会放大 dpr 倍且像素数多出 dpr² 倍
-        const QSize requested = scaledSizeR();
-        if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
-            // avoid repeated identical scale requests
-            return;
-        }
-        lastRequestedScale = static_cast<float>(scale);
-        emit scalingRequested(requested, mViewerToken);
-    } else {
-        // 放大显示由 QGraphicsView 直接绘制，不再需要后台缩放结果
-        invalidateViewerToken();
-        lastRequestedScale = -1.0f;
+    // scaledSizeR() 是设备像素：结果 pixmap 会带 dpr 显示，
+    // 若再乘 dpr，换入时尺寸会放大 dpr 倍且像素数多出 dpr² 倍
+    const QSize requested = scaledSizeR();
+    if (lastRequestedScale > 0 && qFuzzyCompare(1.0 + scale, 1.0 + lastRequestedScale)) {
+        // avoid repeated identical scale requests
+        return;
     }
+    lastRequestedScale = static_cast<float>(scale);
+    // dpr 是 float 成员，显式转 qreal：避免严格构建里 -Wdouble-promotion 的隐式提升告警
+    emit scalingRequested(requested, static_cast<qreal>(dpr), mViewerToken);
 }
 
 void ImageViewerV2::enableDrags()

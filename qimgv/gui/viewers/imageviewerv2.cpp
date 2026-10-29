@@ -852,15 +852,16 @@ void ImageViewerV2::requestScaling()
         return;
 
     const qreal scale = pixmapItem.scale();
+    // 本次调用已经给出最终结论：先取消去抖中的旧请求，避免它稍后再回调一次。
+    // 后续真实变焦都会经 scheduleScaling() 重新计时，不会丢请求。
+    scaleTimer->stop();
+
     // 1:1 直出、放大由 QGraphicsView 直绘、动画帧有自己的缩放帧流水线：
     // 这三者都不需要后台 CPU 缩放结果，顺手作废在途结果与去重锁存
     if (movie || scale >= DIRECT_DRAW_SCALE) {
         invalidatePendingScaling();
         return;
     }
-
-    if (scaleTimer->isActive())
-        scaleTimer->stop();
 
     // scaledSizeR() 是设备像素：结果 pixmap 会带 dpr 显示，
     // 若再乘 dpr，换入时尺寸会放大 dpr 倍且像素数多出 dpr² 倍

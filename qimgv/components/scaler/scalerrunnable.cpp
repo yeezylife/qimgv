@@ -47,11 +47,13 @@ void ScalerRunnable::run()
 
     // 3️⃣ 🚀 关键优化：像素转换移入 worker 线程（Windows raster 允许在非 GUI 线程创建 QPixmap），
     //    UI 线程只做隐式共享浅拷贝。已是 ARGB32_Premultiplied 时跳过格式转换。
+    //    ⭐ 必须 move：fromImage(QImage&&) 走 fromImageInPlace，直接接管像素；
+    //    传左值只会与 scaled 共享缓冲，后面打 dpr 时的 detach 仍要在 worker 里深拷贝一次。
     QPixmap result = (scaled.format() == QImage::Format_ARGB32_Premultiplied)
-                         ? QPixmap::fromImage(scaled, Qt::NoFormatConversion)
-                         : QPixmap::fromImage(scaled);
+                         ? QPixmap::fromImage(std::move(scaled), Qt::NoFormatConversion)
+                         : QPixmap::fromImage(std::move(scaled));
 
-    // ⭐ 此刻 result 是唯一引用：在这里打上 dpr 零代价；
+    // ⭐ 此刻 result 独占像素：在这里打上 dpr 零代价；
     //    等结果回到 GUI 线程再 setDevicePixelRatio()，就会因隐式共享解除而整帧深拷贝一次。
     result.setDevicePixelRatio(m_request.devicePixelRatio());
 

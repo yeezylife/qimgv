@@ -4,6 +4,7 @@
 #include <QSize>
 #include <QMetaType>
 #include <memory>
+#include <utility>
 #include "sourcecontainers/image.h"
 
 // 一次 CPU 缩放请求的全部身份信息。
@@ -49,17 +50,6 @@ public:
 
     [[nodiscard]] const QSize& sizeRef() const noexcept {
         return m_size;
-    }
-
-    // 请求身份 = 同一图像对象 + 同一目标尺寸 + 同一视图令牌（generation 由 Scaler 分配，不参与）
-    bool operator==(const ScalerRequest& other) const noexcept {
-        return m_image.get() == other.m_image.get() &&
-               m_size == other.m_size &&
-               m_viewerToken == other.m_viewerToken;
-    }
-
-    bool operator!=(const ScalerRequest& other) const noexcept {
-        return !(*this == other);
     }
 
 private:

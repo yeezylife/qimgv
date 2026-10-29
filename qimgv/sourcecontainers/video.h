@@ -10,7 +10,7 @@ class Video : public Image {
 public:
     Video(std::unique_ptr<DocumentInfo> _info);
 
-    void getPixmap(QPixmap& outPixmap) const override;
+    void getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const override;
     std::shared_ptr<const QImage> getImage() const override;
     int height() const override;
     int width() const override;

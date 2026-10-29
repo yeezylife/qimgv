@@ -51,7 +51,9 @@ public:
      }
 
     // --- 纯虚函数接口 ---
-    virtual void getPixmap(QPixmap& outPixmap) const = 0;
+    // devicePixelRatio：调用方将要显示的 dpr。实现可据此在缓存里预打标记，
+    // 避免查看器设置同值时触发隐式共享解除（整帧深拷贝）。
+    virtual void getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const = 0;
     virtual std::shared_ptr<const QImage> getImage() const = 0;
     virtual int height() const = 0;
     virtual int width() const = 0;

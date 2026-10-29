@@ -22,7 +22,7 @@ public:
     using Image::save;
 
     // 使用 std::optional 表示可能失败的操作
-    void getPixmap(QPixmap& outPixmap) const override;
+    void getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const override;
     std::shared_ptr<const QImage> getSourceImage() const noexcept;
     std::shared_ptr<const QImage> getImage() const noexcept override;
 

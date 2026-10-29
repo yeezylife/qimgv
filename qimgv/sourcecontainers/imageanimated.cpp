@@ -676,7 +676,7 @@ bool ImageAnimated::isDecoding() const {
     return mCtx && mCtx->running.load(std::memory_order_acquire);
 }
 
-QPixmap ImageAnimated::currentPixmap() const {
+QPixmap ImageAnimated::currentPixmap(qreal devicePixelRatio) const {
     auto frame = frameAt(mCurrentFrame);
     // 环形缓冲可能已回收当前帧；cachedFrame 始终持有最近一次发布的帧
     if (!frame)
@@ -684,9 +684,12 @@ QPixmap ImageAnimated::currentPixmap() const {
     if (!frame)
         return QPixmap();
 
-    // 同一帧只做一次 QImage→QPixmap，循环播放时后续直接共享
-    if (!mCurrentPixmapValid) {
+    // 同一帧 + 同一 dpr 只做一次 QImage→QPixmap，循环播放时后续直接共享
+    if (!mCurrentPixmapValid || mCurrentPixmap.devicePixelRatio() != devicePixelRatio) {
         mCurrentPixmap = QPixmap::fromImage(*frame);
+        // dpr != 1 时打标记会 detach 一次：帧 QImage 仍被环形缓冲持有，无法 move 接管。
+        // 但把它留在缓存里，updatePixmap 的同值设置即可提前返回，避免 GUI 线程每帧再拷一次。
+        mCurrentPixmap.setDevicePixelRatio(devicePixelRatio);
         mCurrentPixmapValid = true;
     }
     return mCurrentPixmap;
@@ -712,15 +715,17 @@ bool ImageAnimated::save() {
     return false;
 }
 
-void ImageAnimated::getPixmap(QPixmap& outPixmap) const {
+void ImageAnimated::getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const {
     // ✅ 优先使用当前帧的 QPixmap 缓存（同一帧只转换一次）
-    outPixmap = currentPixmap();
+    outPixmap = currentPixmap(devicePixelRatio);
     if (!outPixmap.isNull())
         return;
 
     // fallback（极少发生）
     const QByteArray formatBytes = mDocInfo->format().toLatin1();
     outPixmap = QPixmap(mPath, formatBytes.constData());
+    if (!outPixmap.isNull())
+        outPixmap.setDevicePixelRatio(devicePixelRatio);
 }
 
 std::shared_ptr<const QImage> ImageAnimated::getImage() const {

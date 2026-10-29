@@ -23,7 +23,7 @@ bool Video::save() {
     return false;
 }
 
-void Video::getPixmap(QPixmap& outPixmap) const {
+void Video::getPixmap(QPixmap& outPixmap, qreal /*devicePixelRatio*/) const {
     static const QPixmap emptyPixmap;
     outPixmap = emptyPixmap;
 }

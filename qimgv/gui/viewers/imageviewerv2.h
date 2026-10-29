@@ -208,7 +208,9 @@ private:
     static constexpr qreal TRACKPAD_SCROLL_MULTIPLIER = 0.7;
     static constexpr qreal WHEEL_SCROLL_MULTIPLIER = 2.0;
     static constexpr int ANIMATION_SPEED = 150;
-    static constexpr float FAST_SCALE_THRESHOLD = 1.0f;
+    // 直绘分界：scale >= 1（1:1 与放大）交给 QGraphicsView 直接绘制，不请求 CPU 缩放。
+    // 必须保持 1.0：调大后 1:1 也会白算一次全图 resize；调小则放弃 <1 时的平滑 CPU 缩放。
+    static constexpr qreal DIRECT_DRAW_SCALE = 1.0;
     // 后台预解码尚未产出目标帧时的重试间隔
     static constexpr int FRAME_PENDING_RETRY_MS = 10;
 

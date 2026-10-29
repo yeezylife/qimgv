@@ -1264,7 +1264,10 @@ void Core::scalingRequest(QSize size, qreal dpr, quint64 viewerToken) {
 }
 
 void Core::onScalingFinished(const QPixmap& scaled, const ScalerRequest& req) {
-    // 路径以请求携带的 Image 为准：请求结构里不再冗余存一份 QString
+    // 路径以请求携带的 Image 为准：请求结构里不再冗余存一份 QString。
+    // 不拿 state.currentImg 比较：它在若干切换路径上不保证及时更新；
+    // 而缩放请求只可能由 scalingRequest() 从 state.currentFilePath 命中缓存发出，
+    // 因此 filePath() 与 currentFilePath 同源，是这里可靠的归属判据。
     const std::shared_ptr<Image>& source = req.imageRef();
     if (source && state.hasActiveImage && samePath(source->filePath(), state.currentFilePath)) {
         // 视图令牌原样回传，由 ImageViewerV2 校验是否仍属于当前视图状态
@@ -1631,7 +1634,11 @@ void Core::guiSetImage(const std::shared_ptr<Image>& img) {
     DocumentType type = img->type();
     if(type == STATIC) {
         QPixmap pixmap;
-        img->getPixmap(pixmap);
+        // 把目标 dpr 一路传到 ImageStatic 的缓存，查看器设置同值时即可提前返回。
+        // ImageViewerV2 内部用 float 保存 dpr：这里按同样精度折算，
+        // 保证缓存标记与视图随后设置的值逐位相同，不因 double→float 取整而多拷一帧。
+        const qreal targetDpr = static_cast<qreal>(static_cast<float>(mw->devicePixelRatioF()));
+        img->getPixmap(pixmap, targetDpr);
         mw->showImage(pixmap);
     } else if(type == ANIMATED) {
         auto animated = std::dynamic_pointer_cast<ImageAnimated>(img);

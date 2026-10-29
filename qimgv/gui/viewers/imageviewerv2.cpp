@@ -413,9 +413,9 @@ void ImageViewerV2::onAnimationTimer()
         }
     }
 
-    // ImageAnimated::currentPixmap() 返回当前帧缓存（同一帧只转换一次）；
-    // 用移动语义传递，避免 setDevicePixelRatio 触发一次整帧深拷贝
-    QPixmap frame = movie->currentPixmap();
+    // ImageAnimated::currentPixmap() 返回当前帧缓存（同一帧 + 同一 dpr 只转换一次）；
+    // 缓存已带好当前 dpr，updatePixmap 设置同值时提前返回，不再整帧深拷贝
+    QPixmap frame = movie->currentPixmap(static_cast<qreal>(dpr));
     if (frame.isNull()) {
         // 与上面的空 QImage 分支一致：要么安排重试，要么明确结束播放
         if (movie->isDecoding()) {
@@ -537,8 +537,8 @@ bool ImageViewerV2::showAnimationFrame(int frame)
     }
 
     emit frameChanged(movie->currentFrameNumber());
-    // 使用移动语义传递临时对象，避免拷贝
-    updatePixmap(movie->currentPixmap());
+    // 缓存已按当前 dpr 打好标记；move 传递后视图侧设置同值不再拷贝
+    updatePixmap(movie->currentPixmap(static_cast<qreal>(dpr)));
     // 切回动画时首帧已就绪：现在才开始播放计时，避免计时器从旧播放头抢跑
     if (mStartAnimationOnFrameReady) {
         mStartAnimationOnFrameReady = false;
@@ -589,7 +589,7 @@ void ImageViewerV2::showAnimation(const std::shared_ptr<ImageAnimated>& animatio
     // 帧未就绪时由 onAnimationTimer/showAnimationFrame 稍后重试
     movie->jumpToFrame(0);
 
-    updatePixmap(movie->currentPixmap());
+    updatePixmap(movie->currentPixmap(static_cast<qreal>(dpr)));
 
     emit durationChanged(movie->frameCount());
     emit frameChanged(0);
@@ -854,7 +854,7 @@ void ImageViewerV2::requestScaling()
     const qreal scale = pixmapItem.scale();
     // 1:1 直出、放大由 QGraphicsView 直绘、动画帧有自己的缩放帧流水线：
     // 这三者都不需要后台 CPU 缩放结果，顺手作废在途结果与去重锁存
-    if (movie || scale >= FAST_SCALE_THRESHOLD) {
+    if (movie || scale >= DIRECT_DRAW_SCALE) {
         invalidatePendingScaling();
         return;
     }

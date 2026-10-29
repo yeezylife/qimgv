@@ -15,7 +15,7 @@ public:
 
     using Image::save;
 
-    void getPixmap(QPixmap& outPixmap) const override;
+    void getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const override;
     std::shared_ptr<const QImage> getImage() const override;
     int height() const override;
     int width() const override;
@@ -27,7 +27,7 @@ public:
     bool isValid() const;
     bool jumpToFrame(int frameNumber);
     bool jumpToNextFrame();
-    QPixmap currentPixmap() const;
+    QPixmap currentPixmap(qreal devicePixelRatio = 1.0) const;
 
     // 帧缓存（有界环形窗口）+ reader 的共享状态（定义在 .cpp）：
     // 后台解码任务与 GUI 线程共享。公开仅为让 .cpp 里的解码任务能命名该类型，外部不应使用
@@ -60,7 +60,7 @@ private:
 
     std::shared_ptr<DecodeContext> mCtx;
 
-    // 当前帧 QPixmap 缓存：QMovie 每帧都丢弃重建，这里同一帧只转换一次
+    // 当前帧 QPixmap 缓存：同一帧 + 同一 dpr 只转换一次（dpr 缓存直接读 QPixmap 自身）
     mutable QPixmap mCurrentPixmap;
     mutable bool mCurrentPixmapValid = false;
 

@@ -266,7 +266,7 @@ const QImage& ImageStatic::currentImage() const noexcept {
     return nullImage;
 }
 
-void ImageStatic::getPixmap(QPixmap& outPixmap) const {
+void ImageStatic::getPixmap(QPixmap& outPixmap, qreal devicePixelRatio) const {
     const QImage &img = currentImage();
     if(img.isNull()) {
         outPixmap = QPixmap();
@@ -275,16 +275,20 @@ void ImageStatic::getPixmap(QPixmap& outPixmap) const {
 
     // 缓存命中：QImage::cacheKey() 在内容变化时自动改变（编辑/撤销/保存后）
     const qint64 key = img.cacheKey();
-    if(key == mCachedPixmapKey && !mCachedPixmap.isNull()) {
-        outPixmap = mCachedPixmap; // 隐式共享，浅拷贝
-        return;
+    if(key != mCachedPixmapKey || mCachedPixmap.isNull()) {
+        mCachedPixmap = (img.format() == QImage::Format_ARGB32_Premultiplied)
+                            ? QPixmap::fromImage(img, Qt::NoFormatConversion)  // 已是 pixmap 首选格式，省一次整图格式转换
+                            : QPixmap::fromImage(img);
+        mCachedPixmapKey = key;
     }
 
-    mCachedPixmap = (img.format() == QImage::Format_ARGB32_Premultiplied)
-                        ? QPixmap::fromImage(img, Qt::NoFormatConversion)  // 已是 pixmap 首选格式，省一次整图格式转换
-                        : QPixmap::fromImage(img);
-    mCachedPixmapKey = key;
-    outPixmap = mCachedPixmap;
+    // ⭐ dpr 直接打在缓存上：查看器随后设置同值会提前返回。
+    //    源 QImage 仍存活，首次打标记会 detach 一次（无法 move 接管），
+    //    但只在建缓存/换 dpr 时发生；之后每次显示都是纯隐式共享。
+    if(mCachedPixmap.devicePixelRatio() != devicePixelRatio)
+        mCachedPixmap.setDevicePixelRatio(devicePixelRatio);
+
+    outPixmap = mCachedPixmap; // 隐式共享，浅拷贝
 }
 
 std::shared_ptr<const QImage> ImageStatic::getSourceImage() const noexcept {
